@@ -5,9 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 APK_DIR="${PROJECT_ROOT}/app/build/outputs/apk/debug"
 APK_PATH="${APK_DIR}/app-debug.apk"
-PACKAGE_DEBUG="com.hihusky.mnema.debug"
-PACKAGE_RELEASE="com.hihusky.mnema"
-ACTIVITY="${PACKAGE_DEBUG}/com.hihusky.mnema.MainActivity"
+PACKAGE_DEBUG="com.hihusky.mnemora.debug"
+PACKAGE_RELEASE="com.hihusky.mnemora"
+ACTIVITY="${PACKAGE_DEBUG}/com.hihusky.mnemora.MainActivity"
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -128,18 +128,18 @@ cmd_inspect() {
     check_adb
     local ts
     ts=$(date +%Y%m%d-%H%M%S)
-    local outdir="/tmp/mnema-inspect-${ts}"
+    local outdir="/tmp/mnemora-inspect-${ts}"
     mkdir -p "${outdir}"
 
     info "Capturing screenshot..."
-    adb shell screencap -p /data/local/tmp/mnema_screenshot.png
-    adb pull /data/local/tmp/mnema_screenshot.png "${outdir}/screenshot.png" >/dev/null
-    adb shell rm /data/local/tmp/mnema_screenshot.png
+    adb shell screencap -p /data/local/tmp/mnemora_screenshot.png
+    adb pull /data/local/tmp/mnemora_screenshot.png "${outdir}/screenshot.png" >/dev/null
+    adb shell rm /data/local/tmp/mnemora_screenshot.png
 
     info "Dumping UI hierarchy..."
-    adb shell uiautomator dump /data/local/tmp/mnema_window_dump.xml >/dev/null 2>&1 || true
-    adb pull /data/local/tmp/mnema_window_dump.xml "${outdir}/window_dump.xml" >/dev/null 2>&1 || true
-    adb shell rm /data/local/tmp/mnema_window_dump.xml 2>/dev/null || true
+    adb shell uiautomator dump /data/local/tmp/mnemora_window_dump.xml >/dev/null 2>&1 || true
+    adb pull /data/local/tmp/mnemora_window_dump.xml "${outdir}/window_dump.xml" >/dev/null 2>&1 || true
+    adb shell rm /data/local/tmp/mnemora_window_dump.xml 2>/dev/null || true
 
     info "Inspect artifacts saved to: ${outdir}"
     ls -la "${outdir}"

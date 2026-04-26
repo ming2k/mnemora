@@ -59,7 +59,7 @@ brew install fswatch
 ./scripts/dev.sh inspect
 ```
 
-Captures a screenshot and dumps the accessibility hierarchy to `/tmp/mnema-inspect-<timestamp>/`. Useful for verifying UI element bounds and IDs from the terminal.
+Captures a screenshot and dumps the accessibility hierarchy to `/tmp/mnemora-inspect-<timestamp>/`. Useful for verifying UI element bounds and IDs from the terminal.
 
 > Compose elements are only visible if you add `Modifier.semantics {}` or `testTag` to them. See [CLI-First Development Workflow](../explanation/cli-workflow.md) for details.
 

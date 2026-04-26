@@ -9,17 +9,18 @@ Mnemora follows a layered Android architecture using Jetpack Compose for UI, Hil
 ### UI Layer
 
 - **Screens**: One `Screen` + `ViewModel` per feature (Home, Book Detail, Practice, Review, Test, Settings, Collection Detail).
-- **Navigation**: `MnemaNavHost` routes between screens using Compose Navigation.
+- **Navigation**: `MnemoraNavHost` routes between screens using Compose Navigation.
 - **Components**: Reusable composables (`QuestionCard`, `AiChatPanel`, `DopamineProgressBar`, etc.) live in `ui/components/`.
 
 ### Domain Layer
 
 - **Services**: Business logic is encapsulated in domain services:
   - `SrsService` — Spaced repetition scheduling
-  - `AiService` — AI chat integration
-  - `FeedbackService` — Answer evaluation and feedback
-  - `SmartCollectionEngine` — Auto-generated study sets
-  - `PackageService` — Content packaging / import
+  - `AiService` — AI chat integration (config via `AiConfig` / `StateFlow`)
+  - `FeedbackService` — Answer feedback (sound + haptics)
+  - `CollectionManager` — Collection CRUD facade
+  - `PackageService` — ZIP extraction and import orchestration
+  - `BookImporter` — Transactional DB insertion during import (owns the `importData` pipeline)
 
 ### Data Layer
 
@@ -28,6 +29,7 @@ Mnemora follows a layered Android architecture using Jetpack Compose for UI, Hil
   - `UserAnswer`, `SrsReview`
   - `ChatSession`, `ChatHistory`
   - `Collection`, `CollectionItem`
+  - `StudySession`
 - **Repositories**: `DatabaseRepository` and `SettingsRepository` abstract data access for ViewModels.
 - **Preferences**: DataStore holds user settings.
 
@@ -46,11 +48,19 @@ Hilt modules (`AppModule`, `DatabaseModule`) provide singleton and scoped depend
 - **Domain services over UseCases**: For a medium-sized app, full UseCase classes add boilerplate without clear benefit. Services group related operations and keep ViewModels thin.
 - **Single Activity**: Compose Navigation with a single `MainActivity` reduces manifest complexity and enables deep-linking later.
 
+## Known architectural limitations
+
+- **`DatabaseRepository` is large**: At ~600 lines it still mixes DAO delegation for 10 tables, entity-to-domain conversion, and collection/session logic. The import pipeline has been extracted to `BookImporter`, but further domain splits (e.g., separate session and SRS repositories) remain as future targets.
+
+- **Test mode resume is broken by design**: `TestViewModel` accepts a `sessionId` nav parameter to resume a test, but `loadTest()` always re-shuffles the question list. Restoring `currentIndex` against a different list is meaningless. The session resume entry point for Test mode in `RecordsScreen` is misleading — see [ADR-0006](../adr/0006-test-session-resume-limitation.md).
+
 ## Related decisions
 
 - [ADR-0001: Record architecture decisions](../adr/0001-record-architecture-decisions.md)
 - [ADR-0005: Library recency ordering](../adr/0005-library-recency-ordering.md)
+- [ADR-0006: Test session resume limitation](../adr/0006-test-session-resume-limitation.md)
 
 ## Further reading
 
+- [Database Design](database-design.md)
 - [Jetpack Guide to App Architecture](https://developer.android.com/topic/architecture)

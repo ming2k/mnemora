@@ -33,17 +33,17 @@ Development helper script. All commands run from the project root.
 | Operation | Command |
 |---|---|
 | View all logs | `adb logcat` |
-| Tail app logs | `adb logcat --pid=$(adb shell pidof com.hihusky.mnema.debug)` |
+| Tail app logs | `adb logcat --pid=$(adb shell pidof com.hihusky.mnemora.debug)` |
 | Clear logs | `adb logcat -c` |
 | Force reinstall (keep data) | `adb install -r app/build/outputs/apk/debug/app-debug.apk` |
-| Launch app | `adb shell am start -n com.hihusky.mnema.debug/com.hihusky.mnema.MainActivity` |
+| Launch app | `adb shell am start -n com.hihusky.mnemora.debug/com.hihusky.mnemora.MainActivity` |
 
 ## Package Names
 
 | Build Type | Application ID |
 |---|---|
-| Debug | `com.hihusky.mnema.debug` |
-| Release | `com.hihusky.mnema` |
+| Debug | `com.hihusky.mnemora.debug` |
+| Release | `com.hihusky.mnemora` |
 
 The debug package uses the `.debug` suffix and can coexist with the release build on the same device.
 

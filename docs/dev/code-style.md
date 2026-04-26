@@ -17,7 +17,7 @@ All documentation, comments, commit messages, and communications must be written
 
 | Element | Convention | Example |
 |---|---|---|
-| Packages | lowercase, no underscores | `com.hihusky.mnema.data.local` |
+| Packages | lowercase, no underscores | `com.hihusky.mnemora.data.local` |
 | Classes / Interfaces | PascalCase | `BookRepository` |
 | Functions / Variables | camelCase | `fetchNodes()` |
 | Constants / Enums | UPPER_SNAKE_CASE | `MAX_RETRY_COUNT` |
@@ -32,7 +32,7 @@ All documentation, comments, commit messages, and communications must be written
 
 ## Imports
 
-- No wildcard imports (`import com.hihusky.mnema.data.*` is prohibited).
+- No wildcard imports (`import com.hihusky.mnemora.data.*` is prohibited).
 - Group imports: Kotlin stdlib, Android/Jetpack, third-party, project-internal.
 
 ## Formatting

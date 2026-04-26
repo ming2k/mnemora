@@ -33,7 +33,7 @@ sdkmanager "platforms;android-35"
 **Fix**:
 
 ```bash
-adb uninstall com.hihusky.mnema.debug
+adb uninstall com.hihusky.mnemora.debug
 ```
 
 Then retry installation.

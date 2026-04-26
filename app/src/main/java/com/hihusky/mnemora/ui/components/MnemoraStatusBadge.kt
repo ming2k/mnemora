@@ -1,0 +1,36 @@
+package com.hihusky.mnemora.ui.components
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import com.hihusky.mnemora.ui.theme.MnemoraSpacing
+import com.hihusky.mnemora.ui.theme.stateLayer
+
+@Composable
+fun MnemoraStatusBadge(
+    text: String,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .background(
+                color = color.stateLayer(),
+                shape = MaterialTheme.shapes.small
+            )
+            .padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.XSmall)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelSmall,
+            color = color,
+            fontWeight = FontWeight.Bold
+        )
+    }
+}

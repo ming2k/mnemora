@@ -11,6 +11,7 @@ ADRs capture significant architectural decisions. They are append-only — once 
 | [ADR-0003](0003-debug-data-seeding.md) | Debug data seeding | Accepted |
 | [ADR-0004](0004-multiple-debug-sample-packages.md) | Multiple debug sample packages | Accepted |
 | [ADR-0005](0005-library-recency-ordering.md) | Library recency ordering | Accepted |
+| [ADR-0006](0006-test-session-resume-limitation.md) | Test session resume limitation | Accepted |
 
 ## Looking for something else?
 

@@ -88,8 +88,8 @@ This performs:
 
 1. `./gradlew assembleDebug`
 2. `adb install -r app/build/outputs/apk/debug/app-debug.apk`
-3. `adb shell am start -n com.hihusky.mnema.debug/com.hihusky.mnema.MainActivity`
-4. `adb logcat --pid=$(adb shell pidof com.hihusky.mnema.debug)`
+3. `adb shell am start -n com.hihusky.mnemora.debug/com.hihusky.mnemora.MainActivity`
+4. `adb logcat --pid=$(adb shell pidof com.hihusky.mnemora.debug)`
 
 You should see the app open on your device and logs streaming in the terminal.
 
@@ -110,6 +110,6 @@ All unit tests should pass. This verifies your environment is correctly configur
 ## Troubleshooting
 
 - **`adb: command not found`**: Ensure `platform-tools` is installed and `$ANDROID_HOME/platform-tools` is in `PATH`.
-- **`INSTALL_FAILED_UPDATE_INCOMPATIBLE`**: Uninstall the existing version: `adb uninstall com.hihusky.mnema.debug`
+- **`INSTALL_FAILED_UPDATE_INCOMPATIBLE`**: Uninstall the existing version: `adb uninstall com.hihusky.mnemora.debug`
 - **Slow dependency downloads**: Configure a proxy in `gradle.properties` or `~/.gradle/gradle.properties`.
 - See the full [troubleshooting guide](../how-to/troubleshoot-installation.md) for more.

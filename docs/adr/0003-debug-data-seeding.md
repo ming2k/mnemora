@@ -13,11 +13,11 @@ Developers need realistic data (books, questions, study sessions) to manually te
 Use **source-set isolation** with identically-named classes in `src/debug/` and `src/release/`.
 
 ```
-app/src/debug/java/com/hihusky/mnema/initialization/DebugHooks.kt   // seeds data
-app/src/release/java/com/hihusky/mnema/initialization/DebugHooks.kt // no-op
+app/src/debug/java/com/hihusky/mnemora/initialization/DebugHooks.kt   // seeds data
+app/src/release/java/com/hihusky/mnemora/initialization/DebugHooks.kt // no-op
 ```
 
-`MnemaApplication.onCreate()` calls `DebugHooks.seedIfNeeded(this)` unconditionally. Gradle compiles only the source set matching the current build type, so release builds link the no-op stub while debug builds link the real seeder.
+`MnemoraApplication.onCreate()` calls `DebugHooks.seedIfNeeded(this)` unconditionally. Gradle compiles only the source set matching the current build type, so release builds link the no-op stub while debug builds link the real seeder.
 
 ### What the debug seeder does
 
@@ -36,6 +36,6 @@ All work runs on `Dispatchers.IO` inside a `GlobalScope` launched from `Applicat
 ## Consequences
 
 - Positive: Zero runtime cost and zero APK size impact in release.
-- Positive: Type-safe — `MnemaApplication` imports `DebugHooks` directly; no reflection.
+- Positive: Type-safe — `MnemoraApplication` imports `DebugHooks` directly; no reflection.
 - Positive: Standard Android practice used by Square, Stripe, and Google teams.
 - Trade-off: Two files must be kept in sync if the public API of `DebugHooks` changes.

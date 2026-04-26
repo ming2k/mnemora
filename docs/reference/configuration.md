@@ -6,8 +6,8 @@ Configured in `app/build.gradle.kts`.
 
 | Variant | `applicationIdSuffix` | `isMinifyEnabled` | App Name |
 |---|---|---|---|
-| `debug` | `.debug` | `false` | Mnema (test) |
-| `release` | — | `true` | Mnema |
+| `debug` | `.debug` | `false` | Mnemora (test) |
+| `release` | — | `true` | Mnemora |
 
 ## SDK Versions
 

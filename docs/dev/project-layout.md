@@ -3,9 +3,9 @@
 A tour of the source tree for new contributors.
 
 ```
-app/src/main/java/com/hihusky/mnema/
+app/src/main/java/com/hihusky/mnemora/
 ├── MainActivity.kt              # Single Activity entry point
-├── MnemaApplication.kt          # Application class + Hilt entry
+├── MnemoraApplication.kt          # Application class + Hilt entry
 ├── di/
 │   ├── AppModule.kt             # App-level bindings
 │   └── DatabaseModule.kt        # Room database provider
@@ -28,7 +28,9 @@ app/src/main/java/com/hihusky/mnema/
 │   │   ├── practice/
 │   │   ├── review/
 │   │   ├── test/
+│   │   ├── records/
 │   │   ├── settings/
+│   │   ├── collections/
 │   │   └── collectiondetail/
 │   └── theme/                   # Colors, typography, theme
 ```
@@ -48,3 +50,4 @@ app/src/main/java/com/hihusky/mnema/
 - New screen: create a package under `ui/screens/<screen>/` with `Screen.kt` and `ViewModel.kt`.
 - New database entity: add to `data/local/db/entity/` and update `AppDatabase.kt`.
 - New business logic: add a method to an existing domain service or create a new one in `domain/service/`.
+- Import pipeline changes: modify `BookImporter` (transactional DB work) or `PackageService` (file I/O + ZIP parsing). These are now separate concerns.

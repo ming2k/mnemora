@@ -32,17 +32,17 @@ tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.all
 }
 
 android {
-    namespace = "com.hihusky.mnema"
+    namespace = "com.hihusky.mnemora"
     compileSdk = 37
 
     sourceSets["main"].assets.srcDir("$buildDir/generated/room_schemas")
 
     defaultConfig {
-        applicationId = "com.hihusky.mnema"
+        applicationId = "com.hihusky.mnemora"
         minSdk = 24
         targetSdk = 35
-        versionCode = 1
-        versionName = "0.0.1"
+        versionCode = 2
+        versionName = "0.0.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -53,11 +53,11 @@ android {
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
-            resValue("string", "app_name", "Mnema (test)")
+            resValue("string", "app_name", "Mnemora (test)")
             isMinifyEnabled = false
         }
         release {
-            resValue("string", "app_name", "Mnema")
+            resValue("string", "app_name", "Mnemora")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(

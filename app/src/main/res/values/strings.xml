@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Mnema</string>
+    <string name="app_name">Mnemora</string>
     <string name="app_subtitle">An Elegant Learning Companion</string>
 
     <string name="select_question_bank">Select Question Bank</string>

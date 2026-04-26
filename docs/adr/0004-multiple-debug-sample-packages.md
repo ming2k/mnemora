@@ -24,7 +24,7 @@ The project previously seeded a single `sample-package.zip` for debug builds. Th
    - `demo-flashcard.zip`
    - `demo-passage.zip`
 3. **Let `DebugHooks` (debug-only) own the entire seeding flow**:
-   - `MnemaApplication.onCreate()` → `DebugHooks.seedIfNeeded()` imports all demo packages if the database is empty.
+   - `MnemoraApplication.onCreate()` → `DebugHooks.seedIfNeeded()` imports all demo packages if the database is empty.
    - `HomeViewModel` no longer imports built-in packages; it simply loads whatever books exist.
 4. **Fix `sub_questions` import**: `DatabaseRepository.importData()` now inserts the parent `QuestionEntity` first, reads its generated `id`, and inserts child questions with `parentId` set. Previously `sub_questions` were silently dropped.
 

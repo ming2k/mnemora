@@ -62,7 +62,7 @@ When you install a **debug** build, `DebugHooks` automatically seeds sample book
 
 - `src/debug/java/.../DebugHooks.kt` — real seeder
 - `src/release/java/.../DebugHooks.kt` — no-op stub
-- `MnemaApplication.onCreate()` calls `DebugHooks.seedIfNeeded(this)`
+- `MnemoraApplication.onCreate()` calls `DebugHooks.seedIfNeeded(this)`
 
 Gradle compiles only the source set matching the build type, so release builds are completely unaffected.
 
@@ -84,4 +84,4 @@ Launch the debug app and check:
 
 ### Adding more seed data
 
-Edit `app/src/debug/java/com/hihusky/mnema/initialization/DebugHooks.kt`. Never add seeding logic to `src/main/`.
+Edit `app/src/debug/java/com/hihusky/mnemora/initialization/DebugHooks.kt`. Never add seeding logic to `src/main/`.

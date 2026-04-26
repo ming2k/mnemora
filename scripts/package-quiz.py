@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Package Quiz — validate and bundle a Mnemora question bank into .mnemapkg
+Package Quiz — validate and bundle a Mnemora question bank into .mnemorapkg
 
 Usage:
     python3 scripts/package-quiz.py <source_dir> [output_file]
 
 Example:
-    python3 scripts/package-quiz.py ~/my-quiz-bank/ ~/my-quiz-bank.mnemapkg
+    python3 scripts/package-quiz.py ~/my-quiz-bank/ ~/my-quiz-bank.mnemorapkg
 
 The script will:
 1. Validate data.json exists and is valid JSON
 2. Check that all image references resolve to actual files
 3. Warn about unknown question_type values
-4. Produce a .mnemapkg (or .zip) archive
+4. Produce a .mnemorapkg (or .zip) archive
 """
 
 import json
@@ -23,7 +23,7 @@ import zipfile
 from pathlib import Path
 
 
-SUPPORTED_EXTENSIONS = (".zip", ".quizpkg", ".mnemapkg")
+SUPPORTED_EXTENSIONS = (".zip", ".quizpkg", ".mnemorapkg")
 SUPPORTED_QUESTION_TYPES = {
     "multiple_choice",
     "true_false",
@@ -176,11 +176,11 @@ def main() -> int:
     if len(sys.argv) >= 3:
         output_path = Path(sys.argv[2]).resolve()
     else:
-        default_name = src_dir.name + ".mnemapkg"
+        default_name = src_dir.name + ".mnemorapkg"
         output_path = src_dir.parent / default_name
 
     if not str(output_path).lower().endswith(SUPPORTED_EXTENSIONS):
-        output_path = output_path.with_suffix(".mnemapkg")
+        output_path = output_path.with_suffix(".mnemorapkg")
 
     print(f"Source : {src_dir}")
     print(f"Output : {output_path}")

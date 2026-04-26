@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.2] - 2026-04-26
+
+### Added
+- Package detail now owns package-scoped collections, study records, node entry points, and destructive package deletion.
+- Database design documentation describing current Room ownership, relationships, package boundaries, and migration expectations.
+- ADR for the current Test resume limitation.
+
+### Changed
+- Renamed the Android package namespace from `com.hihusky.mnema` to `com.hihusky.mnemora`.
+- Simplified bottom navigation to Library and Settings; collections and records now live under the package detail flow.
+- Tightened the Room schema around package ownership: collections are scoped to a package, collection items point directly at questions, and `question_pool` was removed.
+- Updated import, practice, and collection-detail flows to use `questions` as the single source of truth for collection membership.
+- Refreshed docs, scripts, package helpers, and project layout references for the Mnemora naming and package format.
+
 ## [0.0.1] - 2026-04-26
 
 ### Added
@@ -20,7 +34,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Home screen mode selector** — the crowded row of four AssistChips is replaced by a single **Start** button that opens a BottomSheet. Each mode (Practice, Review, Test, Preview) is shown as a card with an icon and description.
 - **App launcher icon** — replaced with the new brand icon.
 - **Mode icons** — Practice, Preview, Review, and Test now use custom SVG icons instead of generic Material icons.
-- **TopAppBar** — all screens use unified `MnemaTopAppBar` / `MnemaCenterTopAppBar` components with consistent `windowInsets` handling.
+- **TopAppBar** — all screens use unified `MnemoraTopAppBar` / `MnemoraCenterTopAppBar` components with consistent `windowInsets` handling.
 - Development workflow documented as CLI-first with selective Android Studio use for UI preview and debugging.
 
 ## [1.2.2] - 2025-01-15
@@ -55,7 +69,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.1...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/hihusky/mnemora/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/hihusky/mnemora/releases/tag/v0.0.1
 [1.2.2]: https://github.com/hihusky/mnemora/compare/v1.2.1...v1.2.2
 [1.2.1]: https://github.com/hihusky/mnemora/compare/v1.2.0...v1.2.1

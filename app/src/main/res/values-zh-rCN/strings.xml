@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Mnema</string>
+    <string name="app_name">Mnemora</string>
     <string name="app_subtitle">优雅的学习伴侣</string>
 
     <string name="select_question_bank">选择题库</string>

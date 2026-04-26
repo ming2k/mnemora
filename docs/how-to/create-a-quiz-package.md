@@ -1,6 +1,6 @@
 # How to Create and Package a Question Bank
 
-A question bank in Mnemora is a ZIP archive (with extension `.zip`, `.quizpkg`, or `.mnemapkg`) that contains a `data.json` file and any referenced assets such as images. This guide covers the directory layout, the JSON schema, image handling, and the helper script that validates and bundles everything.
+A question bank in Mnemora is a ZIP archive (with extension `.zip`, `.quizpkg`, or `.mnemorapkg`) that contains a `data.json` file and any referenced assets such as images. This guide covers the directory layout, the JSON schema, image handling, and the helper script that validates and bundles everything.
 
 For the rationale behind the package format, see [ADR-0004: Multiple Debug Sample Packages](../adr/0004-multiple-debug-sample-packages.md).
 
@@ -24,7 +24,7 @@ Use this guide when you want to:
 A valid package is a ZIP archive with the following layout:
 
 ```
-my-quiz.mnemapkg
+my-quiz.mnemorapkg
 ├── data.json          ← Required. The question bank manifest.
 └── images/            ← Optional. Assets referenced by relative path.
     ├── diagram_01.png
@@ -176,7 +176,7 @@ Images are referenced inside `content`, `explanation`, `choices`, `front_templat
 Keep all images in a single folder (conventionally `images/`) so paths stay short and predictable:
 
 ```
-my-quiz.mnemapkg
+my-quiz.mnemorapkg
 ├── data.json
 └── images/
     ├── triangle.png
@@ -196,10 +196,10 @@ python3 scripts/package-quiz.py <source_directory> [output_file]
 Example:
 
 ```bash
-python3 scripts/package-quiz.py ~/my-quiz-bank ~/my-quiz-bank.mnemapkg
+python3 scripts/package-quiz.py ~/my-quiz-bank ~/my-quiz-bank.mnemorapkg
 ```
 
-If you omit the output file, the script creates `<directory_name>.mnemapkg` next to the source directory.
+If you omit the output file, the script creates `<directory_name>.mnemorapkg` next to the source directory.
 
 ### What the script checks
 
@@ -217,10 +217,10 @@ If you prefer not to use the script, create the archive manually:
 
 ```bash
 cd ~/my-quiz-bank
-zip -r ../my-quiz-bank.mnemapkg data.json images/
+zip -r ../my-quiz-bank.mnemorapkg data.json images/
 ```
 
-Ensure the file extension is `.zip`, `.quizpkg`, or `.mnemapkg`.
+Ensure the file extension is `.zip`, `.quizpkg`, or `.mnemorapkg`.
 
 ## Step 4: Import into Mnemora
 
@@ -260,7 +260,7 @@ After importing, verify the following:
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| **"Invalid file type"** | Extension is not `.zip`, `.quizpkg`, or `.mnemapkg`. | Rename the file to use a supported extension. |
+| **"Invalid file type"** | Extension is not `.zip`, `.quizpkg`, or `.mnemorapkg`. | Rename the file to use a supported extension. |
 | **"No data.json found"** | The archive is missing `data.json` or it is nested too deeply. | Ensure `data.json` is at the archive root or exactly one folder deep. |
 | **Images show as blank or broken** | Image path in Markdown does not match the actual file path in the archive. | Check case sensitivity and relative path. Run the helper script to catch missing files. |
 | **Passage sub-questions do not appear** | The field name `questions` was used instead of `sub_questions`. | Use `sub_questions` for child questions inside a `passage`. |

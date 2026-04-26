@@ -1,4 +1,4 @@
-# ProGuard rules for Mnema
+# ProGuard rules for Mnemora
 
 # ViewModel
 -keepclassmembers class * extends androidx.lifecycle.ViewModel {
@@ -28,8 +28,8 @@
 -keepclassmembers class * implements kotlinx.serialization.Serializable {
     <fields>;
 }
--keepclassmembers class com.hihusky.mnema.data.model.** { *; }
--keepclassmembers class com.hihusky.mnema.data.local.db.entity.** { *; }
+-keepclassmembers class com.hihusky.mnemora.data.model.** { *; }
+-keepclassmembers class com.hihusky.mnemora.data.local.db.entity.** { *; }
 
 # OkHttp
 -dontwarn okhttp3.internal.platform.**
