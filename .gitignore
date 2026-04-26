@@ -1,0 +1,37 @@
+# === Gradle ===
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
+
+# === Local configuration ===
+local.properties
+*.jks
+*.keystore
+key.properties
+
+# === IDEA / Android Studio ===
+.idea/
+*.iml
+.navigation/
+captures/
+
+# === Kotlin ===
+.kotlin/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === AI assistant workdirs ===
+.claude/
+.codex
+.codex/
+.kimi/
+.gemini/
+.cursor/
+.aider/
+
+# === Misc ===
+*.log

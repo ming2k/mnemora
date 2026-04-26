@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Mnema</string>
+    <string name="app_subtitle">优雅的学习伴侣</string>
+
+    <string name="select_question_bank">选择题库</string>
+    <string name="select_mode">选择模式</string>
+    <string name="start_practice">开始练习</string>
+    <string name="exit">退出</string>
+
+    <string name="practice_mode">练习</string>
+    <string name="practice_mode_desc">即时反馈练习题目</string>
+    <string name="review_mode">复习</string>
+    <string name="review_mode_desc">复习错题和标记题</string>
+    <string name="memorize_mode">记忆</string>
+    <string name="memorize_mode_desc">直接显示答案</string>
+    <string name="test_mode">模拟测试</string>
+    <string name="test_mode_desc">随机题目的限时测试</string>
+
+    <string name="question">题目</string>
+    <string name="question_of">/</string>
+    <string name="correct">正确</string>
+    <string name="wrong">错误</string>
+    <string name="accuracy">正确率</string>
+    <string name="mark">标记</string>
+    <string name="unmark">取消标记</string>
+    <string name="previous">上一题</string>
+    <string name="next">下一题</string>
+    <string name="submit">提交</string>
+    <string name="reset">重置</string>
+    <string name="show_analysis">显示解析</string>
+    <string name="hide_analysis">隐藏解析</string>
+    <string name="analysis">解析</string>
+    <string name="answer">答案</string>
+    <string name="ai_explain">AI 解析</string>
+
+    <string name="overview">总览</string>
+    <string name="all">全部</string>
+    <string name="unanswered">未答</string>
+    <string name="answered">已答</string>
+    <string name="marked">标记</string>
+
+    <string name="test_question_count">题目数量</string>
+    <string name="start_test">开始测试</string>
+    <string name="finish_test">完成</string>
+    <string name="test_result">测试结果</string>
+    <string name="total_questions">总数</string>
+    <string name="correct_count">正确</string>
+    <string name="wrong_count">错误</string>
+    <string name="unanswered_count">未答</string>
+    <string name="time_taken">用时</string>
+    <string name="back_to_home">返回首页</string>
+    <string name="view_history">查看历史</string>
+    <string name="show_answer">显示答案</string>
+    <string name="memory_review">记忆复习</string>
+    <string name="complete">完成</string>
+    <string name="no_review_questions">没有需要复习的题目</string>
+    <string name="review_complete">复习完成！</string>
+    <string name="reviewed_count">已复习 %1$d 题</string>
+    <string name="srs_again">重来</string>
+    <string name="srs_hard">困难</string>
+    <string name="srs_good">良好</string>
+    <string name="srs_easy">简单</string>
+    <string name="review">复习</string>
+    <string name="srs_new">新题</string>
+    <string name="srs_learning">学习中</string>
+    <string name="srs_review">待复习</string>
+    <string name="review_mistakes">复习错题</string>
+    <string name="retake_test">重新测试</string>
+    <string name="about">关于</string>
+    <string name="version">版本</string>
+
+    <string name="settings">设置</string>
+    <string name="appearance">外观</string>
+    <string name="theme">主题</string>
+    <string name="theme_system">跟随系统</string>
+    <string name="theme_light">浅色</string>
+    <string name="theme_dark">深色</string>
+    <string name="language">语言</string>
+    <string name="language_chinese">中文</string>
+    <string name="language_english">English</string>
+    <string name="quiz_experience">学习体验</string>
+    <string name="auto_advance">自动下一题</string>
+    <string name="auto_advance_desc">答对后自动进入下一题</string>
+    <string name="show_analysis_option">显示解析</string>
+    <string name="show_analysis_option_desc">答题后显示解析</string>
+    <string name="sound_effects">音效</string>
+    <string name="sound_effects_desc">答题时播放音效</string>
+    <string name="haptic_feedback">触感反馈</string>
+    <string name="haptic_feedback_desc">答题时震动反馈</string>
+    <string name="continuous_feedback">连续反馈</string>
+    <string name="continuous_feedback_desc">连击时升级音效和震动</string>
+    <string name="confetti_effect">彩纸特效</string>
+    <string name="confetti_effect_desc">答对时显示彩纸特效</string>
+    <string name="ai_settings">AI 设置</string>
+    <string name="ai_provider">AI 提供商</string>
+    <string name="ai_api_key">API 密钥</string>
+    <string name="ai_model">模型</string>
+    <string name="ai_chat_scroll_to_bottom">发送后滚动到底部</string>
+    <string name="ai_chat_scroll_to_bottom_desc">发送消息后自动滚动到最新内容</string>
+
+    <string name="all_sections">所有章节</string>
+    <string name="section">章节</string>
+    <string name="questions">题</string>
+
+    <string name="history">历史</string>
+    <string name="no_history">暂无历史记录</string>
+    <string name="clear_history">清空历史</string>
+
+    <string name="loading">加载中…</string>
+    <string name="error">错误</string>
+    <string name="retry">重试</string>
+    <string name="cancel">取消</string>
+    <string name="confirm">确认</string>
+    <string name="save">保存</string>
+    <string name="delete">删除</string>
+    <string name="ok">确定</string>
+    <string name="clear">清空</string>
+
+    <string name="no_questions">暂无题目</string>
+    <string name="no_books">暂无书籍</string>
+    <string name="no_books_desc">导入学习包以开始学习</string>
+    <string name="import_package">导入学习包</string>
+    <string name="import_failed">导入失败</string>
+    <string name="import_success">成功导入 "%1$s"</string>
+    <string name="confirm_delete_book">确定要删除 "%1$s" 吗？</string>
+
+    <string name="ai_key_not_set">未设置</string>
+    <string name="ai_base_url">AI 基础 URL</string>
+    <string name="ai_base_url_default">默认</string>
+    <string name="ai_base_url_hint">https://generativelanguage.googleapis.com</string>
+    <string name="ai_base_url_helper">留空使用默认值</string>
+    <string name="enter_api_key">输入你的 API 密钥</string>
+    <string name="text_selection_menu">文本选择菜单</string>
+    <string name="menu_item_order">菜单项顺序</string>
+    <string name="reorder_menu_items">重新排序菜单项</string>
+
+    <string name="confirm_exit_test">确定要结束测试吗？</string>
+    <string name="reset_progress">重置进度</string>
+    <string name="confirm_reset_progress">确定要重置所有进度吗？此操作不可撤销。</string>
+    <string name="do_reset">重置</string>
+
+    <string name="ai_chat_title">AI 解析</string>
+    <string name="chat_history">聊天记录</string>
+    <string name="new_chat">新对话</string>
+    <string name="chat_input_hint">输入问题…</string>
+    <string name="start_conversation">开始与 AI 对话</string>
+    <string name="no_chat_history">暂无记录</string>
+    <string name="delete_chat">删除对话？</string>
+    <string name="confirm_delete_chat">确定要删除 "%1$s" 吗？</string>
+    <string name="ai_suggestion_1">详细解释这道题</string>
+    <string name="ai_suggestion_2">其他选项为什么错？</string>
+    <string name="ai_suggestion_3">这道题考查什么知识点？</string>
+    <string name="ai_suggestion_4">用更简单的方式解释</string>
+    <string name="ai_suggestion_5">翻译成中文</string>
+
+    <string name="test_history">测试历史</string>
+    <string name="no_test_history">暂无测试历史</string>
+    <string name="clear_history_confirm">确定要清空所有测试历史吗？</string>
+    <string name="total_short">总数</string>
+    <string name="correct_short">正确</string>
+    <string name="wrong_short">错误</string>
+
+    <string name="continue_learning">继续学习</string>
+    <string name="question_x_of_y">第 %1$d / %2$d 题</string>
+    <string name="collections">收藏</string>
+    <string name="details">详情</string>
+    <string name="explanation">解析</string>
+    <string name="note">笔记</string>
+    <string name="send">发送</string>
+    <string name="sections">章节</string>
+    <string name="how_well_recall">掌握程度如何？</string>
+</resources>
