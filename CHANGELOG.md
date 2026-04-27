@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.3] - 2026-04-27
+
+### Added
+- `MnemoraAlertDialog` — Cupertino-style alert dialog used across Practice, Test, BookDetail, and CollectionDetail screens, replacing the default Material3 `AlertDialog`.
+- `ConfettiOverlay` — canvas-based particle animation triggered on a correct answer in Practice mode, controlled by `confettiId` in `PracticeUiState`.
+- `MainViewModel` — root-level ViewModel that exposes theme mode as a reactive `StateFlow`, replacing a one-shot DataStore read in `MainActivity`.
+
+### Changed
+- AI settings (provider, model, API key, system prompt, context flags) now propagate to `AiService` immediately via `syncAiConfig()` on every change; no app restart required.
+- `PracticeViewModel` observes `autoAdvance` reactively in `observePreferences()` and caches it in `PracticeUiState`, consistent with all other preference-driven state.
+
+### Fixed
+- `AiConfig.contextIncludeAnswer` default corrected from `false` to `true`, matching the `SettingsRepository` default; previously the answer could be silently excluded from AI context on first launch before settings loaded.
+- `TestScreen` results card now uses `MnemoraCard` instead of a bare `ElevatedCard`, consistent with the design system.
+- Removed dead `onBack` parameter from `SettingsScreen` and `SettingsScreenContent`; Settings is a bottom-nav root screen and requires no back navigation.
+- Removed stale `import androidx.compose.material3.AlertDialog` from `CollectionDetailScreen`.
+
 ## [0.0.2] - 2026-04-26
 
 ### Added
@@ -69,7 +86,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.2...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/hihusky/mnemora/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/hihusky/mnemora/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/hihusky/mnemora/releases/tag/v0.0.1
 [1.2.2]: https://github.com/hihusky/mnemora/compare/v1.2.1...v1.2.2

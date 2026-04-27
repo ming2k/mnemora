@@ -27,7 +27,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material3.AlertDialog
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -71,6 +71,7 @@ import com.hihusky.mnemora.data.model.QuestionType
 import com.hihusky.mnemora.data.model.UserAnswer
 import com.hihusky.mnemora.ui.components.AiChatPanel
 import com.hihusky.mnemora.ui.components.CollectionSheet
+import com.hihusky.mnemora.ui.components.ConfettiOverlay
 import com.hihusky.mnemora.ui.components.DopamineProgressBar
 import com.hihusky.mnemora.ui.components.NodeSelector
 import com.hihusky.mnemora.ui.components.OverviewSheet
@@ -106,6 +107,7 @@ fun PracticeScreen(
         onCreateChatSession = viewModel::createChatSession,
         onDeleteChatSession = viewModel::deleteChatSession,
         onSendAiMessage = viewModel::sendAiMessage,
+        onConfettiFinished = viewModel::clearConfetti,
         getQuestionStatus = viewModel::getQuestionStatus,
         imageBasePath = viewModel.imageBasePath
     )
@@ -131,6 +133,7 @@ internal fun PracticeScreenContent(
     onCreateChatSession: () -> Unit,
     onDeleteChatSession: () -> Unit,
     onSendAiMessage: (String) -> Unit,
+    onConfettiFinished: () -> Unit,
     getQuestionStatus: (Int) -> QuestionStatus,
     imageBasePath: String?
 ) {
@@ -138,7 +141,6 @@ internal fun PracticeScreenContent(
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val haptic = LocalHapticFeedback.current
-
     var showResetDialog by remember { mutableStateOf(false) }
     var showOverview by remember { mutableStateOf(false) }
     var showAiChat by remember { mutableStateOf(false) }
@@ -157,6 +159,7 @@ internal fun PracticeScreenContent(
         }
     }
 
+    Box(modifier = Modifier.fillMaxSize()) {
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         topBar = {
@@ -351,19 +354,26 @@ internal fun PracticeScreenContent(
         }
     }
 
+    if (uiState.confettiId > 0L) {
+        androidx.compose.runtime.key(uiState.confettiId) {
+            ConfettiOverlay(onFinished = onConfettiFinished)
+        }
+    }
+
+    } // end Box
+
     if (showResetDialog) {
-        AlertDialog(
+        MnemoraAlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Reset Progress", style = MaterialTheme.typography.headlineSmall) },
-            text = { Text("Clear your answer for this question? This cannot be undone.", style = MaterialTheme.typography.bodyMedium) },
-            confirmButton = {
-                TextButton(onClick = { onResetCurrentQuestion(); showResetDialog = false }) {
-                    Text("Reset", color = MaterialTheme.colorScheme.error)
-                }
+            title = "Reset Progress",
+            message = "Clear your answer for this question? This cannot be undone.",
+            confirmText = "Reset",
+            onConfirm = {
+                onResetCurrentQuestion()
+                showResetDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) { Text("Cancel") }
-            }
+            dismissText = "Cancel",
+            isDestructive = true
         )
     }
 
@@ -485,6 +495,7 @@ private fun PracticeScreenContentPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
             imageBasePath = null
         )
@@ -513,6 +524,7 @@ private fun PracticeScreenContentLoadingPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
             imageBasePath = null
         )
@@ -544,6 +556,7 @@ private fun PracticeScreenContentAnsweredPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
             imageBasePath = null
         )

@@ -34,6 +34,10 @@ class SettingsRepository @Inject constructor(
         val AI_LOCATION = stringPreferencesKey("ai_location")
         val AI_API_KEY_CACHE = stringPreferencesKey("ai_api_key_cache")
         val AI_SYSTEM_PROMPT = stringPreferencesKey("ai_system_prompt")
+        val AI_CONTEXT_INCLUDE_STEM = booleanPreferencesKey("ai_context_include_stem")
+        val AI_CONTEXT_INCLUDE_OPTIONS = booleanPreferencesKey("ai_context_include_options")
+        val AI_CONTEXT_INCLUDE_ANSWER = booleanPreferencesKey("ai_context_include_answer")
+        val AI_CONTEXT_INCLUDE_EXPLANATION = booleanPreferencesKey("ai_context_include_explanation")
         val LAST_OPENED_BANK = stringPreferencesKey("last_opened_bank")
         val FIRST_LAUNCH_COMPLETED = booleanPreferencesKey("first_launch_completed")
     }
@@ -65,6 +69,10 @@ class SettingsRepository @Inject constructor(
     // Haptic feedback
     val hapticFeedback: Flow<Boolean> = dataStore.data.map { it[HAPTIC_FEEDBACK] ?: true }
     suspend fun setHapticFeedback(value: Boolean) = dataStore.edit { it[HAPTIC_FEEDBACK] = value }
+
+    // Continuous (streak) feedback
+    val continuousFeedback: Flow<Boolean> = dataStore.data.map { it[CONTINUOUS_FEEDBACK] ?: true }
+    suspend fun setContinuousFeedback(value: Boolean) = dataStore.edit { it[CONTINUOUS_FEEDBACK] = value }
 
     // Confetti effect
     val confettiEffect: Flow<Boolean> = dataStore.data.map { it[CONFETTI_EFFECT] ?: true }
@@ -100,6 +108,18 @@ class SettingsRepository @Inject constructor(
         it[AI_SYSTEM_PROMPT] ?: "You are a professional maritime education expert, skilled at explaining nautical exam questions. Please explain questions and answers in a concise and clear manner."
     }
     suspend fun setAiSystemPrompt(value: String) = dataStore.edit { it[AI_SYSTEM_PROMPT] = value }
+
+    val aiContextIncludeStem: Flow<Boolean> = dataStore.data.map { it[AI_CONTEXT_INCLUDE_STEM] ?: true }
+    suspend fun setAiContextIncludeStem(value: Boolean) = dataStore.edit { it[AI_CONTEXT_INCLUDE_STEM] = value }
+
+    val aiContextIncludeOptions: Flow<Boolean> = dataStore.data.map { it[AI_CONTEXT_INCLUDE_OPTIONS] ?: true }
+    suspend fun setAiContextIncludeOptions(value: Boolean) = dataStore.edit { it[AI_CONTEXT_INCLUDE_OPTIONS] = value }
+
+    val aiContextIncludeAnswer: Flow<Boolean> = dataStore.data.map { it[AI_CONTEXT_INCLUDE_ANSWER] ?: true }
+    suspend fun setAiContextIncludeAnswer(value: Boolean) = dataStore.edit { it[AI_CONTEXT_INCLUDE_ANSWER] = value }
+
+    val aiContextIncludeExplanation: Flow<Boolean> = dataStore.data.map { it[AI_CONTEXT_INCLUDE_EXPLANATION] ?: true }
+    suspend fun setAiContextIncludeExplanation(value: Boolean) = dataStore.edit { it[AI_CONTEXT_INCLUDE_EXPLANATION] = value }
 
     // Last opened bank
     val lastOpenedBank: Flow<String?> = dataStore.data.map { it[LAST_OPENED_BANK] }

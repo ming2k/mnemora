@@ -20,7 +20,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SmartToy
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,7 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -223,35 +222,17 @@ internal fun CollectionDetailScreenContent(
     }
 
     if (showDeleteConfirm) {
-        AlertDialog(
+        MnemoraAlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = {
-                Text(
-                    "Delete Collection?",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            title = "Delete Collection?",
+            message = "Are you sure you want to delete this collection? The questions will not be removed.",
+            confirmText = "Delete",
+            onConfirm = {
+                showDeleteConfirm = false
+                onDeleteCollection()
             },
-            text = {
-                Text(
-                    "Are you sure you want to delete this collection? The questions will not be removed.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showDeleteConfirm = false
-                        onDeleteCollection()
-                    }
-                ) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissText = "Cancel",
+            isDestructive = true
         )
     }
 }

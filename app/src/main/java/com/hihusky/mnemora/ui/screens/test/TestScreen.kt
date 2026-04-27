@@ -21,12 +21,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.CardDefaults
+import com.hihusky.mnemora.ui.components.MnemoraCard
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
@@ -202,35 +201,17 @@ internal fun TestScreenContent(
     }
 
     if (showFinishDialog) {
-        AlertDialog(
+        MnemoraAlertDialog(
             onDismissRequest = { showFinishDialog = false },
-            title = {
-                Text(
-                    "Finish Test",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+            title = "Finish Test",
+            message = "Are you sure you want to finish the test? Unanswered questions will be marked as wrong.",
+            confirmText = "Finish",
+            onConfirm = {
+                onFinish()
+                showFinishDialog = false
             },
-            text = {
-                Text(
-                    "Are you sure you want to finish the test? Unanswered questions will be marked as wrong.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onFinish()
-                        showFinishDialog = false
-                    }
-                ) {
-                    Text("Finish")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showFinishDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissText = "Cancel",
+            isDestructive = true
         )
     }
 }
@@ -263,34 +244,29 @@ private fun TestResults(
         )
         Spacer(modifier = Modifier.height(24.dp))
 
-        ElevatedCard(
+        MnemoraCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = MaterialTheme.shapes.large,
-            colors = CardDefaults.elevatedCardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceContainerLow
-            )
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp)
         ) {
-            Column(modifier = Modifier.padding(20.dp)) {
-                ResultRow("Total", uiState.totalQuestions.toString())
-                HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                ResultRow(
-                    "Correct",
-                    uiState.correctCount.toString(),
-                    MaterialTheme.colorScheme.primary
-                )
-                ResultRow(
-                    "Wrong",
-                    uiState.wrongCount.toString(),
-                    MaterialTheme.colorScheme.error
-                )
-                ResultRow(
-                    "Unanswered",
-                    uiState.unansweredCount.toString(),
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                ResultRow("Time", uiState.formattedTime)
-            }
+            ResultRow("Total", uiState.totalQuestions.toString())
+            HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
+            ResultRow(
+                "Correct",
+                uiState.correctCount.toString(),
+                MaterialTheme.colorScheme.primary
+            )
+            ResultRow(
+                "Wrong",
+                uiState.wrongCount.toString(),
+                MaterialTheme.colorScheme.error
+            )
+            ResultRow(
+                "Unanswered",
+                uiState.unansweredCount.toString(),
+                MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
+            ResultRow("Time", uiState.formattedTime)
         }
 
         Spacer(modifier = Modifier.height(32.dp))

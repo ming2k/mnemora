@@ -9,18 +9,22 @@ Mnemora follows a layered Android architecture using Jetpack Compose for UI, Hil
 ### UI Layer
 
 - **Screens**: One `Screen` + `ViewModel` per feature (Home, Book Detail, Practice, Review, Test, Settings, Collection Detail).
-- **Navigation**: `MnemoraNavHost` routes between screens using Compose Navigation.
-- **Components**: Reusable composables (`QuestionCard`, `AiChatPanel`, `DopamineProgressBar`, etc.) live in `ui/components/`.
+- **Root ViewModel**: `MainViewModel` (injected into `MainActivity`) observes theme mode as a `StateFlow` so the app theme responds to preference changes without restarting.
+- **Navigation**: `MnemoraNavHost` routes between screens using Compose Navigation. The bottom bar shows only for the two root destinations (Library and Settings); `MnemoraBottomNavigation` hides itself on all sub-screens.
+- **Components**: Reusable composables live in `ui/components/`:
+  - `MnemoraAlertDialog` — Cupertino-style confirm/alert dialog used for destructive actions.
+  - `ConfettiOverlay` — canvas-based particle animation for positive reinforcement in Practice mode.
+  - `AiChatPanel`, `DopamineProgressBar`, `QuestionContent`, `MnemoraCard`, and others.
 
 ### Domain Layer
 
 - **Services**: Business logic is encapsulated in domain services:
-  - `SrsService` — Spaced repetition scheduling
-  - `AiService` — AI chat integration (config via `AiConfig` / `StateFlow`)
-  - `FeedbackService` — Answer feedback (sound + haptics)
-  - `CollectionManager` — Collection CRUD facade
-  - `PackageService` — ZIP extraction and import orchestration
-  - `BookImporter` — Transactional DB insertion during import (owns the `importData` pipeline)
+  - `SrsService` — Spaced repetition scheduling (SM-2 variant).
+  - `AiService` — AI chat integration. Config is a `MutableStateFlow<AiConfig>` updated synchronously by `SettingsViewModel` via `syncAiConfig()` whenever any AI setting changes; no restart required.
+  - `FeedbackService` — Answer feedback (sound + haptics), streak tracking.
+  - `CollectionManager` — Collection CRUD facade.
+  - `PackageService` — ZIP extraction and import orchestration.
+  - `BookImporter` — Transactional DB insertion during import (owns the `importData` pipeline).
 
 ### Data Layer
 

@@ -177,7 +177,7 @@ fun MnemoraSettingsDropdownRow(
 }
 
 @Composable
-private fun MnemoraSettingsRow(
+fun MnemoraSettingsRow(
     headline: String,
     supporting: String?,
     icon: ImageVector?,

@@ -157,7 +157,7 @@ fun MnemoraNavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen()
         }
     }
 }

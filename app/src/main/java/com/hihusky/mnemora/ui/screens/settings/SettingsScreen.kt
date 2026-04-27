@@ -1,10 +1,14 @@
 package com.hihusky.mnemora.ui.screens.settings
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -15,16 +19,22 @@ import androidx.compose.runtime.remember
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Contrast
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.MusicNote
+import androidx.compose.material.icons.filled.Equalizer
 import androidx.compose.material.icons.filled.SmartButton
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.SettingsBrightness
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -34,6 +44,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.hihusky.mnemora.ui.components.MnemoraSettingsRow
 import com.hihusky.mnemora.ui.components.MnemoraSettingsDivider
 import com.hihusky.mnemora.ui.components.MnemoraSettingsDropdownRow
 import com.hihusky.mnemora.ui.components.MnemoraSettingsGroup
@@ -55,6 +67,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.clickable
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
@@ -62,26 +76,31 @@ import com.hihusky.mnemora.ui.theme.MnemoraTheme
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBack: () -> Unit,
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
     SettingsScreenContent(
         uiState = uiState,
-        onBack = onBack,
         onThemeModeSelect = { viewModel.setThemeMode(it) },
+        onLocaleSelect = { viewModel.setLocale(it) },
         onAutoAdvanceChange = { viewModel.setAutoAdvance(it) },
         onShowAnalysisChange = { viewModel.setShowAnalysis(it) },
         onSoundEffectsChange = { viewModel.setSoundEffects(it) },
         onHapticFeedbackChange = { viewModel.setHapticFeedback(it) },
+        onContinuousFeedbackChange = { viewModel.setContinuousFeedback(it) },
         onConfettiEffectChange = { viewModel.setConfettiEffect(it) },
         onShowPracticeProgressChange = { viewModel.setShowPracticeProgress(it) },
         onAiProviderSelect = { viewModel.setAiProvider(it) },
         onAiApiKeyChange = { viewModel.setAiApiKey(it) },
         onAiProjectIdChange = { viewModel.setAiProjectId(it) },
         onAiLocationChange = { viewModel.setAiLocation(it) },
-        onAiModelChange = { viewModel.setAiModel(it) }
+        onAiModelChange = { viewModel.setAiModel(it) },
+        onAiContextIncludeStemChange = { viewModel.setAiContextIncludeStem(it) },
+        onAiContextIncludeOptionsChange = { viewModel.setAiContextIncludeOptions(it) },
+        onAiContextIncludeAnswerChange = { viewModel.setAiContextIncludeAnswer(it) },
+        onAiContextIncludeExplanationChange = { viewModel.setAiContextIncludeExplanation(it) },
+        onAiSystemPromptChange = { viewModel.setAiSystemPrompt(it) }
     )
 }
 
@@ -89,19 +108,25 @@ fun SettingsScreen(
 @Composable
 internal fun SettingsScreenContent(
     uiState: SettingsUiState,
-    onBack: () -> Unit,
     onThemeModeSelect: (Int) -> Unit,
+    onLocaleSelect: (String) -> Unit,
     onAutoAdvanceChange: (Boolean) -> Unit,
     onShowAnalysisChange: (Boolean) -> Unit,
     onShowPracticeProgressChange: (Boolean) -> Unit,
     onSoundEffectsChange: (Boolean) -> Unit,
     onHapticFeedbackChange: (Boolean) -> Unit,
+    onContinuousFeedbackChange: (Boolean) -> Unit,
     onConfettiEffectChange: (Boolean) -> Unit,
     onAiProviderSelect: (String) -> Unit,
     onAiApiKeyChange: (String) -> Unit,
     onAiProjectIdChange: (String) -> Unit,
     onAiLocationChange: (String) -> Unit,
     onAiModelChange: (String) -> Unit,
+    onAiContextIncludeStemChange: (Boolean) -> Unit,
+    onAiContextIncludeOptionsChange: (Boolean) -> Unit,
+    onAiContextIncludeAnswerChange: (Boolean) -> Unit,
+    onAiContextIncludeExplanationChange: (Boolean) -> Unit,
+    onAiSystemPromptChange: (String) -> Unit,
 ) {
     val scrollState = rememberScrollState()
     val scrollFraction by remember {
@@ -126,6 +151,12 @@ internal fun SettingsScreenContent(
             MnemoraSettingsSectionHeader(title = "Appearance")
             val themeOptions = listOf("System" to Icons.Outlined.SettingsBrightness, "Light" to Icons.Outlined.LightMode, "Dark" to Icons.Outlined.DarkMode)
             val themeIndex = uiState.themeMode.coerceIn(0, 2)
+            val localeOptions = listOf(
+                "" to "System Default",
+                "en" to "English",
+                "zh-CN" to "简体中文"
+            )
+            val localeIndex = localeOptions.indexOfFirst { it.first == uiState.locale }.coerceAtLeast(0)
             MnemoraSettingsGroup {
                 MnemoraSettingsDropdownRow(
                     headline = "Theme",
@@ -134,6 +165,15 @@ internal fun SettingsScreenContent(
                     options = themeOptions.map { it.first },
                     selectedIndex = themeIndex,
                     onSelect = { onThemeModeSelect(it) }
+                )
+                MnemoraSettingsDivider()
+                MnemoraSettingsDropdownRow(
+                    headline = "Language",
+                    supporting = localeOptions[localeIndex].second,
+                    icon = Icons.Default.Language,
+                    options = localeOptions.map { it.second },
+                    selectedIndex = localeIndex,
+                    onSelect = { onLocaleSelect(localeOptions[it].first) }
                 )
             }
 
@@ -172,6 +212,17 @@ internal fun SettingsScreenContent(
                     checked = uiState.soundEffects,
                     onCheckedChange = { onSoundEffectsChange(it) }
                 )
+                if (uiState.soundEffects) {
+                    MnemoraSettingsDivider()
+                    MnemoraSettingsSwitchRow(
+                        headline = "Streak Sounds",
+                        supporting = "Escalating audio as you answer correctly in a row",
+                        icon = Icons.Default.Equalizer,
+                        checked = uiState.continuousFeedback,
+                        onCheckedChange = { onContinuousFeedbackChange(it) },
+                        modifier = Modifier.padding(start = MnemoraSpacing.Large)
+                    )
+                }
                 MnemoraSettingsDivider()
                 MnemoraSettingsSwitchRow(
                     headline = "Haptic Feedback",
@@ -217,6 +268,21 @@ internal fun SettingsScreenContent(
                 ?: aiProviders.first().first
 
             MnemoraSettingsGroup {
+                // Provider
+                MnemoraSettingsDropdownRow(
+                    headline = "Provider",
+                    supporting = currentProviderDisplay,
+                    icon = Icons.Default.Speed,
+                    options = aiProviders.map { it.first },
+                    selectedIndex = aiProviders.indexOfFirst { it.second == uiState.aiProvider }
+                        .coerceAtLeast(0),
+                    onSelect = { index ->
+                        onAiProviderSelect(aiProviders[index].second)
+                    }
+                )
+
+                MnemoraSettingsDivider()
+
                 // Model
                 MnemoraSettingsDropdownRow(
                     headline = "Model",
@@ -228,21 +294,6 @@ internal fun SettingsScreenContent(
                         .coerceAtLeast(0),
                     onSelect = { index ->
                         onAiModelChange(aiModels[index].second)
-                    }
-                )
-
-                MnemoraSettingsDivider()
-
-                // Provider
-                MnemoraSettingsDropdownRow(
-                    headline = "Provider",
-                    supporting = currentProviderDisplay,
-                    icon = Icons.Default.Speed,
-                    options = aiProviders.map { it.first },
-                    selectedIndex = aiProviders.indexOfFirst { it.second == uiState.aiProvider }
-                        .coerceAtLeast(0),
-                    onSelect = { index ->
-                        onAiProviderSelect(aiProviders[index].second)
                     }
                 )
 
@@ -330,6 +381,75 @@ internal fun SettingsScreenContent(
 
             }
 
+            HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(top = 20.dp))
+
+            // ── AI Chat Context ──
+            MnemoraSettingsSectionHeader(title = "AI Chat Context")
+            
+            MnemoraSettingsGroup {
+                MnemoraSettingsSwitchRow(
+                    headline = "Include Stem",
+                    supporting = "Add the question text (题干) to context",
+                    checked = uiState.aiContextIncludeStem,
+                    onCheckedChange = onAiContextIncludeStemChange
+                )
+                MnemoraSettingsDivider()
+                MnemoraSettingsSwitchRow(
+                    headline = "Include Options",
+                    supporting = "Add the multiple choices (选项) to context",
+                    checked = uiState.aiContextIncludeOptions,
+                    onCheckedChange = onAiContextIncludeOptionsChange
+                )
+                MnemoraSettingsDivider()
+                MnemoraSettingsSwitchRow(
+                    headline = "Include Answer",
+                    supporting = "Add the correct answer (答案) to context",
+                    checked = uiState.aiContextIncludeAnswer,
+                    onCheckedChange = onAiContextIncludeAnswerChange
+                )
+                MnemoraSettingsDivider()
+                MnemoraSettingsSwitchRow(
+                    headline = "Include Explanation",
+                    supporting = "Add the existing explanation (解释) to context",
+                    checked = uiState.aiContextIncludeExplanation,
+                    onCheckedChange = onAiContextIncludeExplanationChange
+                )
+                
+                MnemoraSettingsDivider()
+                
+                // System Prompt
+                val promptFocus = remember { BringIntoViewRequester() }
+                val scope = rememberCoroutineScope()
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium)
+                ) {
+                    Text(
+                        text = "System Prompt",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                    OutlinedTextField(
+                        value = uiState.aiSystemPrompt,
+                        onValueChange = onAiSystemPromptChange,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .bringIntoViewRequester(promptFocus)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    scope.launch { delay(300); promptFocus.bringIntoView() }
+                                }
+                            },
+                        textStyle = MaterialTheme.typography.bodyMedium,
+                        shape = MaterialTheme.shapes.medium,
+                        colors = settingsTextFieldColors()
+                    )
+                }
+            }
+
             androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(24.dp))
         }
     }
@@ -352,19 +472,25 @@ private fun SettingsScreenPreviewDefault() {
     MnemoraTheme {
         SettingsScreenContent(
             uiState = SettingsUiState(),
-            onBack = {},
             onThemeModeSelect = {},
+            onLocaleSelect = {},
             onAutoAdvanceChange = {},
             onShowAnalysisChange = {},
             onShowPracticeProgressChange = {},
             onSoundEffectsChange = {},
             onHapticFeedbackChange = {},
+            onContinuousFeedbackChange = {},
             onConfettiEffectChange = {},
             onAiProviderSelect = {},
             onAiApiKeyChange = {},
             onAiProjectIdChange = {},
             onAiLocationChange = {},
-            onAiModelChange = {}
+            onAiModelChange = {},
+            onAiContextIncludeStemChange = {},
+            onAiContextIncludeOptionsChange = {},
+            onAiContextIncludeAnswerChange = {},
+            onAiContextIncludeExplanationChange = {},
+            onAiSystemPromptChange = {}
         )
     }
 }
@@ -380,24 +506,31 @@ private fun SettingsScreenPreviewModified() {
                 showAnalysis = false,
                 soundEffects = false,
                 hapticFeedback = true,
+                continuousFeedback = false,
                 confettiEffect = false,
                 aiProvider = "kimi",
                 aiApiKey = "sk-test123",
                 aiModel = "kimi-k2.6"
             ),
-            onBack = {},
             onThemeModeSelect = {},
+            onLocaleSelect = {},
             onAutoAdvanceChange = {},
             onShowAnalysisChange = {},
             onShowPracticeProgressChange = {},
             onSoundEffectsChange = {},
             onHapticFeedbackChange = {},
+            onContinuousFeedbackChange = {},
             onConfettiEffectChange = {},
             onAiProviderSelect = {},
             onAiApiKeyChange = {},
             onAiProjectIdChange = {},
             onAiLocationChange = {},
-            onAiModelChange = {}
+            onAiModelChange = {},
+            onAiContextIncludeStemChange = {},
+            onAiContextIncludeOptionsChange = {},
+            onAiContextIncludeAnswerChange = {},
+            onAiContextIncludeExplanationChange = {},
+            onAiSystemPromptChange = {}
         )
     }
 }

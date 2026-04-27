@@ -1,5 +1,7 @@
 package com.hihusky.mnemora.ui.screens.settings
 
+import androidx.appcompat.app.AppCompatDelegate
+import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hihusky.mnemora.data.repository.SettingsRepository
@@ -46,6 +48,10 @@ class SettingsViewModel @Inject constructor(
             val projectId = settingsRepository.aiProjectId.first()
             val location = settingsRepository.aiLocation.first()
             val systemPrompt = settingsRepository.aiSystemPrompt.first()
+            val includeStem = settingsRepository.aiContextIncludeStem.first()
+            val includeOptions = settingsRepository.aiContextIncludeOptions.first()
+            val includeAnswer = settingsRepository.aiContextIncludeAnswer.first()
+            val includeExplanation = settingsRepository.aiContextIncludeExplanation.first()
 
             _uiState.update {
                 it.copy(
@@ -56,6 +62,7 @@ class SettingsViewModel @Inject constructor(
                     showPracticeProgress = settingsRepository.showPracticeProgress.first(),
                     soundEffects = settingsRepository.soundEffects.first(),
                     hapticFeedback = settingsRepository.hapticFeedback.first(),
+                    continuousFeedback = settingsRepository.continuousFeedback.first(),
                     confettiEffect = settingsRepository.confettiEffect.first(),
                     testQuestionCount = settingsRepository.testQuestionCount.first(),
                     aiProvider = provider,
@@ -63,7 +70,11 @@ class SettingsViewModel @Inject constructor(
                     aiModel = model,
                     aiProjectId = projectId,
                     aiLocation = location,
-                    aiSystemPrompt = systemPrompt
+                    aiSystemPrompt = systemPrompt,
+                    aiContextIncludeStem = includeStem,
+                    aiContextIncludeOptions = includeOptions,
+                    aiContextIncludeAnswer = includeAnswer,
+                    aiContextIncludeExplanation = includeExplanation
                 )
             }
 
@@ -73,7 +84,11 @@ class SettingsViewModel @Inject constructor(
                 model = model,
                 projectId = projectId,
                 location = location,
-                systemPrompt = systemPrompt
+                systemPrompt = systemPrompt,
+                contextIncludeStem = includeStem,
+                contextIncludeOptions = includeOptions,
+                contextIncludeAnswer = includeAnswer,
+                contextIncludeExplanation = includeExplanation
             ))
         }
     }
@@ -105,7 +120,11 @@ class SettingsViewModel @Inject constructor(
             model = state.aiModel,
             projectId = state.aiProjectId,
             location = state.aiLocation,
-            systemPrompt = state.aiSystemPrompt
+            systemPrompt = state.aiSystemPrompt,
+            contextIncludeStem = state.aiContextIncludeStem,
+            contextIncludeOptions = state.aiContextIncludeOptions,
+            contextIncludeAnswer = state.aiContextIncludeAnswer,
+            contextIncludeExplanation = state.aiContextIncludeExplanation
         ))
     }
 
@@ -117,6 +136,12 @@ class SettingsViewModel @Inject constructor(
     fun setLocale(value: String) {
         viewModelScope.launch { settingsRepository.setLocale(value) }
         _uiState.update { it.copy(locale = value) }
+        val localeList = if (value.isEmpty()) {
+            LocaleListCompat.getEmptyLocaleList()
+        } else {
+            LocaleListCompat.forLanguageTags(value)
+        }
+        AppCompatDelegate.setApplicationLocales(localeList)
     }
 
     fun setAutoAdvance(value: Boolean) {
@@ -142,6 +167,11 @@ class SettingsViewModel @Inject constructor(
     fun setHapticFeedback(value: Boolean) {
         viewModelScope.launch { settingsRepository.setHapticFeedback(value) }
         _uiState.update { it.copy(hapticFeedback = value) }
+    }
+
+    fun setContinuousFeedback(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setContinuousFeedback(value) }
+        _uiState.update { it.copy(continuousFeedback = value) }
     }
 
     fun setConfettiEffect(value: Boolean) {
@@ -211,6 +241,30 @@ class SettingsViewModel @Inject constructor(
         syncAiConfig(_uiState.value)
     }
 
+    fun setAiContextIncludeStem(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setAiContextIncludeStem(value) }
+        _uiState.update { it.copy(aiContextIncludeStem = value) }
+        syncAiConfig(_uiState.value)
+    }
+
+    fun setAiContextIncludeOptions(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setAiContextIncludeOptions(value) }
+        _uiState.update { it.copy(aiContextIncludeOptions = value) }
+        syncAiConfig(_uiState.value)
+    }
+
+    fun setAiContextIncludeAnswer(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setAiContextIncludeAnswer(value) }
+        _uiState.update { it.copy(aiContextIncludeAnswer = value) }
+        syncAiConfig(_uiState.value)
+    }
+
+    fun setAiContextIncludeExplanation(value: Boolean) {
+        viewModelScope.launch { settingsRepository.setAiContextIncludeExplanation(value) }
+        _uiState.update { it.copy(aiContextIncludeExplanation = value) }
+        syncAiConfig(_uiState.value)
+    }
+
     private fun isProviderCompatible(model: String, provider: String): Boolean {
         val lowerModel = model.lowercase()
         return when {
@@ -238,6 +292,7 @@ data class SettingsUiState(
     val showPracticeProgress: Boolean = true,
     val soundEffects: Boolean = true,
     val hapticFeedback: Boolean = true,
+    val continuousFeedback: Boolean = true,
     val confettiEffect: Boolean = true,
     val testQuestionCount: Int = 50,
     val aiProvider: String = "gemini",
@@ -245,5 +300,9 @@ data class SettingsUiState(
     val aiModel: String = "gemini-3.1-flash-lite-preview",
     val aiProjectId: String = "",
     val aiLocation: String = "",
-    val aiSystemPrompt: String = "You are a helpful study assistant. Please explain questions and answers in a concise and clear manner."
+    val aiSystemPrompt: String = "You are a professional maritime education expert, skilled at explaining nautical exam questions. Please explain questions and answers in a concise and clear manner.",
+    val aiContextIncludeStem: Boolean = true,
+    val aiContextIncludeOptions: Boolean = true,
+    val aiContextIncludeAnswer: Boolean = true,
+    val aiContextIncludeExplanation: Boolean = true
 )

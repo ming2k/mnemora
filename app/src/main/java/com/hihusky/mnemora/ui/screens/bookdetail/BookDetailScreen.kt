@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FolderOpen
-import androidx.compose.material3.AlertDialog
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -217,27 +217,17 @@ internal fun BookDetailScreenContent(
     }
 
     if (showDeleteDialog && book != null) {
-        AlertDialog(
+        MnemoraAlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Delete package?") },
-            text = {
-                Text(
-                    "\"${book.displayName}\" and all of its questions, collections, records, progress, and AI chats will be permanently removed."
-                )
+            title = "Delete package?",
+            message = "\"${book.displayName}\" and all of its questions, collections, records, progress, and AI chats will be permanently removed.",
+            confirmText = "Delete",
+            onConfirm = {
+                showDeleteDialog = false
+                onDeleteBook()
             },
-            confirmButton = {
-                TextButton(onClick = {
-                    showDeleteDialog = false
-                    onDeleteBook()
-                }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Cancel")
-                }
-            }
+            dismissText = "Cancel",
+            isDestructive = true
         )
     }
 

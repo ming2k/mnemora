@@ -29,7 +29,11 @@ data class AiConfig(
     val model: String = "gemini-3.1-flash-lite-preview",
     val projectId: String = "",
     val location: String = "",
-    val systemPrompt: String = "You are a helpful study assistant. Please explain questions and answers in a concise and clear manner."
+    val systemPrompt: String = "You are a helpful study assistant. Please explain questions and answers in a concise and clear manner.",
+    val contextIncludeStem: Boolean = true,
+    val contextIncludeOptions: Boolean = true,
+    val contextIncludeAnswer: Boolean = true,
+    val contextIncludeExplanation: Boolean = false
 )
 
 @Singleton
@@ -54,13 +58,14 @@ class AiService @Inject constructor() {
         questionStem: String,
         options: Map<String, String>,
         correctAnswer: String,
+        explanation: String? = null,
         userQuestion: String? = null,
         history: List<ChatMessage> = emptyList()
     ): Flow<String> = flow {
         val cfg = _config.value
         if (cfg.apiKey.isBlank()) throw IllegalStateException("AI service not configured. Please set API key.")
 
-        val context = buildQuestionContext(questionStem, options, correctAnswer)
+        val context = buildQuestionContext(questionStem, options, correctAnswer, explanation, cfg)
         val effectiveHistory = buildEffectiveHistory(history, userQuestion)
 
         when (cfg.provider.lowercase()) {
@@ -327,19 +332,33 @@ class AiService @Inject constructor() {
     private fun buildQuestionContext(
         questionStem: String,
         options: Map<String, String>,
-        correctAnswer: String
+        correctAnswer: String,
+        explanation: String?,
+        cfg: AiConfig
     ): String {
         val sb = StringBuilder()
-        sb.appendLine("Question:")
-        sb.appendLine(questionStem)
-        sb.appendLine()
-        sb.appendLine("Options:")
-        options.forEach { (k, v) ->
-            sb.appendLine("$k. $v")
+        if (cfg.contextIncludeStem) {
+            sb.appendLine("Question:")
+            sb.appendLine(questionStem)
+            sb.appendLine()
         }
-        sb.appendLine()
-        sb.appendLine("Correct answer: $correctAnswer")
-        return sb.toString()
+        if (cfg.contextIncludeOptions && options.isNotEmpty()) {
+            sb.appendLine("Options:")
+            options.forEach { (k, v) ->
+                sb.appendLine("$k. $v")
+            }
+            sb.appendLine()
+        }
+        if (cfg.contextIncludeAnswer) {
+            sb.appendLine("Correct answer: $correctAnswer")
+            sb.appendLine()
+        }
+        if (cfg.contextIncludeExplanation && !explanation.isNullOrBlank()) {
+            sb.appendLine("Explanation:")
+            sb.appendLine(explanation)
+            sb.appendLine()
+        }
+        return sb.toString().trimEnd()
     }
 
     private fun buildEffectiveHistory(

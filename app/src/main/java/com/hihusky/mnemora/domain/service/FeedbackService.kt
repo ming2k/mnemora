@@ -51,9 +51,9 @@ class FeedbackService @Inject constructor(
         if (!soundEnabled) return
         val level = if (continuousFeedback) {
             when {
-                streak >= 10 -> 6
-                streak >= 7 -> 5
-                streak >= 5 -> 4
+                streak >= 6 -> 6
+                streak >= 5 -> 5
+                streak >= 4 -> 4
                 streak >= 3 -> 3
                 streak >= 2 -> 2
                 else -> 1

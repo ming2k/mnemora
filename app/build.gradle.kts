@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -27,8 +28,16 @@ tasks.register<Copy>("syncRoomSchemas") {
     into("$buildDir/generated/room_schemas/room_schemas")
 }
 
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }.all {
-    dependsOn("syncRoomSchemas")
+tasks.configureEach {
+    if (name != "syncRoomSchemas" &&
+        (name.contains("Lint", ignoreCase = true) ||
+         (name.startsWith("merge") && name.endsWith("Assets")))) {
+        dependsOn("syncRoomSchemas")
+    }
+}
+
+val localProps = Properties().apply {
+    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
 }
 
 android {
@@ -50,6 +59,15 @@ android {
         }
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = localProps.getProperty("signing.storeFile")?.let { rootProject.file(it) }
+            storePassword = localProps.getProperty("signing.storePassword")
+            keyAlias = localProps.getProperty("signing.keyAlias")
+            keyPassword = localProps.getProperty("signing.keyPassword")
+        }
+    }
+
     buildTypes {
         debug {
             applicationIdSuffix = ".debug"
@@ -57,6 +75,7 @@ android {
             isMinifyEnabled = false
         }
         release {
+            signingConfig = signingConfigs.getByName("release")
             resValue("string", "app_name", "Mnemora")
             isMinifyEnabled = true
             isShrinkResources = true
@@ -86,6 +105,7 @@ dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
 
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2025.12.00")

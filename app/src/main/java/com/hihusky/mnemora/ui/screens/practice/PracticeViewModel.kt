@@ -23,7 +23,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -51,6 +50,7 @@ class PracticeViewModel @Inject constructor(
         private set
 
     private var aiJob: Job? = null
+    private var confettiJob: Job? = null
     private var currentSessionId: Long = -1L
     private var effectiveBookId: Int = navBookId
 
@@ -135,17 +135,42 @@ class PracticeViewModel @Inject constructor(
     }
 
     init {
-        observePracticeProgressPreference()
+        observePreferences()
         loadBook()
         _uiState.update {
             it.copy(aiModel = aiService.config.value.model, aiProvider = aiService.config.value.provider)
         }
     }
 
-    private fun observePracticeProgressPreference() {
+    private fun observePreferences() {
         viewModelScope.launch {
             settingsRepository.showPracticeProgress.collect { showProgress ->
                 _uiState.update { it.copy(showProgressBar = showProgress) }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.soundEffects.collect { enabled ->
+                feedbackService.soundEnabled = enabled
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.hapticFeedback.collect { enabled ->
+                feedbackService.hapticEnabled = enabled
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.continuousFeedback.collect { enabled ->
+                feedbackService.continuousFeedback = enabled
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.confettiEffect.collect { enabled ->
+                _uiState.update { it.copy(confettiEnabled = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            settingsRepository.autoAdvance.collect { enabled ->
+                _uiState.update { it.copy(autoAdvance = enabled) }
             }
         }
     }
@@ -298,13 +323,20 @@ class PracticeViewModel @Inject constructor(
             if (isCorrect) {
                 feedbackService.incrementStreak()
                 feedbackService.playCorrect()
+                if (_uiState.value.confettiEnabled) {
+                    _uiState.update { it.copy(confettiId = System.currentTimeMillis()) }
+                    confettiJob?.cancel()
+                    confettiJob = launch {
+                        delay(2800)
+                        _uiState.update { it.copy(confettiId = 0L) }
+                    }
+                }
             } else {
                 feedbackService.resetStreak()
                 feedbackService.playWrong()
             }
 
-            val autoAdvance = settingsRepository.autoAdvance.first()
-            if (isCorrect && autoAdvance && state.currentIndex < state.questions.size - 1) {
+            if (isCorrect && state.autoAdvance && state.currentIndex < state.questions.size - 1) {
                 delay(1000)
                 nextQuestion()
             }
@@ -455,6 +487,7 @@ class PracticeViewModel @Inject constructor(
                         questionStem = question.content,
                         options = question.choices.associate { it.key to it.content },
                         correctAnswer = question.answer,
+                        explanation = question.explanation,
                         userQuestion = message,
                         history = history
                     )
@@ -487,6 +520,11 @@ class PracticeViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun clearConfetti() {
+        confettiJob?.cancel()
+        _uiState.update { it.copy(confettiId = 0L) }
     }
 
     fun cancelAiChat() {
@@ -527,6 +565,9 @@ data class PracticeUiState(
     val availableCollections: List<com.hihusky.mnemora.data.model.Collection> = emptyList(),
     val questionCollectionIds: Set<Int> = emptySet(),
     val showProgressBar: Boolean = true,
+    val confettiEnabled: Boolean = true,
+    val confettiId: Long = 0L,
+    val autoAdvance: Boolean = true,
     val aiModel: String = "",
     val aiProvider: String = ""
 ) {

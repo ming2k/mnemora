@@ -32,7 +32,7 @@ import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.ui.res.painterResource
 import com.hihusky.mnemora.R
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.AlertDialog
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -125,6 +125,7 @@ fun HomeScreen(
 
     HomeScreenContent(
         uiState = uiState,
+        snackbarHostState = snackbarHostState,
         onNavigateToPractice = onNavigateToPractice,
         onNavigateToReview = onNavigateToReview,
         onNavigateToTest = onNavigateToTest,
@@ -141,6 +142,7 @@ fun HomeScreen(
 @Composable
 internal fun HomeScreenContent(
     uiState: HomeUiState,
+    snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onNavigateToPractice: (Int, String?) -> Unit,
     onNavigateToReview: (Int) -> Unit,
     onNavigateToTest: (Int, Long?) -> Unit,
@@ -165,6 +167,7 @@ internal fun HomeScreenContent(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (isSearchActive) {
                 LibrarySearchTopBar(
@@ -255,11 +258,25 @@ internal fun HomeScreenContent(
     if (uiState.importStatus != null) {
         val importStatus = uiState.importStatus
         val importProgress = uiState.importProgress
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text("Importing", style = MaterialTheme.typography.headlineSmall) },
-            text = {
-                Column {
+        Dialog(onDismissRequest = { }) {
+            androidx.compose.material3.Surface(
+                modifier = Modifier.width(270.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shadowElevation = 8.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "Importing",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(16.dp))
                     if (importProgress != null) {
                         LinearProgressIndicator(
                             progress = { importProgress.coerceIn(0f, 1f) },
@@ -271,12 +288,13 @@ internal fun HomeScreenContent(
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
                         importStatus,
-                        style = MaterialTheme.typography.bodyMedium
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
                     )
                 }
-            },
-            confirmButton = {}
-        )
+            }
+        }
     }
 
 }

@@ -5,7 +5,8 @@ A tour of the source tree for new contributors.
 ```
 app/src/main/java/com/hihusky/mnemora/
 ├── MainActivity.kt              # Single Activity entry point
-├── MnemoraApplication.kt          # Application class + Hilt entry
+├── MainViewModel.kt             # Root ViewModel: reactive theme mode for MainActivity
+├── MnemoraApplication.kt        # Application class + Hilt entry
 ├── di/
 │   ├── AppModule.kt             # App-level bindings
 │   └── DatabaseModule.kt        # Room database provider

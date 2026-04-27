@@ -15,6 +15,13 @@ Mnemora is a focused study tool. The interface should feel calm, legible, and ta
 - Follow an Apple-like system palette: soft neutral backgrounds, white cards, crisp text, and saturated colors only for interaction or feedback.
 - Borrow from Figma mobile's product feel: flat, minimal, content-first screens where content and actions matter more than chrome.
 
+### Dialogs & Modals (Apple-like)
+- Use custom Cupertino-inspired dialogs (`MnemoraAlertDialog`) instead of the default Android `AlertDialog`.
+- **Aesthetics:** Fixed width (usually 270dp), `14.dp` rounded corners, and neutral `surfaceContainerHighest` backgrounds without excessive padding or colored containers.
+- **Typography:** Bold, centered titles. Regular, centered body text.
+- **Actions:** Borderless text buttons separated by thin (0.5dp) dividers. Primary actions use the `primary` color; destructive actions use the `error` color.
+- **Reasoning:** Prevents the "plastic" or oversized look of default Material 3 dialogs, maintaining a premium and professional feel.
+
 ---
 
 ## Source Of Truth
@@ -35,22 +42,20 @@ Shared UI components live in `app/src/main/java/com/hihusky/mnemora/ui/component
 
 ### Bottom Navigation (top-level screens)
 
-Four items only: **Library**, **Collections**, **Records**, **Settings**.
+Two items: **Library** and **Settings**.
+
+Collections and Records are scoped to a package and live under the BookDetail flow, not the global bottom bar.
 
 Icon rules:
 - Use a distinct filled/outlined pair for each item.
 - The active indicator is a 2dp horizontal line above the icon (not a background pill).
 - Selected icon: filled variant + `onSurface` color. Unselected: outlined variant + `onSurfaceVariant`.
-- Do **not** use icons that overlap in meaning with other tabs.
-  - `History` (clock) is not allowed — it looks identical to other time icons. Use `BarChart` for Records.
-  - `Settings` uses the gear. Nothing else should use a gear.
+- `Settings` uses the gear. Nothing else should use a gear.
 
 Current icon assignments:
 | Tab | Outlined | Filled |
 |---|---|---|
 | Library | `AutoMirrored.Outlined.MenuBook` | `AutoMirrored.Filled.MenuBook` |
-| Collections | `Outlined.FolderOpen` | `Filled.FolderOpen` |
-| Records | `Outlined.BarChart` | `Filled.BarChart` |
 | Settings | `Outlined.Settings` | `Filled.Settings` |
 
 ---
@@ -61,7 +66,7 @@ There are two top bar patterns. Use them based on screen type:
 
 ### `MnemoraCollapsibleTopAppBar` — top-level screens only
 
-Use for the four bottom-nav roots (Library, Collections, Records, Settings).
+Use for the two bottom-nav roots (Library, Settings).
 
 - Title left-aligned at 22sp → center-aligned at 18sp as the user scrolls.
 - Height animates from `MnemoraSize.TopBarExpanded` (56dp) to `MnemoraSize.TopBarCollapsed` (48dp).
@@ -72,11 +77,11 @@ Use for the four bottom-nav roots (Library, Collections, Records, Settings).
 
 ```kotlin
 MnemoraCollapsibleTopAppBar(
-    title = "Collections",
+    title = "Library",
     scrollFraction = scrollFraction,
     actions = {
-        IconButton(onClick = { /* new */ }) {
-            Icon(Icons.Default.Add, contentDescription = "New collection")
+        IconButton(onClick = { /* import */ }) {
+            Icon(Icons.Default.UploadFile, contentDescription = "Import package")
         }
     }
 )
@@ -364,4 +369,5 @@ MnemoraSettingsGroup {
 5. **Actions on top-level screens go in the collapsible top bar's `actions` slot — not in a FAB.**
 6. **Sub-screen top bars use `MnemoraTopAppBar`, title style `titleMedium`, left-aligned.**
 7. **Grouped rows on any screen (not just Settings) use `MnemoraSettingsGroup + MnemoraSettingsDivider`.**
-8. Update this document when introducing a new design rule or reusable UI primitive.
+8. **Alert and confirm dialogs use `MnemoraAlertDialog`, never `AlertDialog` from Material3.**
+9. Update this document when introducing a new design rule or reusable UI primitive.
