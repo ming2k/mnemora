@@ -389,28 +389,28 @@ internal fun SettingsScreenContent(
             MnemoraSettingsGroup {
                 MnemoraSettingsSwitchRow(
                     headline = "Include Stem",
-                    supporting = "Add the question text (题干) to context",
+                    supporting = "Send the question stem to the AI",
                     checked = uiState.aiContextIncludeStem,
                     onCheckedChange = onAiContextIncludeStemChange
                 )
                 MnemoraSettingsDivider()
                 MnemoraSettingsSwitchRow(
                     headline = "Include Options",
-                    supporting = "Add the multiple choices (选项) to context",
+                    supporting = "Send the answer choices to the AI",
                     checked = uiState.aiContextIncludeOptions,
                     onCheckedChange = onAiContextIncludeOptionsChange
                 )
                 MnemoraSettingsDivider()
                 MnemoraSettingsSwitchRow(
                     headline = "Include Answer",
-                    supporting = "Add the correct answer (答案) to context",
+                    supporting = "Send the correct answer to the AI",
                     checked = uiState.aiContextIncludeAnswer,
                     onCheckedChange = onAiContextIncludeAnswerChange
                 )
                 MnemoraSettingsDivider()
                 MnemoraSettingsSwitchRow(
                     headline = "Include Explanation",
-                    supporting = "Add the existing explanation (解释) to context",
+                    supporting = "Send the existing explanation to the AI",
                     checked = uiState.aiContextIncludeExplanation,
                     onCheckedChange = onAiContextIncludeExplanationChange
                 )
@@ -436,13 +436,13 @@ internal fun SettingsScreenContent(
                         onValueChange = onAiSystemPromptChange,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp)
                             .bringIntoViewRequester(promptFocus)
                             .onFocusChanged { focusState ->
                                 if (focusState.isFocused) {
                                     scope.launch { delay(300); promptFocus.bringIntoView() }
                                 }
                             },
+                        minLines = 4,
                         textStyle = MaterialTheme.typography.bodyMedium,
                         shape = MaterialTheme.shapes.medium,
                         colors = settingsTextFieldColors()

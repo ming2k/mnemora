@@ -446,6 +446,15 @@ class DatabaseRepository @Inject constructor(
             .mapValues { it.value.first() }
     }
 
+    suspend fun getActiveSessionsPerMode(bookIds: List<Int>): Map<Int, Map<String, StudySessionEntity>> {
+        if (bookIds.isEmpty()) return emptyMap()
+        return db.studySessionDao().getActiveSessionsForBooks(bookIds)
+            .groupBy { it.bookId }
+            .mapValues { (_, sessions) ->
+                sessions.groupBy { it.mode }.mapValues { it.value.first() }
+            }
+    }
+
     fun getAllSessions(): Flow<List<StudySessionEntity>> {
         return db.studySessionDao().getAllSessions()
     }

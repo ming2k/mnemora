@@ -89,7 +89,7 @@ MnemoraCollapsibleTopAppBar(
 
 ### `MnemoraTopAppBar` — sub-screens (back navigation)
 
-Use for all screens reached by navigating from a root: BookDetail, CollectionDetail, Practice, Review, Test.
+Use for all screens reached by navigating from a root: BookDetail, CollectionDetail, Practice, Test.
 
 - Title left-aligned. Style: `MaterialTheme.typography.titleMedium`.
 - Back arrow on the left (`Icons.AutoMirrored.Filled.ArrowBack`).
@@ -279,6 +279,10 @@ MnemoraSettingsGroup {
 
 ## Component Rules
 
+### Disclosure arrows
+
+Use `Icons.AutoMirrored.Filled.KeyboardArrowRight` (`>` chevron) for disclosure affordances in list rows and cards (navigating to a detail screen). Do **not** use `Icons.AutoMirrored.Filled.ArrowForward` for disclosure — that icon is reserved for directional navigation (next question, next step). Chevron = "there is more here"; arrow = "move in this direction".
+
 ### Cards
 - `MnemoraCard` for book cards, session cards, collection summaries, metric chips.
 - `surfaceContainerLow` unless the card needs more or less prominence.
@@ -344,10 +348,38 @@ MnemoraSettingsGroup {
 
 ## Sheets
 
-- `ModalBottomSheet` for temporary selectors, overview grids, AI analysis, creation flows.
+- `MnemoraBottomSheet` for all bottom sheets — temporary selectors, overview grids, AI analysis, creation flows. Do **not** use `ModalBottomSheet` directly in screens or components.
 - Creation sheets should collect **name + purpose (description)**. Prompting for purpose forces intent articulation, which improves follow-through.
 - Cap sheet content with `MnemoraSize.SheetMaxHeight`.
 - Sheet bottom padding: `XXLarge`.
+
+### Drag handle
+
+Always replace the default M3 drag handle with a compact custom pill:
+
+```kotlin
+dragHandle = {
+    Box(
+        modifier = Modifier
+            .padding(top = 6.dp, bottom = 4.dp)
+            .size(width = 32.dp, height = 4.dp)
+            .background(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(2.dp)
+            )
+    )
+}
+```
+
+Total handle height: 14dp (vs the 48dp M3 default). Do not use the M3 default `BottomSheetDefaults.DragHandle` — it wastes vertical space.
+
+### Mode selection — no bottom sheet on home screen
+
+Do not use a `ModalBottomSheet` to let the user pick a study mode before starting. Expose Practice / Test / Preview as direct action buttons on the `BookCard`. The sheet is reserved for contextual in-session actions (node selector, question overview, collections, AI chat).
+
+### Color restraint in sheets
+
+Do not use `primaryContainer` as the background for every icon in a sheet. Use `surfaceContainerHighest` with `onSurfaceVariant` tint. Reserve `primary` blue for selected/active states only.
 
 ---
 

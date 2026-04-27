@@ -31,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -38,7 +39,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
@@ -78,6 +79,7 @@ fun AiChatPanel(
     onSessionSelected: (Int) -> Unit,
     onCreateSession: () -> Unit,
     onSendMessage: (String) -> Unit,
+    onCancelMessage: () -> Unit = {},
     onDismiss: () -> Unit,
     onDeleteSession: () -> Unit = {},
     modelLabel: String = "",
@@ -128,7 +130,7 @@ fun AiChatPanel(
         )
     }
 
-    ModalBottomSheet(
+    MnemoraBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
@@ -184,7 +186,8 @@ fun AiChatPanel(
 
             AiChatInputBar(
                 isLoading = isLoading,
-                onSendMessage = onSendMessage
+                onSendMessage = onSendMessage,
+                onCancelMessage = onCancelMessage
             )
         }
     }
@@ -480,7 +483,8 @@ private fun ThinkingRow() {
 @Composable
 private fun AiChatInputBar(
     isLoading: Boolean,
-    onSendMessage: (String) -> Unit
+    onSendMessage: (String) -> Unit,
+    onCancelMessage: () -> Unit
 ) {
     var input by remember { mutableStateOf("") }
 
@@ -526,11 +530,15 @@ private fun AiChatInputBar(
                 )
             )
             FilledIconButton(
-                onClick = ::submit,
-                enabled = input.isNotBlank() && !isLoading,
+                onClick = if (isLoading) onCancelMessage else ::submit,
+                enabled = isLoading || input.isNotBlank(),
                 modifier = Modifier.size(44.dp)
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                if (isLoading) {
+                    Icon(Icons.Default.Stop, contentDescription = "Stop")
+                } else {
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Send")
+                }
             }
         }
     }

@@ -22,7 +22,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Clear
@@ -34,8 +34,6 @@ import com.hihusky.mnemora.R
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.CircularProgressIndicator
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraCollapsibleTopAppBar
 import androidx.compose.material3.FloatingActionButton
@@ -60,10 +58,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -87,7 +83,6 @@ import java.util.Calendar
 @Composable
 fun HomeScreen(
     onNavigateToPractice: (Int, String?) -> Unit,
-    onNavigateToReview: (Int) -> Unit,
     onNavigateToTest: (Int, Long?) -> Unit,
     onNavigateToPreview: (Int) -> Unit,
     onNavigateToBookDetail: (Int) -> Unit,
@@ -127,7 +122,6 @@ fun HomeScreen(
         uiState = uiState,
         snackbarHostState = snackbarHostState,
         onNavigateToPractice = onNavigateToPractice,
-        onNavigateToReview = onNavigateToReview,
         onNavigateToTest = onNavigateToTest,
         onNavigateToPreview = onNavigateToPreview,
         onNavigateToBookDetail = onNavigateToBookDetail,
@@ -144,7 +138,6 @@ internal fun HomeScreenContent(
     uiState: HomeUiState,
     snackbarHostState: SnackbarHostState = remember { SnackbarHostState() },
     onNavigateToPractice: (Int, String?) -> Unit,
-    onNavigateToReview: (Int) -> Unit,
     onNavigateToTest: (Int, Long?) -> Unit,
     onNavigateToPreview: (Int) -> Unit,
     onNavigateToBookDetail: (Int) -> Unit,
@@ -241,10 +234,9 @@ internal fun HomeScreenContent(
                         ) { book ->
                             BookCard(
                                 book = book,
-                                activeSession = uiState.activeSessions[book.id],
+                                practiceSession = uiState.activeSessions[book.id]?.get("Practice"),
                                 onPractice = { onNavigateToPractice(book.id, null) },
-                                onReview = { onNavigateToReview(book.id) },
-                                onTest = { sessionId -> onNavigateToTest(book.id, sessionId) },
+                                onTest = { onNavigateToTest(book.id, null) },
                                 onPreview = { onNavigateToPreview(book.id) },
                                 onDetail = { onNavigateToBookDetail(book.id) }
                             )
@@ -427,190 +419,105 @@ private fun EmptyErrorState(message: String, onRetry: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 private fun BookCard(
     book: Book,
-    activeSession: StudySessionEntity?,
+    practiceSession: StudySessionEntity?,
     onPractice: () -> Unit,
-    onReview: () -> Unit,
-    onTest: (Long?) -> Unit,
+    onTest: () -> Unit,
     onPreview: () -> Unit,
     onDetail: () -> Unit
 ) {
-    var showModeSheet by remember { mutableStateOf(false) }
-    val sheetState = rememberModalBottomSheetState()
-
     MnemoraCard(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small)
     ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                MnemoraBookAvatar(
-                    bookId = book.id,
-                    displayName = book.displayName,
-                    iconName = book.icon
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            MnemoraBookAvatar(
+                bookId = book.id,
+                displayName = book.displayName,
+                iconName = book.icon
+            )
+            Spacer(modifier = Modifier.width(MnemoraSpacing.Large))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = book.displayName,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-                Spacer(modifier = Modifier.width(MnemoraSpacing.Large))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = book.displayName,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "${book.totalQuestions} questions",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                IconButton(onClick = onDetail) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Open package",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = "${book.totalQuestions} questions",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-
-            Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
-
-            if (activeSession != null) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small)
-                ) {
-                    val resumeAction = {
-                        when (activeSession.mode) {
-                            "Practice" -> onPractice()
-                            "Review" -> onReview()
-                            "Test" -> onTest(activeSession.id)
-                            "Preview" -> onPreview()
-                            else -> onPractice()
-                        }
-                    }
-                    androidx.compose.material3.FilledTonalButton(
-                        onClick = resumeAction,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Resume ${activeSession.mode}")
-                    }
-                    androidx.compose.material3.OutlinedButton(
-                        onClick = { showModeSheet = true },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("New")
-                    }
-                }
-            } else {
-                androidx.compose.material3.FilledTonalButton(
-                    onClick = { showModeSheet = true },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_practice),
-                        contentDescription = null,
-                        modifier = Modifier.size(MnemoraSize.IconSmall)
-                    )
-                    Spacer(modifier = Modifier.width(MnemoraSpacing.Small))
-                    Text("Start")
-                }
+            IconButton(onClick = onDetail) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = "Open package",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
-    }
+        }
 
-    if (showModeSheet) {
-        ModalBottomSheet(
-            onDismissRequest = { showModeSheet = false },
-            sheetState = sheetState
+        Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
+
+        // Primary action: Practice or Resume
+        androidx.compose.material3.FilledTonalButton(
+            onClick = onPractice,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            Icon(
+                painter = painterResource(R.drawable.ic_practice),
+                contentDescription = null,
+                modifier = Modifier.size(MnemoraSize.IconSmall)
+            )
+            Spacer(modifier = Modifier.width(MnemoraSpacing.Small))
+            if (practiceSession != null && practiceSession.totalQuestions > 0) {
+                Text("Resume")
+                Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "Choose a mode",
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    text = "${practiceSession.currentIndex.coerceAtMost(practiceSession.totalQuestions)}/${practiceSession.totalQuestions}",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                Text(
-                    text = "Select how you want to study this book",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 12.dp)
+            } else {
+                Text("Practice")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+
+        // Secondary actions: Test + Preview
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small)
+        ) {
+            androidx.compose.material3.OutlinedButton(
+                onClick = onTest,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_test),
+                    contentDescription = null,
+                    modifier = Modifier.size(MnemoraSize.IconSmall)
                 )
-
-                val modes = listOf(
-                    Triple(
-                        "Practice",
-                        "Practice with instant feedback and explanations",
-                        R.drawable.ic_practice to onPractice
-                    ),
-                    Triple(
-                        "Review",
-                        "Review due questions based on your memory curve",
-                        R.drawable.ic_review to onReview
-                    ),
-                    Triple(
-                        "Test",
-                        "Simulate exam conditions with a timer",
-                        R.drawable.ic_test to { onTest(null) }
-                    ),
-                    Triple(
-                        "Preview",
-                        "Quickly scan all questions without scoring",
-                        R.drawable.ic_preview to onPreview
-                    )
+                Spacer(modifier = Modifier.width(MnemoraSpacing.XSmall))
+                Text("Test")
+            }
+            androidx.compose.material3.OutlinedButton(
+                onClick = onPreview,
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_preview),
+                    contentDescription = null,
+                    modifier = Modifier.size(MnemoraSize.IconSmall)
                 )
-
-                modes.forEach { (title, desc, pair) ->
-                    val (iconRes, onClick) = pair
-                    androidx.compose.material3.Surface(
-                        shape = MaterialTheme.shapes.medium,
-                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp)
-                            .clickable {
-                                showModeSheet = false
-                                onClick()
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .background(
-                                        color = MaterialTheme.colorScheme.primaryContainer,
-                                        shape = MaterialTheme.shapes.small
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    painter = painterResource(iconRes),
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.width(16.dp))
-                            Column {
-                                Text(
-                                    text = title,
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = desc,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.width(MnemoraSpacing.XSmall))
+                Text("Preview")
             }
         }
     }
@@ -629,7 +536,7 @@ private fun HomeScreenLoadingPreview() {
         HomeScreenContent(
             uiState = HomeUiState(isLoading = true),
             onNavigateToPractice = { _, _ -> },
-            onNavigateToReview = {},
+
             onNavigateToTest = { _, _ -> },
             onNavigateToPreview = {},
             onNavigateToBookDetail = {},
@@ -648,7 +555,7 @@ private fun HomeScreenEmptyPreview() {
         HomeScreenContent(
             uiState = HomeUiState(),
             onNavigateToPractice = { _, _ -> },
-            onNavigateToReview = {},
+
             onNavigateToTest = { _, _ -> },
             onNavigateToPreview = {},
             onNavigateToBookDetail = {},
@@ -684,7 +591,7 @@ private fun HomeScreenWithBooksPreview() {
                 )
             ),
             onNavigateToPractice = { _, _ -> },
-            onNavigateToReview = {},
+
             onNavigateToTest = { _, _ -> },
             onNavigateToPreview = {},
             onNavigateToBookDetail = {},

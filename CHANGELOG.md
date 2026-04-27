@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.4] - 2026-04-27
+
+### Added
+- `MnemoraBottomSheet` wrapper — encapsulates the compact drag handle (14dp total vs. Material3 default 48dp); replaces all six direct `ModalBottomSheet` usages across the app so drag handle style is defined in one place.
+- `CollectionSheet` — added missing `@Preview` composable.
+- `getActiveSessionsPerMode` in `DatabaseRepository` — per-mode active session lookup used by the home screen resume logic.
+- Design system documentation: `MnemoraBottomSheet` usage rule, disclosure arrow convention, drag handle spec, mode-selection placement rule.
+
+### Changed
+- **Home screen UX redesign** — book cards now expose Practice, Test, and Preview as direct action buttons; the mode-selection bottom sheet is removed. Practice shows "Resume N/Total" when a session is active; Test always starts a fresh session (multi-instance). The ambiguous "New" button is gone.
+- **Preview mode shows answers by default** — Preview is now a read-only browse mode; correct answers are always visible, answer submission is blocked, and Undo is disabled.
+- **Bottom sheet color restraint** — icon containers in sheets now use `surfaceContainerHighest` + `onSurfaceVariant` tint instead of `primaryContainer`, avoiding blue overuse.
+- **Disclosure icons** — list-row and card disclosure affordances switched from `ArrowForward` to `KeyboardArrowRight` (chevron `>`).
+- AI context setting descriptions reworded from mixed Chinese/English copy to clean English.
+
+### Removed
+- **Review mode** — `ReviewScreen`, `ReviewViewModel`, and the `review/{bookId}` route are removed. Practice filters (wrong/marked/srs_due) already cover the same workflows.
+
 ## [0.0.3] - 2026-04-27
 
 ### Added
@@ -86,7 +104,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.3...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.4...HEAD
+[0.0.4]: https://github.com/hihusky/mnemora/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/hihusky/mnemora/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/hihusky/mnemora/compare/v0.0.1...v0.0.2
 [0.0.1]: https://github.com/hihusky/mnemora/releases/tag/v0.0.1

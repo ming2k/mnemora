@@ -37,7 +37,7 @@ class HomeViewModel @Inject constructor(
         booksCollectorJob?.cancel()
         booksCollectorJob = viewModelScope.launch {
             dbRepository.getBooksFlow(_uiState.value.searchQuery).collect { books ->
-                val sessions = dbRepository.getActiveSessionsForBooks(books.map { it.id })
+                val sessions = dbRepository.getActiveSessionsPerMode(books.map { it.id })
                 _uiState.update {
                     it.copy(books = books, activeSessions = sessions, isLoading = false, error = null)
                 }
@@ -55,7 +55,7 @@ class HomeViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
                 val books = dbRepository.getBooks()
-                val sessions = dbRepository.getActiveSessionsForBooks(books.map { it.id })
+                val sessions = dbRepository.getActiveSessionsPerMode(books.map { it.id })
                 _uiState.update { it.copy(books = books, activeSessions = sessions, isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
@@ -119,7 +119,7 @@ class HomeViewModel @Inject constructor(
 
 data class HomeUiState(
     val books: List<Book> = emptyList(),
-    val activeSessions: Map<Int, StudySessionEntity> = emptyMap(),
+    val activeSessions: Map<Int, Map<String, StudySessionEntity>> = emptyMap(),
     val searchQuery: String = "",
     val isLoading: Boolean = false,
     val error: String? = null,

@@ -11,14 +11,13 @@ import com.hihusky.mnemora.ui.screens.bookdetail.BookDetailScreen
 import com.hihusky.mnemora.ui.screens.collectiondetail.CollectionDetailScreen
 import com.hihusky.mnemora.ui.screens.home.HomeScreen
 import com.hihusky.mnemora.ui.screens.practice.PracticeScreen
-import com.hihusky.mnemora.ui.screens.review.ReviewScreen
+
 import com.hihusky.mnemora.ui.screens.settings.SettingsScreen
 import com.hihusky.mnemora.ui.screens.test.TestScreen
 
 object Routes {
     const val HOME = "home"
     const val PRACTICE = "practice/{bookId}?nodeId={nodeId}&collectionId={collectionId}&filter={filter}"
-    const val REVIEW = "review/{bookId}"
     const val TEST = "test/{bookId}?sessionId={sessionId}"
     const val PREVIEW = "preview/{bookId}?mode={mode}"
     const val SETTINGS = "settings"
@@ -39,7 +38,6 @@ object Routes {
         if (params.isNotEmpty()) route += "?" + params.joinToString("&")
         return route
     }
-    fun review(bookId: Int) = "review/$bookId"
     fun test(bookId: Int, sessionId: Long? = null): String {
         return if (sessionId != null) "test/$bookId?sessionId=$sessionId" else "test/$bookId"
     }
@@ -63,13 +61,11 @@ fun MnemoraNavHost(
                 onNavigateToPractice = { bookId, nodeId ->
                     navController.navigate(Routes.practice(bookId, nodeId))
                 },
-                onNavigateToReview = { navController.navigate(Routes.review(it)) },
                 onNavigateToTest = { bookId, sessionId ->
                     navController.navigate(Routes.test(bookId, sessionId))
                 },
                 onNavigateToPreview = { navController.navigate(Routes.preview(it)) },
-                onNavigateToBookDetail = { navController.navigate(Routes.bookDetail(it)) },
-
+                onNavigateToBookDetail = { navController.navigate(Routes.bookDetail(it)) }
             )
         }
         composable(
@@ -91,12 +87,6 @@ fun MnemoraNavHost(
             )
         ) {
             PracticeScreen(onBack = { navController.popBackStack() })
-        }
-        composable(
-            route = Routes.REVIEW,
-            arguments = listOf(navArgument("bookId") { type = NavType.IntType })
-        ) {
-            ReviewScreen(onBack = { navController.popBackStack() })
         }
         composable(
             route = Routes.TEST,
@@ -137,7 +127,6 @@ fun MnemoraNavHost(
                 onResumeSession = { bookId, mode, sessionId ->
                     when (mode) {
                         "Practice" -> navController.navigate(Routes.practice(bookId))
-                        "Review" -> navController.navigate(Routes.review(bookId))
                         "Test" -> navController.navigate(Routes.test(bookId, sessionId))
                         "Preview" -> navController.navigate(Routes.preview(bookId))
                         else -> navController.navigate(Routes.practice(bookId))

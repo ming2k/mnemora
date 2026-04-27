@@ -107,6 +107,7 @@ fun PracticeScreen(
         onCreateChatSession = viewModel::createChatSession,
         onDeleteChatSession = viewModel::deleteChatSession,
         onSendAiMessage = viewModel::sendAiMessage,
+        onCancelAiMessage = viewModel::cancelAiChat,
         onSaveChatScrollPosition = viewModel::saveChatScrollPosition,
         onConfettiFinished = viewModel::clearConfetti,
         getQuestionStatus = viewModel::getQuestionStatus,
@@ -134,6 +135,7 @@ internal fun PracticeScreenContent(
     onCreateChatSession: () -> Unit,
     onDeleteChatSession: () -> Unit,
     onSendAiMessage: (String) -> Unit,
+    onCancelAiMessage: () -> Unit,
     onSaveChatScrollPosition: (Int, Int) -> Unit,
     onConfettiFinished: () -> Unit,
     getQuestionStatus: (Int) -> QuestionStatus,
@@ -253,7 +255,7 @@ internal fun PracticeScreenContent(
 
                     IconButton(
                         onClick = { showResetDialog = true },
-                        enabled = uiState.currentUserAnswer != null
+                        enabled = uiState.currentUserAnswer != null && !uiState.isPreviewMode
                     ) {
                         Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Reset answer")
                     }
@@ -343,8 +345,8 @@ internal fun PracticeScreenContent(
                             QuestionContent(
                                 question = question,
                                 selectedOption = if (isCurrent) answer?.selected else null,
-                                showAnswer = isCurrent && answer != null,
-                                onOptionSelected = if (isCurrent && answer == null) {
+                                showAnswer = isCurrent && (answer != null || uiState.isPreviewMode),
+                                onOptionSelected = if (isCurrent && answer == null && !uiState.isPreviewMode) {
                                     { onAnswerQuestion(it) }
                                 } else null,
                                 imageBasePath = imageBasePath
@@ -394,11 +396,12 @@ internal fun PracticeScreenContent(
             sessions = uiState.chatSessions,
             currentSessionId = uiState.currentChatSessionId,
             history = uiState.chatHistory,
-            isLoading = uiState.isAiLoading,
-            streamingResponse = uiState.aiStreamingResponse,
+            isLoading = uiState.isCurrentSessionLoading,
+            streamingResponse = uiState.currentStreamingResponse,
             onSessionSelected = onSwitchChatSession,
             onCreateSession = onCreateChatSession,
             onSendMessage = onSendAiMessage,
+            onCancelMessage = onCancelAiMessage,
             onDismiss = { showAiChat = false },
             onDeleteSession = onDeleteChatSession,
             modelLabel = uiState.aiModel,
@@ -500,6 +503,7 @@ private fun PracticeScreenContentPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onCancelAiMessage = {},
             onSaveChatScrollPosition = { _, _ -> },
             onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
@@ -530,6 +534,7 @@ private fun PracticeScreenContentLoadingPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onCancelAiMessage = {},
             onSaveChatScrollPosition = { _, _ -> },
             onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
@@ -563,6 +568,7 @@ private fun PracticeScreenContentAnsweredPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onCancelAiMessage = {},
             onSaveChatScrollPosition = { _, _ -> },
             onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },

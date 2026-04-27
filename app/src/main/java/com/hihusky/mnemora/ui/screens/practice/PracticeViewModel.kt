@@ -43,13 +43,13 @@ class PracticeViewModel @Inject constructor(
     private val filter: String = savedStateHandle["filter"] ?: ""
     private val mode: String = savedStateHandle["mode"] ?: "Practice"
 
-    private val _uiState = MutableStateFlow(PracticeUiState())
+    private val _uiState = MutableStateFlow(PracticeUiState(isPreviewMode = mode == "Preview"))
     val uiState: StateFlow<PracticeUiState> = _uiState.asStateFlow()
 
     var imageBasePath: String? = null
         private set
 
-    private var aiJob: Job? = null
+    private val aiJobs = mutableMapOf<Int, Job>()
     private var confettiJob: Job? = null
     private var currentSessionId: Long = -1L
     private var effectiveBookId: Int = navBookId
@@ -486,13 +486,17 @@ class PracticeViewModel @Inject constructor(
 
             val userMsg = ChatMessage(text = message, isUser = true)
             dbRepository.saveChatMessage(sessionId, userMsg)
-            _uiState.update {
-                it.copy(chatHistory = it.chatHistory + userMsg, isAiLoading = true, aiError = null)
+            _uiState.update { state ->
+                state.copy(
+                    chatHistory = state.chatHistory + userMsg,
+                    aiLoadingSessions = state.aiLoadingSessions + sessionId
+                )
             }
 
-            aiJob?.cancel()
+            // Cancel any in-flight request for this same session before starting a new one
+            aiJobs[sessionId]?.cancel()
             val history = _uiState.value.chatHistory
-            aiJob = launch {
+            aiJobs[sessionId] = launch {
                 try {
                     val stream = aiService.explain(
                         questionStem = question.content,
@@ -505,29 +509,32 @@ class PracticeViewModel @Inject constructor(
                     var response = ""
                     stream.collect { chunk ->
                         response += chunk
-                        _uiState.update { it.copy(aiStreamingResponse = response) }
+                        _uiState.update { state ->
+                            state.copy(aiStreamingResponses = state.aiStreamingResponses + (sessionId to response))
+                        }
                     }
                     val botMsg = ChatMessage(text = response, isUser = false)
                     dbRepository.saveChatMessage(sessionId, botMsg)
-                    _uiState.update {
-                        it.copy(
-                            chatHistory = it.chatHistory + botMsg,
-                            aiStreamingResponse = "",
-                            isAiLoading = false
+                    _uiState.update { state ->
+                        state.copy(
+                            chatHistory = if (state.currentChatSessionId == sessionId) state.chatHistory + botMsg else state.chatHistory,
+                            aiStreamingResponses = state.aiStreamingResponses - sessionId,
+                            aiLoadingSessions = state.aiLoadingSessions - sessionId
                         )
                     }
                 } catch (e: Exception) {
-                    val errorMsg = "Error: ${e.message}"
-                    val botMsg = ChatMessage(text = errorMsg, isUser = false)
+                    if (e is kotlinx.coroutines.CancellationException) throw e
+                    val botMsg = ChatMessage(text = "Error: ${e.message}", isUser = false)
                     dbRepository.saveChatMessage(sessionId, botMsg)
-                    _uiState.update {
-                        it.copy(
-                            chatHistory = it.chatHistory + botMsg,
-                            aiStreamingResponse = "",
-                            isAiLoading = false,
-                            aiError = e.message
+                    _uiState.update { state ->
+                        state.copy(
+                            chatHistory = if (state.currentChatSessionId == sessionId) state.chatHistory + botMsg else state.chatHistory,
+                            aiStreamingResponses = state.aiStreamingResponses - sessionId,
+                            aiLoadingSessions = state.aiLoadingSessions - sessionId
                         )
                     }
+                } finally {
+                    aiJobs.remove(sessionId)
                 }
             }
         }
@@ -539,9 +546,15 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun cancelAiChat() {
-        aiJob?.cancel()
-        aiJob = null
-        _uiState.update { it.copy(isAiLoading = false, aiStreamingResponse = "") }
+        val sessionId = _uiState.value.currentChatSessionId ?: return
+        aiJobs[sessionId]?.cancel()
+        aiJobs.remove(sessionId)
+        _uiState.update { state ->
+            state.copy(
+                aiLoadingSessions = state.aiLoadingSessions - sessionId,
+                aiStreamingResponses = state.aiStreamingResponses - sessionId
+            )
+        }
     }
 
     //endregion
@@ -570,9 +583,8 @@ data class PracticeUiState(
     val chatSessions: List<ChatSession> = emptyList(),
     val currentChatSessionId: Int? = null,
     val chatHistory: List<ChatMessage> = emptyList(),
-    val isAiLoading: Boolean = false,
-    val aiStreamingResponse: String = "",
-    val aiError: String? = null,
+    val aiLoadingSessions: Set<Int> = emptySet(),
+    val aiStreamingResponses: Map<Int, String> = emptyMap(),
     val chatScrollIndex: Int = 0,
     val chatScrollOffset: Int = 0,
     val availableCollections: List<com.hihusky.mnemora.data.model.Collection> = emptyList(),
@@ -582,7 +594,8 @@ data class PracticeUiState(
     val confettiId: Long = 0L,
     val autoAdvance: Boolean = true,
     val aiModel: String = "",
-    val aiProvider: String = ""
+    val aiProvider: String = "",
+    val isPreviewMode: Boolean = false
 ) {
     val currentQuestion: Question?
         get() = questions.getOrNull(currentIndex)
@@ -593,4 +606,8 @@ data class PracticeUiState(
     val totalQuestions: Int get() = questions.size
     val progress: Float
         get() = if (totalQuestions > 0) (currentIndex + 1).toFloat() / totalQuestions else 0f
+    val isCurrentSessionLoading: Boolean
+        get() = currentChatSessionId?.let { it in aiLoadingSessions } ?: false
+    val currentStreamingResponse: String
+        get() = currentChatSessionId?.let { aiStreamingResponses[it] } ?: ""
 }

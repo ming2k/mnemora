@@ -27,7 +27,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
@@ -44,9 +43,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.hihusky.mnemora.data.model.Collection
+import com.hihusky.mnemora.data.model.CollectionBehavior
+import com.hihusky.mnemora.data.model.CollectionKind
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
+import com.hihusky.mnemora.ui.theme.MnemoraTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -63,20 +66,9 @@ fun CollectionSheet(
     var isCreating by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
-    ModalBottomSheet(
+    MnemoraBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(vertical = 8.dp)
-                    .size(width = 32.dp, height = 4.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(2.dp)
-                    )
-            )
-        }
+        sheetState = sheetState
     ) {
         Column(modifier = Modifier.padding(bottom = MnemoraSpacing.XLarge)) {
             Text(
@@ -205,5 +197,26 @@ private fun CollectionRow(
                 modifier = Modifier.size(18.dp)
             )
         }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Preview(showBackground = true)
+@Composable
+private fun CollectionSheetPreview() {
+    MnemoraTheme {
+        CollectionSheet(
+            collections = listOf(
+                Collection(id = 1, bookId = 1, kind = CollectionKind.Custom,
+                    behavior = CollectionBehavior.Manual, name = "Exam Prep", createdAt = 0L),
+                Collection(id = 2, bookId = 1, kind = CollectionKind.Custom,
+                    behavior = CollectionBehavior.Manual, name = "Wrong Answers", createdAt = 0L)
+            ),
+            questionCollectionIds = setOf(1),
+            onToggle = {},
+            onCreate = {},
+            onDelete = {},
+            onDismiss = {}
+        )
     }
 }

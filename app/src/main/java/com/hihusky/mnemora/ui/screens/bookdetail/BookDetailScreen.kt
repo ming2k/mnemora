@@ -30,7 +30,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
+import com.hihusky.mnemora.ui.components.MnemoraBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -468,7 +468,7 @@ private fun CreateCollectionSheet(
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    MnemoraBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
                 .padding(horizontal = MnemoraSpacing.XLarge)
