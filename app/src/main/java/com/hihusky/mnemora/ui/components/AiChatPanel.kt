@@ -46,10 +46,12 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -80,19 +82,50 @@ fun AiChatPanel(
     onDeleteSession: () -> Unit = {},
     modelLabel: String = "",
     providerLabel: String = "",
+    initialScrollIndex: Int = 0,
+    initialScrollOffset: Int = 0,
+    onSaveScrollPosition: (Int, Int) -> Unit = { _, _ -> },
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
-    val listState = rememberLazyListState()
+    val listState = rememberLazyListState(initialScrollIndex, initialScrollOffset)
     val visibleMessages = history + listOfNotNull(
         streamingResponse.takeIf { it.isNotBlank() }?.let {
-            ChatMessage(text = it, isUser = false)
+            // Use timestamp=0L so this item has a stable key across recompositions
+            ChatMessage(text = it, isUser = false, timestamp = 0L)
         }
     )
+    var showDeleteConfirm by remember { mutableStateOf(false) }
 
-    LaunchedEffect(visibleMessages.size, streamingResponse) {
+    // Only scroll when a new message is added, not on every streaming chunk
+    LaunchedEffect(visibleMessages.size) {
         if (visibleMessages.isNotEmpty()) {
             listState.animateScrollToItem(visibleMessages.lastIndex)
         }
+    }
+
+    val currentOnSaveScrollPosition by rememberUpdatedState(onSaveScrollPosition)
+    DisposableEffect(Unit) {
+        onDispose {
+            currentOnSaveScrollPosition(
+                listState.firstVisibleItemIndex,
+                listState.firstVisibleItemScrollOffset
+            )
+        }
+    }
+
+    if (showDeleteConfirm) {
+        MnemoraAlertDialog(
+            title = "Delete Chat",
+            message = "This conversation will be permanently deleted.",
+            confirmText = "Delete",
+            dismissText = "Cancel",
+            isDestructive = true,
+            onDismissRequest = { showDeleteConfirm = false },
+            onConfirm = {
+                showDeleteConfirm = false
+                onDeleteSession()
+            }
+        )
     }
 
     ModalBottomSheet(
@@ -105,7 +138,7 @@ fun AiChatPanel(
                 currentSessionId = currentSessionId,
                 onSessionSelected = onSessionSelected,
                 onCreateSession = onCreateSession,
-                onDeleteSession = onDeleteSession,
+                onDeleteSession = { showDeleteConfirm = true },
                 modelLabel = modelLabel,
                 providerLabel = providerLabel
             )
@@ -135,8 +168,11 @@ fun AiChatPanel(
                     }
                 }
 
-                items(visibleMessages) { message ->
-                    ChatMessageBlock(message = message)
+                items(visibleMessages, key = { it.timestamp }) { message ->
+                    ChatMessageBlock(
+                        message = message,
+                        isStreaming = streamingResponse.isNotBlank() && message.timestamp == 0L
+                    )
                 }
 
                 if (isLoading && streamingResponse.isBlank()) {
@@ -334,11 +370,11 @@ private fun SuggestionPill(
 }
 
 @Composable
-private fun ChatMessageBlock(message: ChatMessage) {
+private fun ChatMessageBlock(message: ChatMessage, isStreaming: Boolean = false) {
     if (message.isUser) {
         UserMessage(message.text)
     } else {
-        AssistantMessage(message.text)
+        AssistantMessage(text = message.text, isStreaming = isStreaming)
     }
 }
 
@@ -378,7 +414,7 @@ private fun UserMessage(text: String) {
 }
 
 @Composable
-private fun AssistantMessage(text: String) {
+private fun AssistantMessage(text: String, isStreaming: Boolean = false) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.Start
@@ -396,15 +432,27 @@ private fun AssistantMessage(text: String) {
             color = MaterialTheme.colorScheme.surfaceContainerLowest,
             modifier = Modifier.fillMaxWidth()
         ) {
-            MarkdownText(
-                content = text,
-                textStyle = MaterialTheme.typography.bodyMedium,
-                contentColor = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.padding(
-                    horizontal = MnemoraSpacing.Medium,
-                    vertical = MnemoraSpacing.Small
+            if (isStreaming) {
+                Text(
+                    text = text,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(
+                        horizontal = MnemoraSpacing.Medium,
+                        vertical = MnemoraSpacing.Small
+                    )
                 )
-            )
+            } else {
+                MarkdownText(
+                    content = text,
+                    textStyle = MaterialTheme.typography.bodyMedium,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.padding(
+                        horizontal = MnemoraSpacing.Medium,
+                        vertical = MnemoraSpacing.Small
+                    )
+                )
+            }
         }
     }
 }

@@ -424,7 +424,9 @@ class PracticeViewModel @Inject constructor(
                 it.copy(
                     chatSessions = listOf(session) + it.chatSessions,
                     currentChatSessionId = session.id,
-                    chatHistory = emptyList()
+                    chatHistory = emptyList(),
+                    chatScrollIndex = 0,
+                    chatScrollOffset = 0
                 )
             }
         }
@@ -434,9 +436,18 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             val history = dbRepository.getChatHistory(sessionId)
             _uiState.update {
-                it.copy(currentChatSessionId = sessionId, chatHistory = history)
+                it.copy(
+                    currentChatSessionId = sessionId,
+                    chatHistory = history,
+                    chatScrollIndex = 0,
+                    chatScrollOffset = 0
+                )
             }
         }
+    }
+
+    fun saveChatScrollPosition(index: Int, offset: Int) {
+        _uiState.update { it.copy(chatScrollIndex = index, chatScrollOffset = offset) }
     }
 
     fun deleteChatSession() {
@@ -562,6 +573,8 @@ data class PracticeUiState(
     val isAiLoading: Boolean = false,
     val aiStreamingResponse: String = "",
     val aiError: String? = null,
+    val chatScrollIndex: Int = 0,
+    val chatScrollOffset: Int = 0,
     val availableCollections: List<com.hihusky.mnemora.data.model.Collection> = emptyList(),
     val questionCollectionIds: Set<Int> = emptySet(),
     val showProgressBar: Boolean = true,

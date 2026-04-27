@@ -107,6 +107,7 @@ fun PracticeScreen(
         onCreateChatSession = viewModel::createChatSession,
         onDeleteChatSession = viewModel::deleteChatSession,
         onSendAiMessage = viewModel::sendAiMessage,
+        onSaveChatScrollPosition = viewModel::saveChatScrollPosition,
         onConfettiFinished = viewModel::clearConfetti,
         getQuestionStatus = viewModel::getQuestionStatus,
         imageBasePath = viewModel.imageBasePath
@@ -133,6 +134,7 @@ internal fun PracticeScreenContent(
     onCreateChatSession: () -> Unit,
     onDeleteChatSession: () -> Unit,
     onSendAiMessage: (String) -> Unit,
+    onSaveChatScrollPosition: (Int, Int) -> Unit,
     onConfettiFinished: () -> Unit,
     getQuestionStatus: (Int) -> QuestionStatus,
     imageBasePath: String?
@@ -400,7 +402,10 @@ internal fun PracticeScreenContent(
             onDismiss = { showAiChat = false },
             onDeleteSession = onDeleteChatSession,
             modelLabel = uiState.aiModel,
-            providerLabel = uiState.aiProvider
+            providerLabel = uiState.aiProvider,
+            initialScrollIndex = uiState.chatScrollIndex,
+            initialScrollOffset = uiState.chatScrollOffset,
+            onSaveScrollPosition = onSaveChatScrollPosition
         )
     }
 
@@ -495,6 +500,7 @@ private fun PracticeScreenContentPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onSaveChatScrollPosition = { _, _ -> },
             onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
             imageBasePath = null
@@ -524,6 +530,7 @@ private fun PracticeScreenContentLoadingPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onSaveChatScrollPosition = { _, _ -> },
             onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
             imageBasePath = null
@@ -556,6 +563,7 @@ private fun PracticeScreenContentAnsweredPreview() {
             onCreateChatSession = {},
             onDeleteChatSession = {},
             onSendAiMessage = {},
+            onSaveChatScrollPosition = { _, _ -> },
             onConfettiFinished = {},
             getQuestionStatus = { QuestionStatus.Unanswered },
             imageBasePath = null
