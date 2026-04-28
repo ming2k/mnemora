@@ -423,7 +423,8 @@ class DatabaseRepository @Inject constructor(
             explanation = explanation ?: "",
             questionType = QuestionType.fromProtocol(questionType),
             frontTemplate = frontTemplate,
-            backTemplate = backTemplate
+            backTemplate = backTemplate,
+            format = format
         )
     }
 

@@ -32,6 +32,7 @@ SUPPORTED_QUESTION_TYPES = {
     "flashcard",
     "passage",
 }
+SUPPORTED_FORMATS = {"html", "markdown"}
 REQUIRED_DATA_FILES = ("data.json",)
 
 
@@ -51,10 +52,12 @@ def find_data_json(src_dir: Path) -> Path:
     )
 
 
-def extract_image_refs(text: str) -> list[str]:
-    """Find all Markdown image paths: ![alt](path)"""
+def extract_image_refs(text: str, format: str = "markdown") -> list[str]:
+    """Find image paths from text content based on format."""
     if not text:
         return []
+    if format == "html":
+        return re.findall(r'<img[^>]*src=["\']([^"\']*)["\'][^>]*/?>', text, re.IGNORECASE)
     return re.findall(r"!\[.*?\]\((.*?)\)", text)
 
 
@@ -62,8 +65,9 @@ def collect_all_image_refs(data: dict) -> list[str]:
     """Recursively collect image references from the entire data tree."""
     refs = []
 
-    def scan(obj):
+    def scan(obj, parent_format="markdown"):
         if isinstance(obj, dict):
+            item_format = obj.get("format", parent_format)
             for k, v in obj.items():
                 if isinstance(v, str) and k in (
                     "content",
@@ -71,18 +75,20 @@ def collect_all_image_refs(data: dict) -> list[str]:
                     "front_template",
                     "back_template",
                 ):
-                    refs.extend(extract_image_refs(v))
+                    refs.extend(extract_image_refs(v, item_format))
                 elif k == "choices" and isinstance(v, list):
                     for choice in v:
                         if isinstance(choice, dict):
-                            refs.extend(extract_image_refs(choice.get("content", "")))
-                            refs.extend(extract_image_refs(choice.get("html", "")))
-                            refs.extend(extract_image_refs(choice.get("text", "")))
+                            choice_format = choice.get("format", item_format)
+                            for field in ("content", "html", "text"):
+                                value = choice.get(field)
+                                if isinstance(value, str):
+                                    refs.extend(extract_image_refs(value, choice_format if field == "content" else "markdown"))
                 else:
-                    scan(v)
+                    scan(v, item_format)
         elif isinstance(obj, list):
             for item in obj:
-                scan(item)
+                scan(item, parent_format)
 
     scan(data)
     return refs
@@ -127,18 +133,21 @@ def validate(src_dir: Path, data_path: Path) -> list[str]:
             print(f"  [OK] Image resolved: {ref}")
 
     # Check question types
-    def scan_types(obj):
+    def scan_meta(obj):
         if isinstance(obj, dict):
             qtype = obj.get("question_type")
             if qtype and qtype not in SUPPORTED_QUESTION_TYPES:
                 issues.append(f"[WARN] Unknown question_type: '{qtype}'")
+            fmt = obj.get("format")
+            if fmt and fmt not in SUPPORTED_FORMATS:
+                issues.append(f"[WARN] Unknown format: '{fmt}' (supported: {', '.join(sorted(SUPPORTED_FORMATS))})")
             for v in obj.values():
-                scan_types(v)
+                scan_meta(v)
         elif isinstance(obj, list):
             for item in obj:
-                scan_types(item)
+                scan_meta(item)
 
-    scan_types(data)
+    scan_meta(data)
 
     return issues
 

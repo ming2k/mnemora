@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,6 +23,7 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -29,13 +31,21 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.takeOrElse
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.core.text.HtmlCompat
 import coil.compose.AsyncImage
 import com.hrm.latex.renderer.Latex
 import com.hrm.latex.renderer.model.LatexConfig
@@ -46,50 +56,93 @@ import com.mikepenz.markdown.model.DefaultMarkdownTypography
 import java.io.File
 
 // ------------------------------------------------------------------
-// Content blocks produced by parsing mixed Markdown + LaTeX input
+// Render units produced by the paragraph-aware parser.
+// One paragraph (\n\n-separated) maps to one or more RenderBlocks.
 // ------------------------------------------------------------------
-private sealed class ContentBlock {
-    data class MarkdownText(val text: String) : ContentBlock()
-    data class InlineMath(val formula: String) : ContentBlock()
-    data class DisplayMath(val formula: String) : ContentBlock()
+private sealed class RenderBlock {
+    data class StandaloneMarkdown(val text: String) : RenderBlock()
+    data class InlineFlow(val lines: List<List<InlinePart>>) : RenderBlock()
+    data class DisplayMath(val formula: String) : RenderBlock()
+    data class Image(val alt: String, val path: String) : RenderBlock()
 }
 
-private sealed class RichContentBlock {
-    data class Text(val text: String) : RichContentBlock()
-    data class Image(val alt: String, val path: String) : RichContentBlock()
+private sealed class InlinePart {
+    data class Text(val text: String) : InlinePart()
+    data class Math(val formula: String) : InlinePart()
 }
 
 /**
- * Renders content that may contain **Markdown**, **inline LaTeX** (`$...$`)
- * and **display LaTeX** (`$$...$$`).
+ * Renders content that may contain Markdown, inline LaTeX (`$...$`),
+ * display LaTeX (`$$...$$`) and embedded images.
  *
- * The text is split into blocks; each block is rendered with the most
- * appropriate engine (mikepenz Markdown for prose, huarangmeng Latex
- * for formulas).
+ * Parsing is paragraph-aware: the input is split on blank lines, and each
+ * paragraph is classified independently — pure text → Markdown engine,
+ * inline-math paragraph → FlowRow, display-math/image-only paragraph →
+ * its own block.  This guarantees real vertical spacing between paragraphs
+ * and prevents Chinese-text+formula paragraphs from collapsing into a
+ * single misaligned row.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MarkdownText(
     content: String,
     modifier: Modifier = Modifier,
     imageBasePath: String? = null,
     textStyle: TextStyle? = null,
-    contentColor: Color? = null
+    contentColor: Color? = null,
+    format: String = "markdown"
 ) {
+    if (content.isBlank()) return
+
     val resolvedTextStyle = textStyle ?: MaterialTheme.typography.bodyLarge
     val resolvedContentColor = contentColor ?: MaterialTheme.colorScheme.onSurface
 
-    Column(modifier = modifier) {
-        val richBlocks = remember(content) { parseRichContentBlocks(content) }
-        richBlocks.forEach { block ->
+    if (format == "html") {
+        HtmlContent(
+            html = content,
+            imageBasePath = imageBasePath,
+            textStyle = resolvedTextStyle,
+            contentColor = resolvedContentColor,
+            modifier = modifier
+        )
+        return
+    }
+
+    val blocks = remember(content) { parseRenderBlocks(content) }
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        blocks.forEach { block ->
             when (block) {
-                is RichContentBlock.Text -> RenderTextContent(
-                    content = block.text,
-                    imageBasePath = imageBasePath,
+                is RenderBlock.StandaloneMarkdown -> {
+                    // Convert single \n to CommonMark hard break (two trailing
+                    // spaces + \n) so that line breaks within a paragraph are
+                    // visible — paragraphs themselves were already split on \n\n.
+                    val withBreaks = block.text.replace("\n", "  \n")
+                    val processed = if (imageBasePath != null) {
+                        resolveImagePaths(withBreaks, imageBasePath)
+                    } else withBreaks
+                    MarkdownBlock(
+                        text = processed,
+                        textStyle = resolvedTextStyle,
+                        contentColor = resolvedContentColor
+                    )
+                }
+
+                is RenderBlock.InlineFlow -> InlineFlowParagraph(
+                    lines = block.lines,
                     textStyle = resolvedTextStyle,
                     contentColor = resolvedContentColor
                 )
-                is RichContentBlock.Image -> MarkdownImage(
+
+                is RenderBlock.DisplayMath -> Latex(
+                    latex = block.formula,
+                    modifier = Modifier.fillMaxWidth(),
+                    config = latexDisplayConfig(resolvedTextStyle, resolvedContentColor)
+                )
+
+                is RenderBlock.Image -> MarkdownImage(
                     alt = block.alt,
                     path = block.path,
                     imageBasePath = imageBasePath
@@ -101,73 +154,94 @@ fun MarkdownText(
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RenderTextContent(
-    content: String,
-    imageBasePath: String?,
+private fun InlineFlowParagraph(
+    lines: List<List<InlinePart>>,
     textStyle: TextStyle,
     contentColor: Color
 ) {
-    if (content.isBlank()) return
-
-    val blocks = remember(content) { parseContentBlocks(content) }
-    val grouped = remember(blocks) { groupInlineBlocks(blocks) }
-
-    grouped.forEach { group ->
-        when (group) {
-            is GroupedBlock.StandaloneMarkdown -> {
-                val processed = if (imageBasePath != null) {
-                    resolveImagePaths(group.text, imageBasePath)
-                } else group.text
-                MarkdownBlock(
-                    text = processed,
-                    textStyle = textStyle,
-                    contentColor = contentColor
-                )
-            }
-
-            is GroupedBlock.InlineGroup -> {
-                FlowRow(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.Start,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    group.parts.forEach { part ->
-                        when (part) {
-                            is ContentBlock.MarkdownText -> {
-                                val processed = if (imageBasePath != null) {
-                                    resolveImagePaths(part.text, imageBasePath)
-                                } else part.text
+    val baseSpanStyle = SpanStyle(
+        fontSize = textStyle.fontSize,
+        fontFamily = textStyle.fontFamily
+    )
+    // Each input line is its own FlowRow — single \n inside the paragraph
+    // forces a visible line break, while the FlowRow still wraps a single
+    // line's content when it overflows the screen width.
+    Column(modifier = Modifier.fillMaxWidth()) {
+        lines.forEach { line ->
+            FlowRow(modifier = Modifier.fillMaxWidth()) {
+                line.forEach { part ->
+                    when (part) {
+                        is InlinePart.Text -> {
+                            // Splitting on punctuation/whitespace lets FlowRow
+                            // wrap each phrase independently instead of treating
+                            // the whole sentence as one block (which would push
+                            // following formulas onto a new row).
+                            splitIntoPhrases(part.text).forEach { phrase ->
+                                val annotated = remember(phrase) {
+                                    buildInlineMarkdown(phrase, baseSpanStyle)
+                                }
                                 Text(
-                                    text = processed,
+                                    text = annotated,
                                     style = textStyle,
-                                    color = contentColor
+                                    color = contentColor,
+                                    modifier = Modifier.align(Alignment.CenterVertically)
                                 )
                             }
+                        }
 
-                            is ContentBlock.InlineMath -> {
-                                Latex(
-                                    latex = part.formula,
-                                    config = latexInlineConfig(contentColor)
-                                )
-                            }
-
-                            else -> {}
+                        is InlinePart.Math -> {
+                            Latex(
+                                latex = part.formula,
+                                modifier = Modifier
+                                    .wrapContentSize()
+                                    .align(Alignment.CenterVertically),
+                                config = latexInlineConfig(textStyle, contentColor)
+                            )
                         }
                     }
                 }
             }
-
-            is GroupedBlock.DisplayMath -> {
-                Latex(
-                    latex = group.formula,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 4.dp),
-                    config = latexDisplayConfig(contentColor)
-                )
-            }
         }
     }
+}
+
+private fun splitIntoPhrases(text: String): List<String> {
+    if (text.isEmpty()) return emptyList()
+    // Each CJK character (incl. full-width punctuation) becomes its own
+    // FlowRow item, so a long Chinese run can wrap at any character — and
+    // an inline formula can sit on the same row as whatever fits beside it
+    // instead of pushing the trailing text onto a new row. Latin runs stay
+    // grouped per word (split on whitespace) so words don't break mid-word.
+    val result = mutableListOf<String>()
+    val buf = StringBuilder()
+    for (ch in text) {
+        when {
+            isCjk(ch) -> {
+                if (buf.isNotEmpty()) {
+                    result.add(buf.toString())
+                    buf.clear()
+                }
+                result.add(ch.toString())
+            }
+            ch.isWhitespace() -> {
+                buf.append(ch)
+                result.add(buf.toString())
+                buf.clear()
+            }
+            else -> buf.append(ch)
+        }
+    }
+    if (buf.isNotEmpty()) result.add(buf.toString())
+    return result
+}
+
+private fun isCjk(ch: Char): Boolean {
+    val code = ch.code
+    return code in 0x4E00..0x9FFF ||   // CJK Unified Ideographs
+        code in 0x3400..0x4DBF ||      // CJK Extension A
+        code in 0xF900..0xFAFF ||      // CJK Compatibility Ideographs
+        code in 0x3000..0x303F ||      // CJK Symbols and Punctuation
+        code in 0xFF00..0xFFEF         // Halfwidth/Fullwidth (incl 全角标点)
 }
 
 @Composable
@@ -182,7 +256,6 @@ private fun MarkdownImage(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
             .clip(RoundedCornerShape(8.dp))
             .background(MaterialTheme.colorScheme.surfaceContainerHigh)
             .clickable { showPreview = true }
@@ -298,160 +371,271 @@ private fun MarkdownBlock(
 }
 
 // ------------------------------------------------------------------
-// Parsing: split raw string into ContentBlocks
+// Parsing: split raw string into RenderBlocks (paragraph-aware).
 // ------------------------------------------------------------------
-private fun parseRichContentBlocks(content: String): List<RichContentBlock> {
-    val imageRegex = Regex("!\\[([^\\]]*)]\\(([^)]*)\\)")
-    val blocks = mutableListOf<RichContentBlock>()
-    var lastEnd = 0
+private fun parseRenderBlocks(content: String): List<RenderBlock> {
+    val result = mutableListOf<RenderBlock>()
+    val paragraphs = content.split(Regex("\\n{2,}"))
+    for (rawPara in paragraphs) {
+        val para = rawPara.trim()
+        if (para.isEmpty()) continue
+        result.addAll(parseParagraph(para))
+    }
+    return result
+}
 
-    for (match in imageRegex.findAll(content)) {
-        val before = content.substring(lastEnd, match.range.first)
+private val WHOLE_IMAGE = Regex("^!\\[([^\\]]*)]\\(([^)]+)\\)$")
+private val WHOLE_DISPLAY_MATH = Regex("^\\\$\\\$([\\s\\S]+?)\\\$\\\$$")
+private val WHOLE_INLINE_MATH = Regex("^\\\$([^\\\$]+?)\\\$$")
+private val ANCHOR_REGEX = Regex(
+    "(!\\[[^\\]]*]\\([^)]+\\))" +    // group 1: image
+        "|(\\\$\\\$[\\s\\S]+?\\\$\\\$)"  // group 2: display math
+)
+private val IMAGE_PARTS = Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")
+
+private fun parseParagraph(paragraph: String): List<RenderBlock> {
+    WHOLE_IMAGE.matchEntire(paragraph)?.let {
+        return listOf(RenderBlock.Image(it.groupValues[1], it.groupValues[2]))
+    }
+    WHOLE_DISPLAY_MATH.matchEntire(paragraph)?.let {
+        return listOf(RenderBlock.DisplayMath(it.groupValues[1].trim()))
+    }
+    // A whole-paragraph $...$ is treated as display math too — common in
+    // imported textbook content where standalone formulas use single-$.
+    WHOLE_INLINE_MATH.matchEntire(paragraph)?.let {
+        val body = it.groupValues[1]
+        if (!body.contains('\n')) {
+            return listOf(RenderBlock.DisplayMath(body.trim()))
+        }
+    }
+
+    val anchors = ANCHOR_REGEX.findAll(paragraph).toList()
+    if (anchors.isEmpty()) {
+        return parseTextSegment(paragraph)
+    }
+
+    val result = mutableListOf<RenderBlock>()
+    var lastEnd = 0
+    for (m in anchors) {
+        val before = paragraph.substring(lastEnd, m.range.first)
         if (before.isNotBlank()) {
-            blocks.add(RichContentBlock.Text(before))
+            result.addAll(parseTextSegment(before))
         }
-        blocks.add(
-            RichContentBlock.Image(
-                alt = match.groupValues[1],
-                path = match.groupValues[2]
-            )
-        )
-        lastEnd = match.range.last + 1
+        if (m.groupValues[1].isNotEmpty()) {
+            val img = IMAGE_PARTS.matchEntire(m.value)
+            if (img != null) {
+                result.add(RenderBlock.Image(img.groupValues[1], img.groupValues[2]))
+            }
+        } else {
+            val mathContent = m.value.removePrefix("$$").removeSuffix("$$").trim()
+            result.add(RenderBlock.DisplayMath(mathContent))
+        }
+        lastEnd = m.range.last + 1
     }
-
-    val after = content.substring(lastEnd)
+    val after = paragraph.substring(lastEnd)
     if (after.isNotBlank()) {
-        blocks.add(RichContentBlock.Text(after))
+        result.addAll(parseTextSegment(after))
     }
-    return blocks.ifEmpty { listOf(RichContentBlock.Text(content)) }
+    return result
 }
 
-private fun parseContentBlocks(content: String): List<ContentBlock> {
-    val blocks = mutableListOf<ContentBlock>()
-    val displayRegex = Regex("\\\$\\\$([\\s\\S]*?)\\\$\\\$")
-    val matches = displayRegex.findAll(content).toList()
-
-    var lastEnd = 0
-    for (match in matches) {
-        val before = content.substring(lastEnd, match.range.first)
-        blocks.addAll(parseInlineMathBlocks(before))
-        blocks.add(ContentBlock.DisplayMath(match.groupValues[1].trim()))
-        lastEnd = match.range.last + 1
-    }
-
-    val after = content.substring(lastEnd)
-    blocks.addAll(parseInlineMathBlocks(after))
-    return blocks
-}
-
-private fun parseInlineMathBlocks(text: String): List<ContentBlock> {
-    val blocks = mutableListOf<ContentBlock>()
-    // Match $...$ but not $$...$$
-    val inlineRegex = Regex("(?<!\\\$)\\\$(?!\\\$)([^\\n\\\$]+?)\\\$(?!\\\$)")
-    val matches = inlineRegex.findAll(text).toList()
-
-    var lastEnd = 0
-    for (match in matches) {
-        val before = text.substring(lastEnd, match.range.first)
-        if (before.isNotEmpty()) {
-            blocks.add(ContentBlock.MarkdownText(before))
-        }
-        blocks.add(ContentBlock.InlineMath(match.groupValues[1].trim()))
-        lastEnd = match.range.last + 1
-    }
-
-    val after = text.substring(lastEnd)
-    if (after.isNotEmpty()) {
-        blocks.add(ContentBlock.MarkdownText(after))
-    }
-    return blocks
-}
-
-// ------------------------------------------------------------------
-// Grouping: merge consecutive MarkdownText + InlineMath so they flow
-// together in a single FlowRow.  Standalone MarkdownText stays as a
-// full Markdown block.
-// ------------------------------------------------------------------
-private sealed class GroupedBlock {
-    data class StandaloneMarkdown(val text: String) : GroupedBlock()
-    data class InlineGroup(val parts: List<ContentBlock>) : GroupedBlock()
-    data class DisplayMath(val formula: String) : GroupedBlock()
-}
-
-private fun groupInlineBlocks(blocks: List<ContentBlock>): List<GroupedBlock> {
-    val result = mutableListOf<GroupedGroup>()
-    var currentInline = mutableListOf<ContentBlock>()
-
-    for (block in blocks) {
-        when (block) {
-            is ContentBlock.DisplayMath -> {
-                flushInline(currentInline, result)
-                currentInline = mutableListOf()
-                result.add(GroupedGroup.DisplayMath(block.formula))
-            }
-
-            is ContentBlock.InlineMath,
-            is ContentBlock.MarkdownText -> {
-                currentInline.add(block)
-            }
-        }
-    }
-    flushInline(currentInline, result)
-
-    return result.map { group ->
-        when (group) {
-            is GroupedGroup.StandaloneMarkdown ->
-                GroupedBlock.StandaloneMarkdown(group.text)
-
-            is GroupedGroup.InlineGroup ->
-                GroupedBlock.InlineGroup(group.parts)
-
-            is GroupedGroup.DisplayMath ->
-                GroupedBlock.DisplayMath(group.formula)
-        }
-    }
-}
-
-private sealed class GroupedGroup {
-    data class StandaloneMarkdown(val text: String) : GroupedGroup()
-    data class InlineGroup(val parts: List<ContentBlock>) : GroupedGroup()
-    data class DisplayMath(val formula: String) : GroupedGroup()
-}
-
-private fun flushInline(
-    buffer: MutableList<ContentBlock>,
-    out: MutableList<GroupedGroup>
-) {
-    if (buffer.isEmpty()) return
-
-    // If the buffer contains any InlineMath, treat the whole sequence as an
-    // InlineGroup (FlowRow).  Otherwise it's pure Markdown text.
-    val hasMath = buffer.any { it is ContentBlock.InlineMath }
-    if (hasMath) {
-        out.add(GroupedGroup.InlineGroup(buffer.toList()))
+private fun parseTextSegment(text: String): List<RenderBlock> {
+    val trimmed = text.trim()
+    if (trimmed.isEmpty()) return emptyList()
+    val lines = trimmed.split('\n').map { parseInlinePartsForLine(it) }
+        .filter { it.isNotEmpty() }
+    if (lines.isEmpty()) return emptyList()
+    val anyMath = lines.any { line -> line.any { it is InlinePart.Math } }
+    return if (anyMath) {
+        listOf(RenderBlock.InlineFlow(lines))
     } else {
-        val combined = buffer.joinToString("") { (it as ContentBlock.MarkdownText).text }
-        out.add(GroupedGroup.StandaloneMarkdown(combined))
+        // Pure-text paragraph (possibly multi-line). Defer to the Markdown
+        // engine; the caller adds CommonMark hard breaks for single \n.
+        listOf(RenderBlock.StandaloneMarkdown(trimmed))
     }
-    buffer.clear()
+}
+
+private val INLINE_MATH_REGEX =
+    Regex("(?<!\\\$)\\\$(?!\\\$)([^\\n\\\$]+?)\\\$(?!\\\$)")
+
+private fun parseInlinePartsForLine(line: String): List<InlinePart> {
+    if (line.isEmpty()) return emptyList()
+    val parts = mutableListOf<InlinePart>()
+    var lastEnd = 0
+    for (m in INLINE_MATH_REGEX.findAll(line)) {
+        val before = line.substring(lastEnd, m.range.first)
+        if (before.isNotEmpty()) {
+            parts.add(InlinePart.Text(before))
+        }
+        parts.add(InlinePart.Math(m.groupValues[1].trim()))
+        lastEnd = m.range.last + 1
+    }
+    val after = line.substring(lastEnd)
+    if (after.isNotEmpty()) {
+        parts.add(InlinePart.Text(after))
+    }
+    return parts
+}
+
+// ------------------------------------------------------------------
+// Inline-markdown → AnnotatedString (bold / italic / code / strike)
+// ------------------------------------------------------------------
+private data class InlineMark(
+    val start: Int,
+    val end: Int,
+    val innerStart: Int,
+    val innerEnd: Int,
+    val style: (SpanStyle) -> SpanStyle
+)
+
+private fun collectInlineMarks(text: String): List<InlineMark> {
+    val marks = mutableListOf<InlineMark>()
+
+    val boldAsterisk = Regex("\\*\\*(.+?)\\*\\*")
+    boldAsterisk.findAll(text).forEach { m ->
+        marks.add(InlineMark(m.range.first, m.range.last + 1,
+            m.range.first + 2, m.range.last - 1,
+            { it.copy(fontWeight = FontWeight.Bold) }))
+    }
+    val boldUnderscore = Regex("__(.+?)__")
+    boldUnderscore.findAll(text).forEach { m ->
+        marks.add(InlineMark(m.range.first, m.range.last + 1,
+            m.range.first + 2, m.range.last - 1,
+            { it.copy(fontWeight = FontWeight.Bold) }))
+    }
+    val italicAsterisk = Regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")
+    italicAsterisk.findAll(text).forEach { m ->
+        marks.add(InlineMark(m.range.first, m.range.last + 1,
+            m.range.first + 1, m.range.last,
+            { it.copy(fontStyle = FontStyle.Italic) }))
+    }
+    val italicUnderscore = Regex("(?<!_)_(?!_)(.+?)(?<!_)_(?!_)")
+    italicUnderscore.findAll(text).forEach { m ->
+        marks.add(InlineMark(m.range.first, m.range.last + 1,
+            m.range.first + 1, m.range.last,
+            { it.copy(fontStyle = FontStyle.Italic) }))
+    }
+    val code = Regex("`([^`]+)`")
+    code.findAll(text).forEach { m ->
+        marks.add(InlineMark(m.range.first, m.range.last + 1,
+            m.range.first + 1, m.range.last,
+            { it.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace) }))
+    }
+    val strike = Regex("~~(.+?)~~")
+    strike.findAll(text).forEach { m ->
+        marks.add(InlineMark(m.range.first, m.range.last + 1,
+            m.range.first + 2, m.range.last - 1,
+            { it.copy(textDecoration = TextDecoration.LineThrough) }))
+    }
+
+    return marks.sortedBy { it.start }
+}
+
+/** Build an [AnnotatedString] from a short Markdown fragment, stripping
+ * delimiters and applying [SpanStyle] decorations for bold, italic,
+ * inline code and strikethrough. */
+private fun buildInlineMarkdown(
+    text: String,
+    baseStyle: SpanStyle
+): AnnotatedString {
+    val marks = collectInlineMarks(text)
+    if (marks.isEmpty()) return AnnotatedString(text, baseStyle)
+
+    return buildAnnotatedString {
+        var cursor = 0
+        for (m in marks) {
+            if (m.start < cursor) continue
+            if (cursor < m.start) {
+                withStyle(baseStyle) { append(text, cursor, m.start) }
+            }
+            withStyle(m.style(baseStyle)) {
+                append(text, m.innerStart, m.innerEnd)
+            }
+            cursor = m.end
+        }
+        if (cursor < text.length) {
+            withStyle(baseStyle) { append(text, cursor, text.length) }
+        }
+    }
+}
+
+// ------------------------------------------------------------------
+// HTML content handler
+// ------------------------------------------------------------------
+private val HTML_IMG_REGEX = Regex(
+    """<img[^>]*src=["']([^"']*)["'][^>]*/?>""",
+    RegexOption.IGNORE_CASE
+)
+
+private data class HtmlSegment(val text: String, val imagePath: String? = null)
+
+private fun parseHtmlSegments(html: String): List<HtmlSegment> {
+    val segments = mutableListOf<HtmlSegment>()
+    var lastEnd = 0
+    for (m in HTML_IMG_REGEX.findAll(html)) {
+        val before = html.substring(lastEnd, m.range.first)
+        if (before.isNotBlank()) {
+            segments.add(HtmlSegment(text = before))
+        }
+        segments.add(HtmlSegment(text = m.value, imagePath = m.groupValues[1]))
+        lastEnd = m.range.last + 1
+    }
+    val after = html.substring(lastEnd)
+    if (after.isNotBlank()) {
+        segments.add(HtmlSegment(text = after))
+    }
+    return segments.ifEmpty { listOf(HtmlSegment(text = html)) }
+}
+
+@Composable
+private fun HtmlContent(
+    html: String,
+    imageBasePath: String?,
+    textStyle: TextStyle,
+    contentColor: Color,
+    modifier: Modifier = Modifier
+) {
+    val segments = remember(html) { parseHtmlSegments(html) }
+    Column(modifier = modifier) {
+        segments.forEach { seg ->
+            if (seg.imagePath != null) {
+                MarkdownImage(
+                    alt = "",
+                    path = seg.imagePath,
+                    imageBasePath = imageBasePath
+                )
+            } else {
+                val plainText = remember(seg.text) {
+                    HtmlCompat.fromHtml(seg.text, HtmlCompat.FROM_HTML_MODE_LEGACY)
+                        .toString()
+                        .trimEnd()
+                }
+                Text(
+                    text = plainText,
+                    style = textStyle,
+                    color = contentColor
+                )
+            }
+        }
+    }
 }
 
 // ------------------------------------------------------------------
 // LaTeX config helpers
 // ------------------------------------------------------------------
-@Composable
-private fun latexInlineConfig(contentColor: Color): LatexConfig {
+private fun latexInlineConfig(textStyle: TextStyle, contentColor: Color): LatexConfig {
+    val size = textStyle.fontSize.takeOrElse { 16.sp }
     return LatexConfig(
-        fontSize = 16.sp,
+        fontSize = size,
         color = contentColor,
         darkColor = contentColor
     )
 }
 
-@Composable
-private fun latexDisplayConfig(contentColor: Color): LatexConfig {
+private fun latexDisplayConfig(textStyle: TextStyle, contentColor: Color): LatexConfig {
+    val size = textStyle.fontSize.takeOrElse { 16.sp } * 1.1f
     return LatexConfig(
-        fontSize = 18.sp,
+        fontSize = size,
         color = contentColor,
         darkColor = contentColor
     )

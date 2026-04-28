@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.6] - 2026-04-28
+
+### Added
+- **HTML question format** — `Question`, `QuestionEntity`, `BookImporter`, and `DatabaseRepository` gain a `format` field (`"markdown"` default, `"html"` for HTML content). DB schema bumped to version 18.
+- **`MarkdownText` HTML rendering** — when `format == "html"`, content is rendered via `HtmlCompat` instead of the Markdown/LaTeX pipeline.
+- `scripts/convert-chuanyuanyi.py` — HTML question/choice support: detects source `html` field, passes content through without Markdown cleaning, and sets `format: "html"` in output.
+- `scripts/package-quiz.py` — `SUPPORTED_FORMATS` constant; HTML-aware image extraction (parses `<img src=...>` in addition to Markdown `![]()`); `scan_meta` validates the `format` field alongside `question_type`.
+
+### Changed
+- **`MarkdownText` paragraph-aware renderer** — replaced the flat block parser with a paragraph-aware pass (`\n\n`-separated); pure-text paragraphs go to the Markdown engine, inline-math paragraphs use `FlowRow`, display-math/image blocks render standalone. Fixes vertical spacing collapse and misalignment in Chinese text + formula paragraphs.
+- `QuestionContent` passes `question.format` to `MarkdownText` for the stem, parent-content context, and explanation fields.
+
+### Fixed
+- Haptic feedback (vibration) no longer silenced when sound effects are disabled — `FeedbackService.playCorrect` and `playWrong` now evaluate sound and haptic independently.
+
 ## [0.0.5] - 2026-04-28
 
 ### Added
@@ -119,7 +134,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.5...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.6...HEAD
+[0.0.6]: https://github.com/hihusky/mnemora/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/hihusky/mnemora/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/hihusky/mnemora/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/hihusky/mnemora/compare/v0.0.2...v0.0.3

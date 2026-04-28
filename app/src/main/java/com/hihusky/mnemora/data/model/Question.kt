@@ -16,7 +16,8 @@ data class Question(
     val frontTemplate: String? = null,
     val backTemplate: String? = null,
     val parentContent: String? = null,
-    val subQuestions: List<Question>? = null
+    val subQuestions: List<Question>? = null,
+    val format: String = "markdown"
 ) {
     val isPassage: Boolean get() = questionType == QuestionType.Passage
     val isAnswerable: Boolean get() = questionType != QuestionType.Passage

@@ -48,24 +48,26 @@ class FeedbackService @Inject constructor(
     }
 
     fun playCorrect() {
-        if (!soundEnabled) return
-        val level = if (continuousFeedback) {
-            when {
-                streak >= 6 -> 6
-                streak >= 5 -> 5
-                streak >= 4 -> 4
-                streak >= 3 -> 3
-                streak >= 2 -> 2
-                else -> 1
-            }
-        } else 1
-        soundPool?.play(soundMap[level] ?: 0, 1f, 1f, 1, 0, 1f)
+        if (soundEnabled) {
+            val level = if (continuousFeedback) {
+                when {
+                    streak >= 6 -> 6
+                    streak >= 5 -> 5
+                    streak >= 4 -> 4
+                    streak >= 3 -> 3
+                    streak >= 2 -> 2
+                    else -> 1
+                }
+            } else 1
+            soundPool?.play(soundMap[level] ?: 0, 1f, 1f, 1, 0, 1f)
+        }
         if (hapticEnabled) vibrate()
     }
 
     fun playWrong() {
-        if (!soundEnabled) return
-        soundPool?.play(soundMap[-1] ?: 0, 1f, 1f, 1, 0, 1f)
+        if (soundEnabled) {
+            soundPool?.play(soundMap[-1] ?: 0, 1f, 1f, 1, 0, 1f)
+        }
         if (hapticEnabled) vibrateLong()
     }
 

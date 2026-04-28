@@ -61,11 +61,18 @@ def collect_image_refs(value) -> set[str]:
 
 
 def convert_choice(choice: dict) -> dict:
+    html_content = choice.get("html")
+    if html_content:
+        # HTML choices pass through without markdown cleaning
+        return {
+            "key": str(choice.get("key", "")).strip(),
+            "content": html_content,
+            "format": "html",
+        }
+    content = choice.get("content") or choice.get("text") or ""
     return {
         "key": str(choice.get("key", "")).strip(),
-        "content": clean_markdown(
-            choice.get("content") or choice.get("text") or choice.get("html") or ""
-        ),
+        "content": clean_markdown(content),
     }
 
 
@@ -75,6 +82,7 @@ def convert_question(
     is_sub_question: bool = False,
 ) -> dict:
     children = question.get("children") or []
+    has_html = bool(question.get("html"))
     if children and not is_sub_question:
         converted = {
             "content": clean_markdown(question.get("content")),
@@ -85,15 +93,21 @@ def convert_question(
                 for child in children
             ],
         }
+        if has_html:
+            converted["format"] = "html"
         return converted
 
+    content_raw = question.get("html") if has_html else question.get("content")
+    explanation_raw = question.get("html") if has_html else question.get("explanation")
     converted = {
-        "content": clean_markdown(question.get("content")),
+        "content": content_raw if has_html else clean_markdown(content_raw),
         "choices": [convert_choice(choice) for choice in question.get("choices", [])],
         "answer": str(question.get("answer", "")).strip(),
-        "explanation": clean_markdown(question.get("explanation")),
+        "explanation": explanation_raw if has_html else clean_markdown(explanation_raw),
         "question_type": "multiple_choice",
     }
+    if has_html:
+        converted["format"] = "html"
     return converted
 
 

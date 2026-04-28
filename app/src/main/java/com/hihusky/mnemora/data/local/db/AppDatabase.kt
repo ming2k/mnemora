@@ -36,7 +36,7 @@ import com.hihusky.mnemora.data.local.db.entity.UserAnswerEntity
         CollectionItemEntity::class,
         StudySessionEntity::class,
     ],
-    version = 17,
+    version = 18,
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

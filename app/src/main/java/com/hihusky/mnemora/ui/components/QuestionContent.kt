@@ -74,7 +74,8 @@ fun QuestionContent(
                 content = question.content,
                 modifier = Modifier.fillMaxWidth(),
                 imageBasePath = imageBasePath,
-                textStyle = questionTextStyle
+                textStyle = questionTextStyle,
+                format = question.format
             )
 
             if (question.parentContent != null) {
@@ -94,7 +95,8 @@ fun QuestionContent(
                         .alpha(0.7f),
                     imageBasePath = imageBasePath,
                     textStyle = questionTextStyle,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    format = question.format
                 )
             }
 
@@ -194,7 +196,8 @@ fun QuestionContent(
                         modifier = Modifier.fillMaxWidth(),
                         imageBasePath = imageBasePath,
                         textStyle = explanationTextStyle,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        format = question.format
                     )
                 }
             }

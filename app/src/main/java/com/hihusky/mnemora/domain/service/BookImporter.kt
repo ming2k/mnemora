@@ -183,7 +183,8 @@ class BookImporter @Inject constructor(
             explanation = map["explanation"] as? String,
             questionType = (map["question_type"] as? String) ?: "multiple_choice",
             frontTemplate = map["front_template"] as? String,
-            backTemplate = map["back_template"] as? String
+            backTemplate = map["back_template"] as? String,
+            format = map["format"] as? String ?: "markdown"
         )
     }
 

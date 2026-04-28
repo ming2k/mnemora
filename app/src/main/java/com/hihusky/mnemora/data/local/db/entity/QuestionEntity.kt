@@ -38,5 +38,6 @@ data class QuestionEntity(
     val explanation: String? = null,
     val questionType: String = "multiple_choice",
     val frontTemplate: String? = null,
-    val backTemplate: String? = null
+    val backTemplate: String? = null,
+    val format: String = "markdown"
 )
