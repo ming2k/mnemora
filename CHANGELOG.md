@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5] - 2026-04-28
+
+### Added
+- CI pipeline (`.github/workflows/ci.yml`) — Gradle-based lint (ktlint, detekt) and unit test checks on push and pull request.
+- `.editorconfig` — unified editor settings with Kotlin trailing-comma conventions.
+- `detekt.yml` — static analysis configuration.
+- ktlint and detekt Gradle plugins — auto-formatting and static analysis in the build pipeline.
+- Unit test infrastructure — Robolectric, MockK, and Room testing dependencies; `isIncludeAndroidResources` enabled for local unit tests.
+- Unit tests — DAO tests (`BookDaoTest`, `NodeDaoTest`, `QuestionDaoTest`), service tests (`BookImporterTest`, `CollectionManagerTest`, `SrsServiceTest`), and `PracticeUiStateTest`.
+
+### Changed
+- Gradle build files auto-formatted with ktlint (trailing commas, line wrapping, `Properties` block style).
+- Choice items in `QuestionContent` now render at 95 % width with horizontal center alignment, visually denoting subordination to the stem.
+- `ChoiceItem` accepts an optional `Modifier` parameter, supporting the visual indentation.
+
 ## [0.0.4] - 2026-04-27
 
 ### Added
@@ -104,7 +119,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.4...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.5...HEAD
+[0.0.5]: https://github.com/hihusky/mnemora/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/hihusky/mnemora/compare/v0.0.3...v0.0.4
 [0.0.3]: https://github.com/hihusky/mnemora/compare/v0.0.2...v0.0.3
 [0.0.2]: https://github.com/hihusky/mnemora/compare/v0.0.1...v0.0.2

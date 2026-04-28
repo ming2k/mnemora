@@ -1,0 +1,78 @@
+build:
+  maxIssues: 999
+
+style:
+  MagicNumber:
+    active: true
+    ignoreNumbers:
+      - '-1'
+      - '0'
+      - '1'
+      - '2'
+      - '3'
+      - '4'
+      - '5'
+      - '6'
+      - '7'
+      - '8'
+      - '9'
+      - '10'
+      - '30'
+      - '60'
+      - '100'
+      - '500'
+      - '1000'
+      - '10000'
+      - '2800'
+      - '86400000'
+    ignoreEnums: true
+    ignorePropertyDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreConstantDeclaration: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 140
+    excludePackageStatements: true
+    excludeImportStatements: true
+  WildcardImport:
+    active: false
+  ForbiddenComment:
+    active: false
+  UnusedPrivateMember:
+    active: false
+  UnusedImports:
+    active: true
+  UnnecessaryAbstractClass:
+    active: true
+  UseCheckOrError:
+    active: false
+  UseRequire:
+    active: false
+
+complexity:
+  TooManyFunctions:
+    active: false
+  LongParameterList:
+    active: false
+  ComplexCondition:
+    active: false
+  LargeClass:
+    active: false
+  LongMethod:
+    active: false
+
+naming:
+  InvalidPackageDeclaration:
+    active: false
+  FunctionNaming:
+    active: false
+
+potential-bugs:
+  UnsafeCast:
+    active: false
+
+exceptions:
+  SwallowedException:
+    active: false

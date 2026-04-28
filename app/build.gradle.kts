@@ -8,6 +8,8 @@ plugins {
     id("com.google.dagger.hilt.android")
     id("com.google.devtools.ksp")
     id("androidx.room") version "2.8.4"
+    id("org.jlleitschuh.gradle.ktlint")
+    id("io.gitlab.arturbosch.detekt")
 }
 
 kotlin {
@@ -29,16 +31,29 @@ tasks.register<Copy>("syncRoomSchemas") {
 }
 
 tasks.configureEach {
-    if (name != "syncRoomSchemas" &&
-        (name.contains("Lint", ignoreCase = true) ||
-         (name.startsWith("merge") && name.endsWith("Assets")))) {
+    if (
+        name != "syncRoomSchemas" &&
+        (
+            name.contains("Lint", ignoreCase = true) ||
+                (
+                    name.startsWith("merge") &&
+                        name.endsWith("Assets")
+                )
+        )
+    ) {
         dependsOn("syncRoomSchemas")
     }
 }
 
-val localProps = Properties().apply {
-    rootProject.file("local.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
-}
+val localProps =
+    Properties()
+        .apply {
+            rootProject
+                .file("local.properties")
+                .takeIf { it.exists() }
+                ?.inputStream()
+                ?.use { load(it) }
+        }
 
 android {
     namespace = "com.hihusky.mnemora"
@@ -50,8 +65,8 @@ android {
         applicationId = "com.hihusky.mnemora"
         minSdk = 24
         targetSdk = 35
-        versionCode = 4
-        versionName = "0.0.4"
+        versionCode = 5
+        versionName = "0.0.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -81,13 +96,18 @@ android {
             isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+    testOptions {
+        unitTests {
+            isIncludeAndroidResources = true
+        }
     }
     buildFeatures {
         compose = true
@@ -163,9 +183,13 @@ dependencies {
     // Testing
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
-    debugImplementation("androidx.compose.ui:ui-tooling")
-    debugImplementation("androidx.compose.ui:ui-test-manifest")
+    testImplementation("io.mockk:mockk:1.13.17")
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:core:1.6.1")
+    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("androidx.room:room-testing:2.8.4")
+}
+
+detekt {
+    config.from(rootProject.file("detekt.yml"))
 }

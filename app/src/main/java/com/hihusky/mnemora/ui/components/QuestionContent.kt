@@ -152,8 +152,8 @@ fun QuestionContent(
                     }
                 }
                 else -> {
-                    // MultipleChoice, TrueFalse, Unknown — render choices as a flat list
-                    // No individual cards; spatial separation (spacing) guides visual grouping.
+                    // MultipleChoice, TrueFalse, Unknown — render choices with slight
+                    // left indent to visually denote they are subordinate to the stem.
                     question.choices.forEachIndexed { index, choice ->
                         ChoiceItem(
                             choice = choice,
@@ -163,7 +163,10 @@ fun QuestionContent(
                             onClick = { onOptionSelected?.invoke(choice.key) },
                             enabled = onOptionSelected != null,
                             imageBasePath = imageBasePath,
-                            textStyle = questionTextStyle
+                            textStyle = questionTextStyle,
+                            modifier = Modifier
+                                .fillMaxWidth(0.95f)
+                                .align(Alignment.CenterHorizontally)
                         )
                         if (index < question.choices.lastIndex) {
                             Spacer(modifier = Modifier.height(8.dp))
@@ -206,6 +209,7 @@ private fun ChoiceItem(
     isCorrectChoice: Boolean,
     onClick: () -> Unit,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     imageBasePath: String? = null,
     textStyle: androidx.compose.ui.text.TextStyle
 ) {
@@ -227,7 +231,7 @@ private fun ChoiceItem(
     }
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(
                 enabled = enabled,
