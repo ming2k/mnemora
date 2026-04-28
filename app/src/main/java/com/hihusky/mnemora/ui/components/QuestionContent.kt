@@ -1,5 +1,12 @@
 package com.hihusky.mnemora.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -16,7 +23,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material3.Button
-
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +36,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -68,6 +76,7 @@ fun QuestionContent(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = MnemoraSpacing.Small)
+            .animateContentSize(tween(300))
     ) {
             // Question content
             MarkdownText(
@@ -178,27 +187,33 @@ fun QuestionContent(
             }
 
             // Explanation
-            if (showAnswer && question.questionType != QuestionType.Flashcard) {
-                Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
-                HorizontalDivider(thickness = 0.5.dp)
-                Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
+            AnimatedVisibility(
+                visible = showAnswer && question.questionType != QuestionType.Flashcard,
+                enter = fadeIn(tween(300)),
+                exit = fadeOut(tween(200))
+            ) {
+                Column {
+                    Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
+                    HorizontalDivider(thickness = 0.5.dp)
+                    Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
 
-                if (question.explanation.isNotBlank()) {
-                    Text(
-                        text = "Explanation",
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
-                    MarkdownText(
-                        content = question.explanation,
-                        modifier = Modifier.fillMaxWidth(),
-                        imageBasePath = imageBasePath,
-                        textStyle = explanationTextStyle,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                        format = question.format
-                    )
+                    if (question.explanation.isNotBlank()) {
+                        Text(
+                            text = "Explanation",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Medium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                        MarkdownText(
+                            content = question.explanation,
+                            modifier = Modifier.fillMaxWidth(),
+                            imageBasePath = imageBasePath,
+                            textStyle = explanationTextStyle,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            format = question.format
+                        )
+                    }
                 }
             }
         }
@@ -216,22 +231,25 @@ private fun ChoiceItem(
     imageBasePath: String? = null,
     textStyle: androidx.compose.ui.text.TextStyle
 ) {
-    // Flat design: no card background, no border. State is conveyed purely through
-    // icon tint and text color — spatial separation (spacing) handles grouping.
-    // Correct answers use the theme's tertiary slot (green) instead of primary (blue).
-    val contentColor = when {
-        showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
-        showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
-        isSelected -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.onSurface
-    }
+    val contentColor by animateColorAsState(
+        targetValue = when {
+            showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
+            showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
+            isSelected -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.onSurface
+        },
+        animationSpec = tween(300)
+    )
 
-    val iconTint = when {
-        showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
-        showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
-        isSelected -> MaterialTheme.colorScheme.primary
-        else -> MaterialTheme.colorScheme.outlineVariant
-    }
+    val iconTint by animateColorAsState(
+        targetValue = when {
+            showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
+            showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
+            isSelected -> MaterialTheme.colorScheme.primary
+            else -> MaterialTheme.colorScheme.outlineVariant
+        },
+        animationSpec = tween(300)
+    )
 
     Row(
         modifier = modifier
@@ -307,34 +325,56 @@ private fun FlashcardContent(
     showAnswer: Boolean,
     onReveal: () -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth()) {
-        if (!revealed) {
-            Text(
-                text = question.displayFront,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(
-                onClick = onReveal,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text("Reveal Answer")
+    val density = LocalDensity.current
+    val flipRotation by animateFloatAsState(
+        targetValue = if (revealed) 180f else 0f,
+        animationSpec = tween(durationMillis = 600)
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(tween(300))
+            .graphicsLayer {
+                rotationY = flipRotation
+                cameraDistance = 8f * density.density
+            }
+    ) {
+        if (flipRotation <= 90f) {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = question.displayFront,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Button(
+                    onClick = onReveal,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Reveal Answer")
+                }
             }
         } else {
-            Text(
-                text = question.displayFront,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(modifier = Modifier.height(12.dp))
-            HorizontalDivider(thickness = 0.5.dp)
-            Spacer(modifier = Modifier.height(12.dp))
-            Text(
-                text = question.displayBack,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.SemiBold
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { rotationY = 180f }
+            ) {
+                Text(
+                    text = question.displayFront,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(thickness = 0.5.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = question.displayBack,
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
         }
     }
 }

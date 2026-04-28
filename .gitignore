@@ -35,3 +35,6 @@ desktop.ini
 
 # === Misc ===
 *.log
+
+
+__pycache__/

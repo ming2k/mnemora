@@ -1,5 +1,6 @@
 package com.hihusky.mnemora.ui.components
 
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -13,7 +14,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
-import kotlinx.coroutines.delay
 
 private val confettiColors = listOf(
     Color(0xFFE53935),
@@ -61,13 +61,14 @@ fun ConfettiOverlay(
         }
     }
 
-    val startTime = remember { System.currentTimeMillis() }
     var elapsed by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
-        while (elapsed < durationMs) {
-            delay(16)
-            elapsed = System.currentTimeMillis() - startTime
+        val startFrameMs = withFrameMillis { it }
+        while (true) {
+            val frameMs = withFrameMillis { it }
+            elapsed = frameMs - startFrameMs
+            if (elapsed >= durationMs) break
         }
         onFinished()
     }

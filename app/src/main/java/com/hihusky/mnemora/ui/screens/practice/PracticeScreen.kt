@@ -1,5 +1,7 @@
 package com.hihusky.mnemora.ui.screens.practice
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -328,11 +330,12 @@ internal fun PracticeScreenContent(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.weight(1f),
+                    beyondViewportPageCount = 1,
                     contentPadding = PaddingValues(horizontal = 0.dp)
                 ) { page ->
                     val question = uiState.questions[page]
+                    val answer = uiState.userAnswers[question.id]
                     val isCurrent = page == uiState.currentIndex
-                    val answer = if (isCurrent) uiState.currentUserAnswer else null
 
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -342,15 +345,20 @@ internal fun PracticeScreenContent(
                         )
                     ) {
                         item {
-                            QuestionContent(
-                                question = question,
-                                selectedOption = if (isCurrent) answer?.selected else null,
-                                showAnswer = isCurrent && (answer != null || uiState.isPreviewMode),
-                                onOptionSelected = if (isCurrent && answer == null && !uiState.isPreviewMode) {
-                                    { onAnswerQuestion(it) }
-                                } else null,
-                                imageBasePath = imageBasePath
-                            )
+                            Crossfade(
+                                targetState = answer != null || uiState.isPreviewMode,
+                                animationSpec = tween(250)
+                            ) { showAnswer ->
+                                QuestionContent(
+                                    question = question,
+                                    selectedOption = answer?.selected,
+                                    showAnswer = showAnswer,
+                                    onOptionSelected = if (isCurrent && answer == null && !uiState.isPreviewMode) {
+                                        { onAnswerQuestion(it) }
+                                    } else null,
+                                    imageBasePath = imageBasePath
+                                )
+                            }
                         }
                     }
                 }
