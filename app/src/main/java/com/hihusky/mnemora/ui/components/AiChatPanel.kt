@@ -40,8 +40,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -494,14 +495,14 @@ private fun AiChatInputBar(
                 .windowInsetsPadding(WindowInsets.ime)
                 .padding(
                     start = MnemoraSpacing.Large,
-                    top = MnemoraSpacing.Medium,
+                    top = MnemoraSpacing.Small,
                     end = MnemoraSpacing.Large,
-                    bottom = MnemoraSpacing.Large
+                    bottom = MnemoraSpacing.Small
                 ),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small)
         ) {
-            OutlinedTextField(
+            TextField(
                 value = input,
                 onValueChange = { input = it },
                 placeholder = { Text("Ask anything...") },
@@ -510,11 +511,11 @@ private fun AiChatInputBar(
                 minLines = 1,
                 maxLines = 4,
                 shape = RoundedCornerShape(20.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = MaterialTheme.colorScheme.outline,
-                    unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                colors = TextFieldDefaults.colors(
                     focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
                 )
             )
             FilledIconButton(
