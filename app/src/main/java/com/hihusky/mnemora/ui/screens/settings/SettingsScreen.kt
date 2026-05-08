@@ -18,6 +18,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LinearScale
@@ -95,6 +96,7 @@ fun SettingsScreen(
         onAiApiKeyChange = { viewModel.setAiApiKey(it) },
         onAiProjectIdChange = { viewModel.setAiProjectId(it) },
         onAiLocationChange = { viewModel.setAiLocation(it) },
+        onAiBaseUrlChange = { viewModel.setAiBaseUrl(it) },
         onAiModelChange = { viewModel.setAiModel(it) },
         onAiContextIncludeStemChange = { viewModel.setAiContextIncludeStem(it) },
         onAiContextIncludeOptionsChange = { viewModel.setAiContextIncludeOptions(it) },
@@ -121,6 +123,7 @@ internal fun SettingsScreenContent(
     onAiApiKeyChange: (String) -> Unit,
     onAiProjectIdChange: (String) -> Unit,
     onAiLocationChange: (String) -> Unit,
+    onAiBaseUrlChange: (String) -> Unit,
     onAiModelChange: (String) -> Unit,
     onAiContextIncludeStemChange: (Boolean) -> Unit,
     onAiContextIncludeOptionsChange: (Boolean) -> Unit,
@@ -244,40 +247,87 @@ internal fun SettingsScreenContent(
             // ── AI Settings ──
             MnemoraSettingsSectionHeader(title = "AI Settings")
 
-            val aiModels = listOf(
-                "Gemini 3.1 Pro Preview" to "gemini-3.1-pro-preview",
-                "Gemini 3.1 Flash Lite Preview" to "gemini-3.1-flash-lite-preview",
-                "Gemini 2.5 Flash" to "gemini-2.5-flash",
-                "DeepSeek V4 Pro" to "deepseek-v4-pro",
-                "DeepSeek V4 Flash" to "deepseek-v4-flash",
-                "Kimi K2.6" to "kimi-k2.6"
+            // Companies group their models and the providers that can serve those models.
+            data class AiCompany(
+                val id: String,
+                val display: String,
+                val models: List<Pair<String, String>>,
+                val providers: List<Pair<String, String>>
             )
-            val aiProviders = when {
-                uiState.aiModel.startsWith("kimi", ignoreCase = true) -> listOf(
-                    "Moonshot API" to "kimi"
+
+            val aiCompanies = listOf(
+                AiCompany(
+                    id = "google",
+                    display = "Google",
+                    models = listOf(
+                        "Gemini 3.1 Pro Preview" to "gemini-3.1-pro-preview",
+                        "Gemini 3.1 Flash Lite Preview" to "gemini-3.1-flash-lite-preview"
+                    ),
+                    providers = listOf(
+                        "Google AI Studio" to "gemini",
+                        "GCP Vertex AI" to "vertex-ai"
+                    )
+                ),
+                AiCompany(
+                    id = "anthropic",
+                    display = "Anthropic",
+                    models = listOf(
+                        "Claude Opus 4.7" to "claude-opus-4-7",
+                        "Claude Sonnet 4.6" to "claude-sonnet-4-6"
+                    ),
+                    providers = listOf(
+                        "Anthropic API" to "anthropic",
+                        "Custom" to "custom"
+                    )
+                ),
+                AiCompany(
+                    id = "deepseek",
+                    display = "DeepSeek",
+                    models = listOf(
+                        "DeepSeek V4 Pro" to "deepseek-v4-pro",
+                        "DeepSeek V4 Flash" to "deepseek-v4-flash"
+                    ),
+                    providers = listOf(
+                        "DeepSeek API" to "deepseek"
+                    )
+                ),
+                AiCompany(
+                    id = "moonshot",
+                    display = "Moonshot",
+                    models = listOf(
+                        "Kimi K2.6" to "kimi-k2.6"
+                    ),
+                    providers = listOf(
+                        "Moonshot API" to "kimi"
+                    )
                 )
-                uiState.aiModel.startsWith("deepseek", ignoreCase = true) -> listOf(
-                    "DeepSeek API" to "deepseek"
-                )
-                else -> listOf(
-                    "Google AI Studio" to "gemini",
-                    "GCP Vertex AI" to "vertex-ai"
-                )
-            }
+            )
+
+            // Resolve the active company from the currently-selected model.
+            val activeCompany = aiCompanies.firstOrNull { company ->
+                company.models.any { it.second == uiState.aiModel }
+            } ?: aiCompanies.first()
+            val companyIndex = aiCompanies.indexOf(activeCompany).coerceAtLeast(0)
+            val aiModels = activeCompany.models
+            val aiProviders = activeCompany.providers
             val currentProviderDisplay = aiProviders.find { it.second == uiState.aiProvider }?.first
                 ?: aiProviders.first().first
 
             MnemoraSettingsGroup {
-                // Provider
+                // Company
                 MnemoraSettingsDropdownRow(
-                    headline = "Provider",
-                    supporting = currentProviderDisplay,
-                    icon = Icons.Default.Speed,
-                    options = aiProviders.map { it.first },
-                    selectedIndex = aiProviders.indexOfFirst { it.second == uiState.aiProvider }
-                        .coerceAtLeast(0),
+                    headline = "Company",
+                    supporting = activeCompany.display,
+                    icon = Icons.Default.Business,
+                    options = aiCompanies.map { it.display },
+                    selectedIndex = companyIndex,
                     onSelect = { index ->
-                        onAiProviderSelect(aiProviders[index].second)
+                        val nextCompany = aiCompanies[index]
+                        if (nextCompany.id != activeCompany.id) {
+                            // Switch to the company's first model; setAiModel handles
+                            // provider compatibility automatically.
+                            onAiModelChange(nextCompany.models.first().second)
+                        }
                     }
                 )
 
@@ -294,6 +344,21 @@ internal fun SettingsScreenContent(
                         .coerceAtLeast(0),
                     onSelect = { index ->
                         onAiModelChange(aiModels[index].second)
+                    }
+                )
+
+                MnemoraSettingsDivider()
+
+                // Provider
+                MnemoraSettingsDropdownRow(
+                    headline = "Provider",
+                    supporting = currentProviderDisplay,
+                    icon = Icons.Default.Speed,
+                    options = aiProviders.map { it.first },
+                    selectedIndex = aiProviders.indexOfFirst { it.second == uiState.aiProvider }
+                        .coerceAtLeast(0),
+                    onSelect = { index ->
+                        onAiProviderSelect(aiProviders[index].second)
                     }
                 )
 
@@ -331,6 +396,30 @@ internal fun SettingsScreenContent(
                         }
                     }
                 )
+
+                if (uiState.aiProvider.lowercase() == "custom") {
+                    MnemoraSettingsDivider()
+
+                    // Base URL
+                    val baseUrlFocus = remember { BringIntoViewRequester() }
+                    OutlinedTextField(
+                        value = uiState.aiBaseUrl,
+                        onValueChange = { onAiBaseUrlChange(it) },
+                        label = { Text("Base URL") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small)
+                            .bringIntoViewRequester(baseUrlFocus)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    scope.launch { delay(300); baseUrlFocus.bringIntoView() }
+                                }
+                            },
+                        singleLine = true,
+                        shape = MaterialTheme.shapes.medium,
+                        colors = settingsTextFieldColors()
+                    )
+                }
 
                 if (uiState.aiProvider.lowercase() == "vertex-ai") {
                     MnemoraSettingsDivider()
@@ -485,6 +574,7 @@ private fun SettingsScreenPreviewDefault() {
             onAiApiKeyChange = {},
             onAiProjectIdChange = {},
             onAiLocationChange = {},
+            onAiBaseUrlChange = {},
             onAiModelChange = {},
             onAiContextIncludeStemChange = {},
             onAiContextIncludeOptionsChange = {},
@@ -525,6 +615,7 @@ private fun SettingsScreenPreviewModified() {
             onAiApiKeyChange = {},
             onAiProjectIdChange = {},
             onAiLocationChange = {},
+            onAiBaseUrlChange = {},
             onAiModelChange = {},
             onAiContextIncludeStemChange = {},
             onAiContextIncludeOptionsChange = {},

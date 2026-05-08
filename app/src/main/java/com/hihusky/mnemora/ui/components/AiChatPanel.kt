@@ -435,27 +435,15 @@ private fun AssistantMessage(text: String, isStreaming: Boolean = false) {
             color = MaterialTheme.colorScheme.surfaceContainerLowest,
             modifier = Modifier.fillMaxWidth()
         ) {
-            if (isStreaming) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(
-                        horizontal = MnemoraSpacing.Medium,
-                        vertical = MnemoraSpacing.Small
-                    )
+            MarkdownText(
+                content = text,
+                textStyle = MaterialTheme.typography.bodyMedium,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(
+                    horizontal = MnemoraSpacing.Medium,
+                    vertical = MnemoraSpacing.Small
                 )
-            } else {
-                MarkdownText(
-                    content = text,
-                    textStyle = MaterialTheme.typography.bodyMedium,
-                    contentColor = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(
-                        horizontal = MnemoraSpacing.Medium,
-                        vertical = MnemoraSpacing.Small
-                    )
-                )
-            }
+            )
         }
     }
 }

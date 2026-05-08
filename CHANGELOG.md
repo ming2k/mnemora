@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.7] - 2026-05-09
+
+### Added
+- **Anthropic/Custom AI provider support** — `AiService` adds `emitAllAnthropic()` for streaming Claude models (Opus 4.7, Sonnet 4.6) via Anthropic API or any custom base URL. Settings screen gains a "Custom" provider option with configurable Base URL.
+- **AI settings company-based grouping** — Settings screen reorganizes AI provider/model selection by company (Google, Anthropic, DeepSeek, Moonshot). Changing company auto-selects the first compatible model and provider.
+- **Base URL configuration** — new `aiBaseUrl` field in `SettingsRepository`, `SettingsUiState`, and `AiConfig`; exposed in Settings when "Custom" provider is active.
+- **`multiplatform-markdown-renderer-m3`** dependency replaces the `-android` variant, adding Material 3 styled table rendering support.
+
+### Changed
+- **Heading typography in Markdown** — h1-h6 now map to `titleMedium` / `titleSmall` / `bodyLarge` / `bodyMedium` with bold weights, down from `headlineLarge` (32sp). Fixes oversized headings in chat/dialog contexts.
+- **Streaming messages use MarkdownText** — `AiChatPanel` no longer falls back to raw `Text` during streaming; bold, links, and code formatting are visible immediately as tokens arrive.
+- **Paragraph routing for structural Markdown** — `parseTextSegment` now detects tables, lists, blockquotes, and code fences. Paragraphs containing these structures always route through the full Markdown engine, even if they also contain LaTeX formulas. Previously a single `$...$` would downgrade the entire paragraph to the limited inline renderer, destroying table/list layout.
+
+### Fixed
+- **Bold text rendering in streaming** — `**xxx**:` (bold followed by punctuation without space) now renders correctly because the full Markdown parser handles it, instead of the custom regex-based inline parser.
+
 ## [0.0.6] - 2026-04-28
 
 ### Added
@@ -134,7 +150,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.6...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.7...HEAD
+[0.0.7]: https://github.com/hihusky/mnemora/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/hihusky/mnemora/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/hihusky/mnemora/compare/v0.0.4...v0.0.5
 [0.0.4]: https://github.com/hihusky/mnemora/compare/v0.0.3...v0.0.4

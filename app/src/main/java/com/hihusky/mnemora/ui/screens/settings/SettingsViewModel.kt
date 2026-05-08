@@ -47,6 +47,7 @@ class SettingsViewModel @Inject constructor(
             val effectiveKey = cachedKey.ifBlank { activeKey }
             val projectId = settingsRepository.aiProjectId.first()
             val location = settingsRepository.aiLocation.first()
+            val baseUrl = settingsRepository.aiBaseUrl.first()
             val systemPrompt = settingsRepository.aiSystemPrompt.first()
             val includeStem = settingsRepository.aiContextIncludeStem.first()
             val includeOptions = settingsRepository.aiContextIncludeOptions.first()
@@ -70,6 +71,7 @@ class SettingsViewModel @Inject constructor(
                     aiModel = model,
                     aiProjectId = projectId,
                     aiLocation = location,
+                    aiBaseUrl = baseUrl,
                     aiSystemPrompt = systemPrompt,
                     aiContextIncludeStem = includeStem,
                     aiContextIncludeOptions = includeOptions,
@@ -80,6 +82,7 @@ class SettingsViewModel @Inject constructor(
 
             aiService.updateConfig(AiConfig(
                 apiKey = effectiveKey,
+                baseUrl = baseUrl,
                 provider = provider,
                 model = model,
                 projectId = projectId,
@@ -116,6 +119,7 @@ class SettingsViewModel @Inject constructor(
     private fun syncAiConfig(state: SettingsUiState = _uiState.value) {
         aiService.updateConfig(AiConfig(
             apiKey = state.aiApiKey,
+            baseUrl = state.aiBaseUrl,
             provider = state.aiProvider,
             model = state.aiModel,
             projectId = state.aiProjectId,
@@ -235,6 +239,12 @@ class SettingsViewModel @Inject constructor(
         syncAiConfig(_uiState.value)
     }
 
+    fun setAiBaseUrl(value: String) {
+        viewModelScope.launch { settingsRepository.setAiBaseUrl(value) }
+        _uiState.update { it.copy(aiBaseUrl = value) }
+        syncAiConfig(_uiState.value)
+    }
+
     fun setAiSystemPrompt(value: String) {
         viewModelScope.launch { settingsRepository.setAiSystemPrompt(value) }
         _uiState.update { it.copy(aiSystemPrompt = value) }
@@ -270,6 +280,7 @@ class SettingsViewModel @Inject constructor(
         return when {
             lowerModel.startsWith("kimi") -> provider == "kimi"
             lowerModel.startsWith("deepseek") -> provider == "deepseek"
+            lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
             else -> provider == "gemini" || provider == "vertex-ai"
         }
     }
@@ -279,6 +290,7 @@ class SettingsViewModel @Inject constructor(
         return when {
             lowerModel.startsWith("kimi") -> "kimi"
             lowerModel.startsWith("deepseek") -> "deepseek"
+            lowerModel.startsWith("claude") -> "anthropic"
             else -> "gemini"
         }
     }
@@ -300,6 +312,7 @@ data class SettingsUiState(
     val aiModel: String = "gemini-3.1-flash-lite-preview",
     val aiProjectId: String = "",
     val aiLocation: String = "",
+    val aiBaseUrl: String = "",
     val aiSystemPrompt: String = "You are a professional maritime education expert, skilled at explaining nautical exam questions. Please explain questions and answers in a concise and clear manner.",
     val aiContextIncludeStem: Boolean = true,
     val aiContextIncludeOptions: Boolean = true,

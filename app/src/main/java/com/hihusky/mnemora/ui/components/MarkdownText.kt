@@ -49,10 +49,11 @@ import androidx.core.text.HtmlCompat
 import coil.compose.AsyncImage
 import com.hrm.latex.renderer.Latex
 import com.hrm.latex.renderer.model.LatexConfig
-import com.mikepenz.markdown.compose.Markdown
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.DefaultMarkdownColors
 import com.mikepenz.markdown.model.DefaultMarkdownTypography
+import com.mikepenz.markdown.model.rememberMarkdownState
 import java.io.File
 
 // ------------------------------------------------------------------
@@ -343,12 +344,12 @@ private fun MarkdownBlock(
         tableBackground = MaterialTheme.colorScheme.surfaceContainerHigh
     )
     val typography = DefaultMarkdownTypography(
-        h1 = MaterialTheme.typography.headlineLarge,
-        h2 = MaterialTheme.typography.headlineMedium,
-        h3 = MaterialTheme.typography.headlineSmall,
-        h4 = MaterialTheme.typography.titleLarge,
-        h5 = MaterialTheme.typography.titleMedium,
-        h6 = MaterialTheme.typography.titleSmall,
+        h1 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        h2 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
+        h3 = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
+        h4 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+        h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+        h6 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
         text = textStyle,
         code = MaterialTheme.typography.bodyMedium,
         inlineCode = MaterialTheme.typography.bodyMedium,
@@ -362,8 +363,9 @@ private fun MarkdownBlock(
         ),
         table = textStyle
     )
+    val markdownState = rememberMarkdownState(text, retainState = true)
     Markdown(
-        content = text,
+        markdownState = markdownState,
         colors = colors,
         typography = typography,
         imageTransformer = Coil2ImageTransformerImpl
@@ -446,7 +448,22 @@ private fun parseTextSegment(text: String): List<RenderBlock> {
         .filter { it.isNotEmpty() }
     if (lines.isEmpty()) return emptyList()
     val anyMath = lines.any { line -> line.any { it is InlinePart.Math } }
-    return if (anyMath) {
+
+    // Paragraphs that contain tables, lists, blockquotes or code fences
+    // should always go through the full Markdown engine — even if they
+    // also contain LaTeX formulas.  The full renderer handles the
+    // structural elements correctly; inline formulas inside them will
+    // simply render as plain text (the $...$ syntax is not native
+    // Markdown).
+    val hasComplexStructure = trimmed.lines().any { line ->
+        val t = line.trimStart()
+        t.startsWith("|") ||          // table row
+            t.matches(Regex("^[-*+\\d+.]\\s")) || // list item
+            t.startsWith(">") ||      // blockquote
+            t.startsWith("```")       // code fence
+    }
+
+    return if (anyMath && !hasComplexStructure) {
         listOf(RenderBlock.InlineFlow(lines))
     } else {
         // Pure-text paragraph (possibly multi-line). Defer to the Markdown

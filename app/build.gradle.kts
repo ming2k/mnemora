@@ -65,8 +65,8 @@ android {
         applicationId = "com.hihusky.mnemora"
         minSdk = 24
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.0.6"
+        versionCode = 7
+        versionName = "0.0.7"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -173,7 +173,7 @@ dependencies {
 
     // Markdown (Compose)
     implementation("com.mikepenz:multiplatform-markdown-renderer:0.40.2")
-    implementation("com.mikepenz:multiplatform-markdown-renderer-android:0.40.2")
+    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.40.2")
     implementation("com.mikepenz:multiplatform-markdown-renderer-coil2:0.40.2")
 
     // LaTeX formula rendering for Compose
