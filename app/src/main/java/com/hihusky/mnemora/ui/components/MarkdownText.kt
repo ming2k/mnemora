@@ -4,20 +4,30 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentSize
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +46,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
@@ -50,10 +61,20 @@ import coil.compose.AsyncImage
 import com.hrm.latex.renderer.Latex
 import com.hrm.latex.renderer.model.LatexConfig
 import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import com.mikepenz.markdown.compose.components.markdownComponents
+import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
+import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.m3.Markdown
 import com.mikepenz.markdown.model.DefaultMarkdownColors
 import com.mikepenz.markdown.model.DefaultMarkdownTypography
 import com.mikepenz.markdown.model.rememberMarkdownState
+import org.intellij.markdown.MarkdownElementTypes
+import org.intellij.markdown.MarkdownTokenTypes
+import org.intellij.markdown.ast.findChildOfType
+import org.intellij.markdown.ast.getTextInNode
+import org.intellij.markdown.flavours.gfm.GFMElementTypes.HEADER
+import org.intellij.markdown.flavours.gfm.GFMElementTypes.ROW
+import org.intellij.markdown.flavours.gfm.GFMTokenTypes.CELL
 import java.io.File
 
 // ------------------------------------------------------------------
@@ -328,6 +349,194 @@ private fun ImagePreviewDialog(
 }
 
 // ------------------------------------------------------------------
+// Custom table: horizontal scroll, line borders, cell content supports
+// inline LaTeX via FlowRow mixing Text + Latex composables.
+// ------------------------------------------------------------------
+@Composable
+private fun CustomMarkdownTable(
+    content: String,
+    node: org.intellij.markdown.ast.ASTNode,
+    style: TextStyle,
+) {
+    val headerNode = node.findChildOfType(HEADER)
+    val rows = node.children.filter { it.type == ROW }
+
+    // Extract raw text for each cell using AST offsets.
+    val headerCells = headerNode?.children?.filter { it.type == CELL }?.map { cell ->
+        content.substring(cell.startOffset, cell.endOffset).trim()
+    } ?: emptyList()
+
+    val dataRows = rows.map { row ->
+        row.children.filter { it.type == CELL }.map { cell ->
+            content.substring(cell.startOffset, cell.endOffset).trim()
+        }
+    }
+
+    if (headerCells.isEmpty()) return
+
+    val columnCount = headerCells.size
+    val cellWidth = when {
+        columnCount <= 2 -> 140.dp
+        columnCount <= 4 -> 120.dp
+        else -> 100.dp
+    }
+    val dividerThickness = 0.5.dp
+    val tableWidth = (columnCount * cellWidth.value +
+        (columnCount + 1) * dividerThickness.value).dp
+
+    val outlineColor = MaterialTheme.colorScheme.outlineVariant
+    val headerDividerColor = MaterialTheme.colorScheme.outline
+
+    Box(
+        modifier = Modifier
+            .horizontalScroll(rememberScrollState())
+            .padding(vertical = 8.dp)
+    ) {
+        Column {
+            // Top border
+            HorizontalDivider(
+                modifier = Modifier.width(tableWidth),
+                color = outlineColor,
+                thickness = dividerThickness
+            )
+
+            // Header row
+            Row(
+                modifier = Modifier
+                    .width(tableWidth)
+                    .height(IntrinsicSize.Min)
+            ) {
+                // Left border
+                VerticalDivider(
+                    modifier = Modifier.fillMaxHeight(),
+                    color = outlineColor,
+                    thickness = dividerThickness
+                )
+                headerCells.forEachIndexed { _, cellText ->
+                    Box(
+                        modifier = Modifier
+                            .width(cellWidth)
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
+                        TableCellContent(
+                            text = cellText,
+                            style = style.copy(fontWeight = FontWeight.SemiBold),
+                            contentColor = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    // Vertical divider after each cell (including last for right border)
+                    VerticalDivider(
+                        modifier = Modifier.fillMaxHeight(),
+                        color = outlineColor,
+                        thickness = dividerThickness
+                    )
+                }
+            }
+
+            HorizontalDivider(
+                modifier = Modifier.width(tableWidth),
+                color = headerDividerColor,
+                thickness = dividerThickness
+            )
+
+            // Data rows
+            dataRows.forEach { rowCells ->
+                Row(
+                    modifier = Modifier
+                        .width(tableWidth)
+                        .height(IntrinsicSize.Min)
+                ) {
+                    // Left border
+                    VerticalDivider(
+                        modifier = Modifier.fillMaxHeight(),
+                        color = outlineColor,
+                        thickness = dividerThickness
+                    )
+                    rowCells.forEachIndexed { _, cellText ->
+                        Box(
+                            modifier = Modifier
+                                .width(cellWidth)
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            TableCellContent(
+                                text = cellText,
+                                style = style,
+                                contentColor = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        // Vertical divider after each cell (including last for right border)
+                        VerticalDivider(
+                            modifier = Modifier.fillMaxHeight(),
+                            color = outlineColor,
+                            thickness = dividerThickness
+                        )
+                    }
+                }
+                HorizontalDivider(
+                    modifier = Modifier.width(tableWidth),
+                    color = outlineColor,
+                    thickness = dividerThickness
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Renders a single table cell, mixing inline Markdown (bold/italic/code)
+ * with inline LaTeX formulas.
+ */
+@Composable
+private fun TableCellContent(
+    text: String,
+    style: TextStyle,
+    contentColor: Color
+) {
+    val parts = remember(text) { parseInlinePartsForLine(text) }
+    val baseSpanStyle = remember(style) {
+        SpanStyle(
+            fontSize = style.fontSize,
+            fontFamily = style.fontFamily
+        )
+    }
+
+    Row {
+        parts.forEach { part ->
+            when (part) {
+                is InlinePart.Text -> {
+                    if (part.text.isNotEmpty()) {
+                        val annotated = buildInlineMarkdown(part.text, baseSpanStyle)
+                        Text(
+                            text = annotated,
+                            style = style,
+                            color = contentColor,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Clip,
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        )
+                    }
+                }
+                is InlinePart.Math -> {
+                    Latex(
+                        latex = part.formula,
+                        modifier = Modifier
+                            .wrapContentSize()
+                            .align(Alignment.CenterVertically),
+                        config = LatexConfig(
+                            fontSize = style.fontSize,
+                            color = contentColor,
+                            darkColor = contentColor
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------------
 // Internal: pure Markdown block (no inline math inside)
 // ------------------------------------------------------------------
 @Composable
@@ -338,21 +547,21 @@ private fun MarkdownBlock(
 ) {
     val colors = DefaultMarkdownColors(
         text = contentColor,
-        codeBackground = MaterialTheme.colorScheme.surfaceContainerHigh,
-        inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerHigh,
+        codeBackground = MaterialTheme.colorScheme.surfaceContainerLowest,
+        inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerLowest,
         dividerColor = MaterialTheme.colorScheme.outline,
-        tableBackground = MaterialTheme.colorScheme.surfaceContainerHigh
+        tableBackground = Color.Transparent
     )
     val typography = DefaultMarkdownTypography(
-        h1 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-        h2 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-        h3 = MaterialTheme.typography.bodyLarge.copy(fontWeight = FontWeight.Bold),
-        h4 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+        h1 = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
+        h2 = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+        h3 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+        h4 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
         h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
         h6 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
         text = textStyle,
-        code = MaterialTheme.typography.bodyMedium,
-        inlineCode = MaterialTheme.typography.bodyMedium,
+        code = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+        inlineCode = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
         quote = textStyle,
         paragraph = textStyle,
         ordered = textStyle,
@@ -364,12 +573,172 @@ private fun MarkdownBlock(
         table = textStyle
     )
     val markdownState = rememberMarkdownState(text, retainState = true)
+    val components = markdownComponents(
+        table = { model ->
+            CustomMarkdownTable(
+                content = model.content,
+                node = model.node,
+                style = model.typography.table
+            )
+        },
+        codeFence = { model ->
+            MarkdownCodeFence(
+                content = model.content,
+                node = model.node,
+                style = model.typography.code,
+                block = { code, language, style ->
+                    ModernCodeBlock(code = code, language = language, style = style)
+                }
+            )
+        },
+        codeBlock = { model ->
+            MarkdownCodeBlock(
+                content = model.content,
+                node = model.node,
+                style = model.typography.code,
+                block = { code, language, style ->
+                    ModernCodeBlock(code = code, language = language, style = style)
+                }
+            )
+        },
+        blockQuote = { model ->
+            ModernBlockQuote(
+                content = model.content,
+                node = model.node,
+                style = model.typography.quote
+            )
+        }
+    )
     Markdown(
         markdownState = markdownState,
         colors = colors,
         typography = typography,
+        components = components,
         imageTransformer = Coil2ImageTransformerImpl
     )
+}
+
+// ------------------------------------------------------------------
+// Modern code block: rounded card with accent bar
+// ------------------------------------------------------------------
+@Composable
+private fun ModernCodeBlock(
+    code: String,
+    language: String?,
+    style: TextStyle
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+        ) {
+            // Accent bar on the left
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+
+            Column(modifier = Modifier.fillMaxWidth()) {
+                if (!language.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                MaterialTheme.colorScheme.surfaceContainer
+                            )
+                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                    ) {
+                        Text(
+                            text = language.uppercase(),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                }
+                Text(
+                    text = code,
+                    style = style,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier
+                        .horizontalScroll(rememberScrollState())
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                )
+            }
+        }
+    }
+}
+
+// ------------------------------------------------------------------
+// Modern block quote: accent bar + subtle background
+// ------------------------------------------------------------------
+@Composable
+private fun ModernBlockQuote(
+    content: String,
+    node: org.intellij.markdown.ast.ASTNode,
+    style: TextStyle
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                .padding(start = 0.dp, top = 12.dp, end = 16.dp, bottom = 12.dp)
+                .height(IntrinsicSize.Min)
+        ) {
+            // Accent bar
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .fillMaxHeight()
+                    .background(MaterialTheme.colorScheme.primary)
+            )
+
+            Column(modifier = Modifier.padding(start = 12.dp)) {
+                val blockQuoteColor = MaterialTheme.colorScheme.onSurfaceVariant
+                val quoteStyle = style.copy(color = blockQuoteColor)
+
+                node.children.forEachIndexed { index, child ->
+                    when (child.type) {
+                        MarkdownElementTypes.BLOCK_QUOTE -> {
+                            ModernBlockQuote(
+                                content = content,
+                                node = child,
+                                style = quoteStyle
+                            )
+                        }
+                        MarkdownTokenTypes.EOL -> {
+                            // Skip blank lines
+                        }
+                        else -> {
+                            com.mikepenz.markdown.compose.MarkdownElement(
+                                node = child,
+                                components = com.mikepenz.markdown.compose.LocalMarkdownComponents.current,
+                                content = content,
+                                includeSpacer = false
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 // ------------------------------------------------------------------
@@ -458,7 +827,8 @@ private fun parseTextSegment(text: String): List<RenderBlock> {
     val hasComplexStructure = trimmed.lines().any { line ->
         val t = line.trimStart()
         t.startsWith("|") ||          // table row
-            t.matches(Regex("^[-*+\\d+.]\\s")) || // list item
+            Regex("^[-*+]\\s").containsMatchIn(t) || // unordered list
+            Regex("^\\d+\\.\\s").containsMatchIn(t) || // ordered list
             t.startsWith(">") ||      // blockquote
             t.startsWith("```")       // code fence
     }

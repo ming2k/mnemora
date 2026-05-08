@@ -3,6 +3,7 @@ package com.hihusky.mnemora.ui.screens.settings
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
@@ -53,6 +54,7 @@ import com.hihusky.mnemora.ui.components.MnemoraSettingsGroup
 import com.hihusky.mnemora.ui.components.MnemoraSettingsSectionHeader
 import com.hihusky.mnemora.ui.components.MnemoraSettingsSwitchRow
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraCollapsibleTopAppBar
+import com.hihusky.mnemora.ui.screens.debug.DebugSettingsSection
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -71,13 +73,15 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.clickable
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.hihusky.mnemora.BuildConfig
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    viewModel: SettingsViewModel = hiltViewModel()
+    viewModel: SettingsViewModel = hiltViewModel(),
+    onNavigateToMarkdownTest: () -> Unit = {}
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -102,7 +106,8 @@ fun SettingsScreen(
         onAiContextIncludeOptionsChange = { viewModel.setAiContextIncludeOptions(it) },
         onAiContextIncludeAnswerChange = { viewModel.setAiContextIncludeAnswer(it) },
         onAiContextIncludeExplanationChange = { viewModel.setAiContextIncludeExplanation(it) },
-        onAiSystemPromptChange = { viewModel.setAiSystemPrompt(it) }
+        onAiSystemPromptChange = { viewModel.setAiSystemPrompt(it) },
+        onNavigateToMarkdownTest = onNavigateToMarkdownTest
     )
 }
 
@@ -130,6 +135,7 @@ internal fun SettingsScreenContent(
     onAiContextIncludeAnswerChange: (Boolean) -> Unit,
     onAiContextIncludeExplanationChange: (Boolean) -> Unit,
     onAiSystemPromptChange: (String) -> Unit,
+    onNavigateToMarkdownTest: () -> Unit = {},
 ) {
     val scrollState = rememberScrollState()
     val scrollFraction by remember {
@@ -539,7 +545,28 @@ internal fun SettingsScreenContent(
                 }
             }
 
-            androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(24.dp))
+            // ── App Info ──
+            HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(top = 20.dp))
+            MnemoraSettingsSectionHeader(title = "App Info")
+            MnemoraSettingsGroup {
+                MnemoraSettingsRow(
+                    headline = "Version",
+                    supporting = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+                    icon = null,
+                    trailing = {}
+                )
+                MnemoraSettingsDivider()
+                MnemoraSettingsRow(
+                    headline = "Build",
+                    supporting = if (BuildConfig.DEBUG) "debug" else "release",
+                    icon = null,
+                    trailing = {}
+                )
+            }
+
+            DebugSettingsSection(onNavigateToMarkdownTest = onNavigateToMarkdownTest)
+
+            Spacer(modifier = Modifier.height(24.dp))
         }
     }
 }
@@ -580,7 +607,8 @@ private fun SettingsScreenPreviewDefault() {
             onAiContextIncludeOptionsChange = {},
             onAiContextIncludeAnswerChange = {},
             onAiContextIncludeExplanationChange = {},
-            onAiSystemPromptChange = {}
+            onAiSystemPromptChange = {},
+            onNavigateToMarkdownTest = {}
         )
     }
 }
@@ -621,7 +649,8 @@ private fun SettingsScreenPreviewModified() {
             onAiContextIncludeOptionsChange = {},
             onAiContextIncludeAnswerChange = {},
             onAiContextIncludeExplanationChange = {},
-            onAiSystemPromptChange = {}
+            onAiSystemPromptChange = {},
+            onNavigateToMarkdownTest = {}
         )
     }
 }

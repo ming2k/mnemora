@@ -65,8 +65,8 @@ android {
         applicationId = "com.hihusky.mnemora"
         minSdk = 24
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.0.7"
+        versionCode = 8
+        versionName = "0.0.8"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -112,6 +112,7 @@ android {
     buildFeatures {
         compose = true
         resValues = true
+        buildConfig = true
     }
     packaging {
         resources {
@@ -122,10 +123,10 @@ android {
 
 dependencies {
     // Core
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.appcompat:appcompat:1.7.0")
+    implementation("androidx.core:core-ktx:1.18.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
+    implementation("androidx.activity:activity-compose:1.13.0")
+    implementation("androidx.appcompat:appcompat:1.7.1")
 
     // Compose BOM
     val composeBom = platform("androidx.compose:compose-bom:2025.12.00")
@@ -140,12 +141,12 @@ dependencies {
     implementation("androidx.compose.material:material-icons-extended")
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.9.6")
-    implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("androidx.navigation:navigation-compose:2.9.8")
+    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
 
     // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
 
     // Hilt
     implementation("com.google.dagger:hilt-android:2.59.2")
@@ -157,14 +158,14 @@ dependencies {
     ksp("androidx.room:room-compiler:2.8.4")
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.1.7")
+    implementation("androidx.datastore:datastore-preferences:1.2.1")
 
     // JSON
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // HTTP
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp:5.3.2")
+    implementation("com.squareup.okhttp3:logging-interceptor:5.3.2")
 
     // Image loading
     implementation("io.coil-kt:coil-compose:2.7.0")
@@ -177,16 +178,16 @@ dependencies {
     implementation("com.mikepenz:multiplatform-markdown-renderer-coil2:0.40.2")
 
     // LaTeX formula rendering for Compose
-    implementation("io.github.huarangmeng:latex-renderer:1.3.0")
-    implementation("io.github.huarangmeng:latex-parser:1.3.0")
+    implementation("io.github.huarangmeng:latex-renderer:1.3.9")
+    implementation("io.github.huarangmeng:latex-parser:1.3.9")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    testImplementation("io.mockk:mockk:1.13.17")
-    testImplementation("org.robolectric:robolectric:4.14.1")
-    testImplementation("androidx.test:core:1.6.1")
-    testImplementation("androidx.test.ext:junit:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("io.mockk:mockk:1.14.9")
+    testImplementation("org.robolectric:robolectric:4.16.1")
+    testImplementation("androidx.test:core:1.7.0")
+    testImplementation("androidx.test.ext:junit:1.3.0")
     testImplementation("androidx.room:room-testing:2.8.4")
 }
 

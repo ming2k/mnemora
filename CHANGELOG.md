@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.8] - 2026-05-10
+
+### Added
+- **Custom table rendering** — replaced default mikepenz `MarkdownTable` with `CustomMarkdownTable` supporting inline LaTeX formulas inside cells via `FlowRow` mixing `Text` + `Latex` composables.
+- **Modern code block styling** — `ModernCodeBlock` component with rounded card (12.dp), primary accent bar, language header, and horizontal scrolling. Background: `surfaceContainerLowest`.
+- **Modern block quote styling** — `ModernBlockQuote` component with left primary accent bar, `surfaceContainerLow` background, and `onSurfaceVariant` text color.
+- **Markdown Preview debug screen** — `MarkdownTestScreen` in `src/debug/` with preset test cases (tables, lists, code, headings, bold punctuation, streaming simulation). Accessible via Settings > Developer Tools.
+- **Source-set isolation for debug tools** — debug-only `DebugSettingsSection`, `DebugNavGraph`, and `MarkdownTestScreen` live in `src/debug/`, release variants in `src/release/` ensure zero production impact.
+- **BuildConfig enabled** — `buildConfig = true` in `buildFeatures` for version/build info display.
+
+### Changed
+- **Heading typography scale** — h1-h6 remapped: h1 24sp, h2 22sp, h3 16sp, h4 14sp+bold, h5-6 14sp+semibold. All headings now clearly larger than body text (14sp).
+- **Table line-style borders** — transparent background with full outline borders (top, bottom, left, right, internal dividers). Dynamic column widths: 140dp / 120dp / 100dp based on column count.
+- **Table horizontal scrolling** — `horizontalScroll` with fixed `tableWidth` = cells + dividers, no wrap.
+- **Code/inlineCode font family** — switched to `FontFamily.Monospace` for proper code rendering.
+- **List detection in `parseTextSegment`** — fixed `containsMatchIn` for unordered (`-*+`) and ordered (`\d+\.`) lists, preventing misrouting to `InlineFlow`.
+
+### Fixed
+- **Bold with adjacent punctuation** — `**xxx**:` now renders correctly in all contexts (lists, tables, paragraphs) by routing through full Markdown parser.
+- **Table right border alignment** — `HorizontalDivider` width now matches `Row` width exactly, no overflow beyond last vertical divider.
+- **Debug build scroll padding** — removed duplicate `padding(end = 16.dp)` on `Column` inside `horizontalScroll`.
+
 ## [0.0.7] - 2026-05-09
 
 ### Added
@@ -150,7 +172,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.7...HEAD
+[Unreleased]: https://github.com/hihusky/mnemora/compare/v0.0.8...HEAD
+[0.0.8]: https://github.com/hihusky/mnemora/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/hihusky/mnemora/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/hihusky/mnemora/compare/v0.0.5...v0.0.6
 [0.0.5]: https://github.com/hihusky/mnemora/compare/v0.0.4...v0.0.5

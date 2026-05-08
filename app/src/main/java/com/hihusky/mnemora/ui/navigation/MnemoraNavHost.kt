@@ -146,7 +146,11 @@ fun MnemoraNavHost(
             )
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen()
+            SettingsScreen(
+                onNavigateToMarkdownTest = { navController.navigate(DebugNavGraph.MARKDOWN_TEST) }
+            )
         }
+
+        DebugNavGraph.addDebugRoutes(this, navController)
     }
 }
