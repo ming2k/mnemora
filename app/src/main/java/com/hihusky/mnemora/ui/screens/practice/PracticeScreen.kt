@@ -62,7 +62,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.hihusky.mnemora.data.model.Book
 import com.hihusky.mnemora.data.model.Collection
 import com.hihusky.mnemora.data.model.Node
@@ -101,6 +101,7 @@ fun PracticeScreen(
         onAnswerQuestion = viewModel::answerQuestion,
         onGoToQuestion = viewModel::goToQuestion,
         onSelectNode = viewModel::selectNode,
+        onLoadChatHistory = viewModel::loadChatHistory,
         onLoadCollectionData = viewModel::loadCollectionData,
         onToggleQuestionInCollection = viewModel::toggleQuestionInCollection,
         onCreateCollection = viewModel::createCollection,
@@ -129,6 +130,7 @@ internal fun PracticeScreenContent(
     onAnswerQuestion: (String) -> Unit,
     onGoToQuestion: (Int) -> Unit,
     onSelectNode: (String) -> Unit,
+    onLoadChatHistory: () -> Unit,
     onLoadCollectionData: () -> Unit,
     onToggleQuestionInCollection: (Int) -> Unit,
     onCreateCollection: (String) -> Unit,
@@ -163,6 +165,10 @@ internal fun PracticeScreenContent(
         if (pagerState.currentPage != uiState.currentIndex) {
             onGoToQuestion(pagerState.currentPage)
         }
+    }
+
+    LaunchedEffect(showAiChat) {
+        if (showAiChat) onLoadChatHistory()
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -330,7 +336,7 @@ internal fun PracticeScreenContent(
                 HorizontalPager(
                     state = pagerState,
                     modifier = Modifier.weight(1f),
-                    beyondViewportPageCount = 1,
+                    beyondViewportPageCount = 2,
                     contentPadding = PaddingValues(horizontal = 0.dp)
                 ) { page ->
                     val question = uiState.questions[page]
@@ -503,6 +509,7 @@ private fun PracticeScreenContentPreview() {
             onAnswerQuestion = {},
             onGoToQuestion = {},
             onSelectNode = {},
+            onLoadChatHistory = {},
             onLoadCollectionData = {},
             onToggleQuestionInCollection = {},
             onCreateCollection = {},
@@ -534,6 +541,7 @@ private fun PracticeScreenContentLoadingPreview() {
             onAnswerQuestion = {},
             onGoToQuestion = {},
             onSelectNode = {},
+            onLoadChatHistory = {},
             onLoadCollectionData = {},
             onToggleQuestionInCollection = {},
             onCreateCollection = {},
@@ -568,6 +576,7 @@ private fun PracticeScreenContentAnsweredPreview() {
             onAnswerQuestion = {},
             onGoToQuestion = {},
             onSelectNode = {},
+            onLoadChatHistory = {},
             onLoadCollectionData = {},
             onToggleQuestionInCollection = {},
             onCreateCollection = {},

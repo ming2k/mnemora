@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.10] - 2026-05-12
+
+### Fixed
+- **Practice screen scroll stutter** — removed unnecessary `loadChatHistory()` Room queries from `goToQuestion()` swipe path (chat history is now loaded on-demand when the AI panel opens). Added 300ms debounce to `saveSessionProgress()` to avoid excessive Room writes during rapid scrolling. Increased `beyondViewportPageCount` from 1 to 2 for smoother page pre-composition.
+
 ## [0.0.9] - 2026-05-12
 
 ### Added
@@ -177,7 +182,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.9...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.10...HEAD
+[0.0.10]: https://github.com/ming2k/mnemora/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/ming2k/mnemora/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/ming2k/mnemora/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/ming2k/mnemora/compare/v0.0.6...v0.0.7

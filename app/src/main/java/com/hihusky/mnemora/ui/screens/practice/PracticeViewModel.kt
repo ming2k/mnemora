@@ -55,6 +55,7 @@ class PracticeViewModel @Inject constructor(
 
     private val aiJobs = mutableMapOf<Int, Job>()
     private var confettiJob: Job? = null
+    private var saveProgressJob: Job? = null
     private var currentSessionId: Long = -1L
     private var effectiveBookId: Int = navBookId
 
@@ -222,8 +223,7 @@ class PracticeViewModel @Inject constructor(
     fun goToQuestion(index: Int) {
         if (index < 0 || index >= _uiState.value.questions.size) return
         _uiState.update { it.copy(currentIndex = index) }
-        saveSessionProgress(index)
-        loadChatHistory()
+        debouncedSaveProgress(index)
     }
 
     fun nextQuestion() {
@@ -315,9 +315,22 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
+    private fun debouncedSaveProgress(index: Int) {
+        saveProgressJob?.cancel()
+        saveProgressJob = viewModelScope.launch {
+            delay(300L)
+            val state = _uiState.value
+            manageProgressUseCase.saveSessionProgress(
+                sessionId = currentSessionId,
+                currentIndex = index,
+                totalQuestions = state.questions.size
+            )
+        }
+    }
+
     //region AI Chat
 
-    private fun loadChatHistory() {
+    fun loadChatHistory() {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
             val sessions = aiChatUseCase.getChatSessions(question.id)

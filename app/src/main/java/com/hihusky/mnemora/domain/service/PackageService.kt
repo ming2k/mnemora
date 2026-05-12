@@ -16,7 +16,7 @@ import javax.inject.Singleton
 
 @Singleton
 class PackageService @Inject constructor(
-    @ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val bookImporter: BookImporter
 ) {
     private val json = Json { ignoreUnknownKeys = true }
@@ -271,7 +271,6 @@ class PackageService @Inject constructor(
                     if (v.isString) v.content
                     else v.content.toIntOrNull() ?: v.content.toDoubleOrNull() ?: v.content
                 }
-                else -> null
             }
         }
         return result
