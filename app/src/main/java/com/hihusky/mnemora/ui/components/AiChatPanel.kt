@@ -50,11 +50,13 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -68,6 +70,7 @@ import com.hihusky.mnemora.ui.theme.MnemoraAlpha
 import com.hihusky.mnemora.ui.theme.MnemoraSize
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
+import kotlinx.coroutines.flow.filter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,10 +101,28 @@ fun AiChatPanel(
         }
     )
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var shouldAutoScroll by remember { mutableStateOf(true) }
 
-    // Only scroll when a new message is added, not on every streaming chunk
+    // Track whether the user has scrolled away from the bottom
+    val isAtBottom by remember {
+        derivedStateOf {
+            val lastItem = listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
+            lastItem.index >= visibleMessages.lastIndex
+        }
+    }
+
+    // When the user scrolls, enable auto-scroll only when they return to the bottom
+    LaunchedEffect(listState) {
+        snapshotFlow { listState.isScrollInProgress to isAtBottom }
+            .filter { (inProgress, _) -> !inProgress }
+            .collect { (_, atBottom) ->
+                shouldAutoScroll = atBottom
+            }
+    }
+
+    // Auto-scroll on new messages only when user is at bottom (or hasn't scrolled up)
     LaunchedEffect(visibleMessages.size) {
-        if (visibleMessages.isNotEmpty()) {
+        if (visibleMessages.isNotEmpty() && shouldAutoScroll) {
             listState.animateScrollToItem(visibleMessages.lastIndex)
         }
     }

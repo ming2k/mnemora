@@ -50,6 +50,10 @@ class AiChatUseCase @Inject constructor(
         )
     }
 
+    suspend fun saveScrollPosition(sessionId: Int, index: Int, offset: Int) {
+        chatRepository.saveScrollPosition(sessionId, index, offset)
+    }
+
     suspend fun saveBotMessage(sessionId: Int, response: String): ChatMessage {
         val botMsg = ChatMessage(text = response, isUser = false)
         chatRepository.saveChatMessage(sessionId, botMsg)

@@ -53,7 +53,7 @@ class PracticeViewModel @Inject constructor(
     var imageBasePath: String? = null
         private set
 
-    private val aiJobs = mutableMapOf<Int, Job>()
+    private val chatJobs = mutableMapOf<Int, Job>()
     private var confettiJob: Job? = null
     private var saveProgressJob: Job? = null
     private var currentSessionId: Long = -1L
@@ -66,6 +66,8 @@ class PracticeViewModel @Inject constructor(
             it.copy(aiModel = aiService.config.value.model, aiProvider = aiService.config.value.provider)
         }
     }
+
+    // ── Collections ──────────────────────────────────────────────────
 
     fun loadCollectionData() {
         val question = _uiState.value.currentQuestion ?: return
@@ -127,6 +129,8 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
+    // ── Preferences ──────────────────────────────────────────────────
+
     private fun observePreferences() {
         viewModelScope.launch {
             settingsRepository.showPracticeProgress.collect { showProgress ->
@@ -160,6 +164,8 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
+    // ── Session lifecycle ────────────────────────────────────────────
+
     private fun loadBook() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -188,7 +194,6 @@ class PracticeViewModel @Inject constructor(
                         isLoading = false
                     )
                 }
-                loadChatHistory()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
@@ -213,26 +218,25 @@ class PracticeViewModel @Inject constructor(
                     )
                 }
                 saveSessionProgress(0, data.questions.size)
-                loadChatHistory()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }
             }
         }
     }
 
+    // ── Navigation ───────────────────────────────────────────────────
+
     fun goToQuestion(index: Int) {
         if (index < 0 || index >= _uiState.value.questions.size) return
         _uiState.update { it.copy(currentIndex = index) }
-        debouncedSaveProgress(index)
+        saveSessionProgress(index, debounceMs = 300L)
     }
 
-    fun nextQuestion() {
+    private fun nextQuestion() {
         goToQuestion(_uiState.value.currentIndex + 1)
     }
 
-    fun previousQuestion() {
-        goToQuestion(_uiState.value.currentIndex - 1)
-    }
+    // ── Answering ────────────────────────────────────────────────────
 
     fun answerQuestion(option: String) {
         val state = _uiState.value
@@ -240,7 +244,7 @@ class PracticeViewModel @Inject constructor(
 
         viewModelScope.launch {
             val answer = submitAnswerUseCase(effectiveBookId, question, option)
-            
+
             _uiState.update {
                 it.copy(
                     userAnswers = it.userAnswers.toMutableMap().apply { put(question.id, answer) }
@@ -264,6 +268,8 @@ class PracticeViewModel @Inject constructor(
             }
         }
     }
+
+    // ── Progress management ──────────────────────────────────────────
 
     fun toggleMark() {
         val question = _uiState.value.currentQuestion ?: return
@@ -304,8 +310,10 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
-    private fun saveSessionProgress(index: Int, total: Int? = null) {
-        viewModelScope.launch {
+    private fun saveSessionProgress(index: Int, total: Int? = null, debounceMs: Long = 0L) {
+        saveProgressJob?.cancel()
+        saveProgressJob = viewModelScope.launch {
+            if (debounceMs > 0) delay(debounceMs)
             val state = _uiState.value
             manageProgressUseCase.saveSessionProgress(
                 sessionId = currentSessionId,
@@ -315,99 +323,114 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
-    private fun debouncedSaveProgress(index: Int) {
-        saveProgressJob?.cancel()
-        saveProgressJob = viewModelScope.launch {
-            delay(300L)
-            val state = _uiState.value
-            manageProgressUseCase.saveSessionProgress(
-                sessionId = currentSessionId,
-                currentIndex = index,
-                totalQuestions = state.questions.size
-            )
-        }
-    }
+    // ── AI Chat ──────────────────────────────────────────────────────
 
-    //region AI Chat
-
-    fun loadChatHistory() {
+    fun chatLoadHistory() {
         val question = _uiState.value.currentQuestion ?: return
+        val questionId = question.id
+        _uiState.update { state ->
+            if (state.chat.questionId == questionId) {
+                state
+            } else {
+                state.chatUpdate(
+                    questionId = questionId,
+                    sessions = emptyList(),
+                    currentId = null,
+                    history = emptyList(),
+                    scrollIndex = 0,
+                    scrollOffset = 0
+                )
+            }
+        }
         viewModelScope.launch {
-            val sessions = aiChatUseCase.getChatSessions(question.id)
-            val currentSessionId = sessions.firstOrNull()?.id
-            val history = currentSessionId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
+            val sessions = aiChatUseCase.getChatSessions(questionId)
+            val currentId = sessions.firstOrNull()?.id
+            val current = sessions.firstOrNull()
+            val history = currentId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
+            if (_uiState.value.currentQuestion?.id != questionId) return@launch
             _uiState.update {
-                it.copy(
-                    chatSessions = sessions,
-                    currentChatSessionId = currentSessionId,
-                    chatHistory = history
+                it.chatUpdate(
+                    questionId = questionId,
+                    sessions = sessions,
+                    currentId = currentId,
+                    history = history,
+                    scrollIndex = current?.lastScrollIndex ?: 0,
+                    scrollOffset = current?.lastScrollOffset ?: 0
                 )
             }
         }
     }
 
-    fun createChatSession(title: String = "New Chat") {
+    fun chatCreateSession(title: String = "New Chat") {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
             val session = aiChatUseCase.createChatSession(question.id, title)
-            _uiState.update {
-                it.copy(
-                    chatSessions = listOf(session) + it.chatSessions,
-                    currentChatSessionId = session.id,
-                    chatHistory = emptyList(),
-                    chatScrollIndex = 0,
-                    chatScrollOffset = 0
+            _uiState.update { state ->
+                state.chatUpdate(
+                    sessions = listOf(session) + state.chat.sessions,
+                    currentId = session.id,
+                    history = emptyList(),
+                    scrollIndex = 0,
+                    scrollOffset = 0
                 )
             }
         }
     }
 
-    fun switchChatSession(sessionId: Int) {
+    fun chatSwitchSession(sessionId: Int) {
         viewModelScope.launch {
             val history = aiChatUseCase.getChatHistory(sessionId)
-            _uiState.update {
-                it.copy(
-                    currentChatSessionId = sessionId,
-                    chatHistory = history,
-                    chatScrollIndex = 0,
-                    chatScrollOffset = 0
+            val targetSession = _uiState.value.chat.sessions.find { it.id == sessionId }
+            _uiState.update { state ->
+                state.chatUpdate(
+                    sessions = state.chat.sessions,
+                    currentId = sessionId,
+                    history = history,
+                    scrollIndex = targetSession?.lastScrollIndex ?: 0,
+                    scrollOffset = targetSession?.lastScrollOffset ?: 0
                 )
             }
         }
     }
 
-    fun saveChatScrollPosition(index: Int, offset: Int) {
-        _uiState.update { it.copy(chatScrollIndex = index, chatScrollOffset = offset) }
+    fun chatSaveScrollPosition(index: Int, offset: Int) {
+        _uiState.update { state -> state.chatUpdate(scrollIndex = index, scrollOffset = offset) }
+        val sessionId = _uiState.value.chat.currentSessionId ?: return
+        viewModelScope.launch {
+            aiChatUseCase.saveScrollPosition(sessionId, index, offset)
+        }
     }
 
-    fun deleteChatSession() {
-        val sessionId = _uiState.value.currentChatSessionId ?: return
+    fun chatDeleteSession() {
+        val sessionId = _uiState.value.chat.currentSessionId ?: return
         val questionId = _uiState.value.currentQuestion?.id ?: return
         viewModelScope.launch {
             aiChatUseCase.deleteChatSession(sessionId)
             val remaining = aiChatUseCase.getChatSessions(questionId)
-            val newCurrentId = remaining.firstOrNull()?.id
-            val newHistory = newCurrentId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
-            _uiState.update {
-                it.copy(
-                    chatSessions = remaining,
-                    currentChatSessionId = newCurrentId,
-                    chatHistory = newHistory
+            val newCurrent = remaining.firstOrNull()
+            val newHistory = newCurrent?.let { aiChatUseCase.getChatHistory(it.id) } ?: emptyList()
+            _uiState.update { state ->
+                state.chatUpdate(
+                    sessions = remaining,
+                    currentId = newCurrent?.id,
+                    history = newHistory,
+                    scrollIndex = newCurrent?.lastScrollIndex ?: 0,
+                    scrollOffset = newCurrent?.lastScrollOffset ?: 0
                 )
             }
         }
     }
 
-    fun sendAiMessage(message: String) {
+    fun chatSendMessage(message: String) {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
-            val sessionId = _uiState.value.currentChatSessionId ?: run {
+            val sessionId = _uiState.value.chat.currentSessionId ?: run {
                 val session = aiChatUseCase.createChatSession(question.id, message.take(30))
-                _uiState.update {
-                    it.copy(
-                        chatSessions = listOf(session) + it.chatSessions,
-                        currentChatSessionId = session.id,
-                        chatHistory = emptyList()
+                _uiState.update { state ->
+                    state.chatUpdate(
+                        sessions = listOf(session) + state.chat.sessions,
+                        currentId = session.id,
+                        history = emptyList()
                     )
                 }
                 session.id
@@ -415,72 +438,75 @@ class PracticeViewModel @Inject constructor(
 
             val userMsg = aiChatUseCase.saveUserMessage(sessionId, message)
             _uiState.update { state ->
-                state.copy(
-                    chatHistory = state.chatHistory + userMsg,
-                    aiLoadingSessions = state.aiLoadingSessions + sessionId
+                state.chatUpdate(
+                    history = state.chat.history + userMsg,
+                    loadingSessionIds = state.chat.loadingSessionIds + sessionId
                 )
             }
 
-            aiJobs[sessionId]?.cancel()
-            val history = _uiState.value.chatHistory
-            aiJobs[sessionId] = launch {
+            chatJobs[sessionId]?.cancel()
+            val captionHistory = _uiState.value.chat.history
+            chatJobs[sessionId] = launch {
                 try {
                     val stream = aiChatUseCase.streamAiResponse(
                         sessionId = sessionId,
                         question = question,
                         userMessage = message,
-                        history = history
+                        history = captionHistory
                     )
                     var response = ""
                     stream.collect { chunk ->
                         response += chunk
                         _uiState.update { state ->
-                            state.copy(aiStreamingResponses = state.aiStreamingResponses + (sessionId to response))
+                            state.chatUpdate(
+                                streamingResponses = state.chat.streamingResponses + (sessionId to response)
+                            )
                         }
                     }
                     val botMsg = aiChatUseCase.saveBotMessage(sessionId, response)
                     _uiState.update { state ->
-                        state.copy(
-                            chatHistory = if (state.currentChatSessionId == sessionId) state.chatHistory + botMsg else state.chatHistory,
-                            aiStreamingResponses = state.aiStreamingResponses - sessionId,
-                            aiLoadingSessions = state.aiLoadingSessions - sessionId
+                        val chat = state.chat
+                        state.chatUpdate(
+                            history = if (chat.currentSessionId == sessionId) chat.history + botMsg else chat.history,
+                            streamingResponses = chat.streamingResponses - sessionId,
+                            loadingSessionIds = chat.loadingSessionIds - sessionId
                         )
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
                     val botMsg = aiChatUseCase.saveBotMessage(sessionId, "Error: ${e.message}")
                     _uiState.update { state ->
-                        state.copy(
-                            chatHistory = if (state.currentChatSessionId == sessionId) state.chatHistory + botMsg else state.chatHistory,
-                            aiStreamingResponses = state.aiStreamingResponses - sessionId,
-                            aiLoadingSessions = state.aiLoadingSessions - sessionId
+                        state.chatUpdate(
+                            history = if (state.chat.currentSessionId == sessionId) state.chat.history + botMsg else state.chat.history,
+                            streamingResponses = state.chat.streamingResponses - sessionId,
+                            loadingSessionIds = state.chat.loadingSessionIds - sessionId
                         )
                     }
                 } finally {
-                    aiJobs.remove(sessionId)
+                    chatJobs.remove(sessionId)
                 }
             }
         }
     }
 
-    fun clearConfetti() {
-        confettiJob?.cancel()
-        _uiState.update { it.copy(confettiId = 0L) }
-    }
-
-    fun cancelAiChat() {
-        val sessionId = _uiState.value.currentChatSessionId ?: return
-        aiJobs[sessionId]?.cancel()
-        aiJobs.remove(sessionId)
+    fun chatCancel() {
+        val sessionId = _uiState.value.chat.currentSessionId ?: return
+        chatJobs[sessionId]?.cancel()
+        chatJobs.remove(sessionId)
         _uiState.update { state ->
-            state.copy(
-                aiLoadingSessions = state.aiLoadingSessions - sessionId,
-                aiStreamingResponses = state.aiStreamingResponses - sessionId
+            state.chatUpdate(
+                loadingSessionIds = state.chat.loadingSessionIds - sessionId,
+                streamingResponses = state.chat.streamingResponses - sessionId
             )
         }
     }
 
-    //endregion
+    // ── Misc ─────────────────────────────────────────────────────────
+
+    fun clearConfetti() {
+        confettiJob?.cancel()
+        _uiState.update { it.copy(confettiId = 0L) }
+    }
 
     fun getQuestionStatus(index: Int): QuestionStatus {
         val state = _uiState.value
@@ -493,6 +519,22 @@ class PracticeViewModel @Inject constructor(
     }
 }
 
+// ── State definitions ────────────────────────────────────────────────
+
+data class AiChatUiState(
+    val questionId: Int? = null,
+    val sessions: List<ChatSession> = emptyList(),
+    val currentSessionId: Int? = null,
+    val history: List<ChatMessage> = emptyList(),
+    val loadingSessionIds: Set<Int> = emptySet(),
+    val streamingResponses: Map<Int, String> = emptyMap(),
+    val scrollIndex: Int = 0,
+    val scrollOffset: Int = 0
+) {
+    val isLoading: Boolean get() = currentSessionId?.let { it in loadingSessionIds } ?: false
+    val streamingResponse: String get() = currentSessionId?.let { streamingResponses[it] } ?: ""
+}
+
 data class PracticeUiState(
     val book: Book? = null,
     val nodes: List<Node> = emptyList(),
@@ -503,13 +545,7 @@ data class PracticeUiState(
     val markedQuestions: Set<Int> = emptySet(),
     val isLoading: Boolean = false,
     val error: String? = null,
-    val chatSessions: List<ChatSession> = emptyList(),
-    val currentChatSessionId: Int? = null,
-    val chatHistory: List<ChatMessage> = emptyList(),
-    val aiLoadingSessions: Set<Int> = emptySet(),
-    val aiStreamingResponses: Map<Int, String> = emptyMap(),
-    val chatScrollIndex: Int = 0,
-    val chatScrollOffset: Int = 0,
+    val chat: AiChatUiState = AiChatUiState(),
     val availableCollections: List<com.hihusky.mnemora.data.model.Collection> = emptyList(),
     val questionCollectionIds: Set<Int> = emptySet(),
     val showProgressBar: Boolean = true,
@@ -529,8 +565,27 @@ data class PracticeUiState(
     val totalQuestions: Int get() = questions.size
     val progress: Float
         get() = if (totalQuestions > 0) (currentIndex + 1).toFloat() / totalQuestions else 0f
-    val isCurrentSessionLoading: Boolean
-        get() = currentChatSessionId?.let { it in aiLoadingSessions } ?: false
-    val currentStreamingResponse: String
-        get() = currentChatSessionId?.let { aiStreamingResponses[it] } ?: ""
+
+    /** Convenience for `copy(chat = chat.copy(...))`. */
+    fun chatUpdate(
+        questionId: Int? = chat.questionId,
+        sessions: List<ChatSession> = chat.sessions,
+        currentId: Int? = chat.currentSessionId,
+        history: List<ChatMessage> = chat.history,
+        loadingSessionIds: Set<Int> = chat.loadingSessionIds,
+        streamingResponses: Map<Int, String> = chat.streamingResponses,
+        scrollIndex: Int = chat.scrollIndex,
+        scrollOffset: Int = chat.scrollOffset
+    ): PracticeUiState = copy(
+        chat = AiChatUiState(
+            questionId = questionId,
+            sessions = sessions,
+            currentSessionId = currentId,
+            history = history,
+            loadingSessionIds = loadingSessionIds,
+            streamingResponses = streamingResponses,
+            scrollIndex = scrollIndex,
+            scrollOffset = scrollOffset
+        )
+    )
 }

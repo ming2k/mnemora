@@ -10,29 +10,26 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.GridView
-import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -40,17 +37,17 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -63,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.hihusky.mnemora.data.model.Book
 import com.hihusky.mnemora.data.model.Collection
 import com.hihusky.mnemora.data.model.Node
@@ -75,12 +73,14 @@ import com.hihusky.mnemora.ui.components.AiChatPanel
 import com.hihusky.mnemora.ui.components.CollectionSheet
 import com.hihusky.mnemora.ui.components.ConfettiOverlay
 import com.hihusky.mnemora.ui.components.DopamineProgressBar
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import com.hihusky.mnemora.ui.components.NodeSelector
 import com.hihusky.mnemora.ui.components.OverviewSheet
 import com.hihusky.mnemora.ui.components.QuestionContent
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -89,29 +89,27 @@ fun PracticeScreen(
     onBack: () -> Unit,
     viewModel: PracticeViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     PracticeScreenContent(
         uiState = uiState,
         onBack = onBack,
-        onPreviousQuestion = viewModel::previousQuestion,
-        onNextQuestion = viewModel::nextQuestion,
         onToggleMark = viewModel::toggleMark,
         onResetCurrentQuestion = viewModel::resetCurrentQuestion,
         onAnswerQuestion = viewModel::answerQuestion,
         onGoToQuestion = viewModel::goToQuestion,
         onSelectNode = viewModel::selectNode,
-        onLoadChatHistory = viewModel::loadChatHistory,
+        onLoadChatHistory = viewModel::chatLoadHistory,
         onLoadCollectionData = viewModel::loadCollectionData,
         onToggleQuestionInCollection = viewModel::toggleQuestionInCollection,
         onCreateCollection = viewModel::createCollection,
         onDeleteCollection = viewModel::deleteCollection,
-        onSwitchChatSession = viewModel::switchChatSession,
-        onCreateChatSession = viewModel::createChatSession,
-        onDeleteChatSession = viewModel::deleteChatSession,
-        onSendAiMessage = viewModel::sendAiMessage,
-        onCancelAiMessage = viewModel::cancelAiChat,
-        onSaveChatScrollPosition = viewModel::saveChatScrollPosition,
+        onSwitchChatSession = viewModel::chatSwitchSession,
+        onCreateChatSession = viewModel::chatCreateSession,
+        onDeleteChatSession = viewModel::chatDeleteSession,
+        onSendAiMessage = viewModel::chatSendMessage,
+        onCancelAiMessage = viewModel::chatCancel,
+        onSaveChatScrollPosition = viewModel::chatSaveScrollPosition,
         onConfettiFinished = viewModel::clearConfetti,
         getQuestionStatus = viewModel::getQuestionStatus,
         imageBasePath = viewModel.imageBasePath
@@ -123,8 +121,6 @@ fun PracticeScreen(
 internal fun PracticeScreenContent(
     uiState: PracticeUiState,
     onBack: () -> Unit,
-    onPreviousQuestion: () -> Unit,
-    onNextQuestion: () -> Unit,
     onToggleMark: () -> Unit,
     onResetCurrentQuestion: () -> Unit,
     onAnswerQuestion: (String) -> Unit,
@@ -136,7 +132,7 @@ internal fun PracticeScreenContent(
     onCreateCollection: (String) -> Unit,
     onDeleteCollection: (Int) -> Unit,
     onSwitchChatSession: (Int) -> Unit,
-    onCreateChatSession: () -> Unit,
+    onCreateChatSession: (String) -> Unit,
     onDeleteChatSession: () -> Unit,
     onSendAiMessage: (String) -> Unit,
     onCancelAiMessage: () -> Unit,
@@ -148,22 +144,45 @@ internal fun PracticeScreenContent(
     val pagerState = rememberPagerState(pageCount = { uiState.questions.size.coerceAtLeast(1) })
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
+    val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+    val latestCurrentIndex by rememberUpdatedState(uiState.currentIndex)
     var showResetDialog by remember { mutableStateOf(false) }
     var showOverview by remember { mutableStateOf(false) }
     var showAiChat by remember { mutableStateOf(false) }
     var showNodeSelector by remember { mutableStateOf(false) }
     var showCollectionSheet by remember { mutableStateOf(false) }
 
-    LaunchedEffect(uiState.currentIndex) {
-        if (pagerState.currentPage != uiState.currentIndex && uiState.questions.isNotEmpty()) {
-            pagerState.scrollToPage(uiState.currentIndex)
+    LaunchedEffect(
+        uiState.questions.size,
+        uiState.questions.firstOrNull()?.id,
+        uiState.currentPartitionId
+    ) {
+        if (uiState.questions.isNotEmpty()) {
+            pagerState.scrollToPage(uiState.currentIndex.coerceIn(uiState.questions.indices))
         }
     }
 
-    LaunchedEffect(pagerState.currentPage) {
-        if (pagerState.currentPage != uiState.currentIndex) {
-            onGoToQuestion(pagerState.currentPage)
+    LaunchedEffect(uiState.currentIndex, uiState.questions.size) {
+        if (uiState.questions.isNotEmpty() && pagerState.currentPage != uiState.currentIndex) {
+            pagerState.animateScrollToPage(uiState.currentIndex.coerceIn(uiState.questions.indices))
+        }
+    }
+
+    LaunchedEffect(pagerState, uiState.questions.size) {
+        snapshotFlow { pagerState.settledPage }
+            .distinctUntilChanged()
+            .collect { page ->
+                if (page != latestCurrentIndex && page in uiState.questions.indices) {
+                    onGoToQuestion(page)
+                }
+            }
+    }
+
+    fun navigateToPage(index: Int) {
+        if (index !in uiState.questions.indices) return
+        scope.launch {
+            pagerState.animateScrollToPage(index)
         }
     }
 
@@ -172,224 +191,344 @@ internal fun PracticeScreenContent(
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            MnemoraTopAppBar(
-                title = {
-                    Column {
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                MnemoraTopAppBar(
+                    title = {
+                        Column {
+                            Text(
+                                text = uiState.book?.displayName ?: "Practice",
+                                style = MaterialTheme.typography.titleSmall,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${uiState.currentIndex + 1} / ${uiState.totalQuestions}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = { showNodeSelector = true }) {
+                            Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Nodes")
+                        }
+                        IconButton(onClick = { showOverview = true }) {
+                            Icon(Icons.Default.GridView, contentDescription = "Overview")
+                        }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            bottomBar = {
+                PracticeBottomBar(
+                    showPrev = uiState.currentIndex > 0,
+                    showNext = uiState.currentIndex < uiState.totalQuestions - 1,
+                    showAi = uiState.currentQuestion != null,
+                    isMarked = uiState.isCurrentMarked,
+                    showReset = uiState.currentUserAnswer != null && !uiState.isPreviewMode,
+                    onPrevious = { navigateToPage(uiState.currentIndex - 1) },
+                    onNext = { navigateToPage(uiState.currentIndex + 1) },
+                    onAi = { showAiChat = true },
+                    onToggleMark = onToggleMark,
+                    onLongPressBookmark = {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onLoadCollectionData()
+                        showCollectionSheet = true
+                    },
+                    onReset = { showResetDialog = true }
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = MaterialTheme.colorScheme.background
+        ) { padding ->
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .onKeyEvent { event ->
+                        when (event.key) {
+                            Key.DirectionLeft -> {
+                                navigateToPage(uiState.currentIndex - 1)
+                                true
+                            }
+                            Key.DirectionRight -> {
+                                navigateToPage(uiState.currentIndex + 1)
+                                true
+                            }
+                            Key.A -> { showAiChat = true; true }
+                            Key.M -> { onToggleMark(); true }
+                            Key.R -> {
+                                if (uiState.currentUserAnswer != null) onResetCurrentQuestion()
+                                true
+                            }
+                            Key.One, Key.NumPad1 -> {
+                                uiState.currentQuestion?.choices?.getOrNull(0)?.key
+                                    ?.let { onAnswerQuestion(it) }
+                                true
+                            }
+                            Key.Two, Key.NumPad2 -> {
+                                uiState.currentQuestion?.choices?.getOrNull(1)?.key
+                                    ?.let { onAnswerQuestion(it) }
+                                true
+                            }
+                            Key.Three, Key.NumPad3 -> {
+                                uiState.currentQuestion?.choices?.getOrNull(2)?.key
+                                    ?.let { onAnswerQuestion(it) }
+                                true
+                            }
+                            Key.Four, Key.NumPad4 -> {
+                                uiState.currentQuestion?.choices?.getOrNull(3)?.key
+                                    ?.let { onAnswerQuestion(it) }
+                                true
+                            }
+                            else -> false
+                        }
+                    }
+            ) {
+                if (uiState.showProgressBar) {
+                    DopamineProgressBar(
+                        progress = uiState.progress,
+                        color = MaterialTheme.colorScheme.outline
+                    )
+                }
+
+                if (uiState.isLoading) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else if (uiState.questions.isEmpty()) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
-                            text = uiState.book?.displayName ?: "Practice",
-                            style = MaterialTheme.typography.titleSmall,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${uiState.currentIndex + 1} / ${uiState.totalQuestions}",
-                            style = MaterialTheme.typography.labelMedium,
+                            "No questions available",
+                            style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showNodeSelector = true }) {
-                        Icon(Icons.AutoMirrored.Filled.ListAlt, contentDescription = "Nodes")
-                    }
-                    IconButton(onClick = { showOverview = true }) {
-                        Icon(Icons.Default.GridView, contentDescription = "Overview")
-                    }
-                },
-                scrollBehavior = scrollBehavior
-            )
-        },
-        bottomBar = {
-            androidx.compose.material3.Surface(
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                tonalElevation = 0.dp,
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp)
-                        .padding(horizontal = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceEvenly,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(
-                        onClick = onPreviousQuestion,
-                        enabled = uiState.currentIndex > 0
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous")
-                    }
-
-                    IconButton(
-                        onClick = { showAiChat = true },
-                        enabled = uiState.currentQuestion != null
-                    ) {
-                        Icon(Icons.Default.AutoAwesome, contentDescription = "AI Assistant")
-                    }
-
-                    // Bookmark: tap = toggle mark, long-press = collection sheet
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .combinedClickable(
-                                interactionSource = remember { MutableInteractionSource() },
-                                indication = ripple(bounded = false, radius = 24.dp),
-                                onClick = onToggleMark,
-                                onLongClick = {
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    onLoadCollectionData()
-                                    showCollectionSheet = true
-                                }
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = if (uiState.isCurrentMarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
-                            contentDescription = "Bookmark / Add to collection",
-                            tint = if (uiState.isCurrentMarked)
-                                MaterialTheme.colorScheme.tertiary
-                            else
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { showResetDialog = true },
-                        enabled = uiState.currentUserAnswer != null && !uiState.isPreviewMode
-                    ) {
-                        Icon(Icons.Filled.Refresh, contentDescription = "Clear answer")
-                    }
-
-                    IconButton(
-                        onClick = onNextQuestion,
-                        enabled = uiState.currentIndex < uiState.totalQuestions - 1
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
-                    }
+                } else {
+                    PracticePager(
+                        pagerState = pagerState,
+                        questions = uiState.questions,
+                        userAnswers = uiState.userAnswers,
+                        isPreviewMode = uiState.isPreviewMode,
+                        onAnswerQuestion = onAnswerQuestion,
+                        imageBasePath = imageBasePath
+                    )
                 }
             }
+        }
+
+        if (uiState.confettiId > 0L) {
+            androidx.compose.runtime.key(uiState.confettiId) {
+                ConfettiOverlay(onFinished = onConfettiFinished)
+            }
+        }
+    }
+
+    PracticeDialogs(
+        showResetDialog = showResetDialog,
+        onDismissReset = { showResetDialog = false },
+        onConfirmReset = {
+            onResetCurrentQuestion()
+            showResetDialog = false
         },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .padding(padding)
-                .onKeyEvent { event ->
-                    when (event.key) {
-                        Key.DirectionLeft -> { onPreviousQuestion(); true }
-                        Key.DirectionRight -> { onNextQuestion(); true }
-                        Key.A -> { showAiChat = true; true }
-                        Key.M -> { onToggleMark(); true }
-                        Key.R -> {
-                            if (uiState.currentUserAnswer != null) onResetCurrentQuestion()
-                            true
-                        }
-                        Key.One, Key.NumPad1 -> {
-                            uiState.currentQuestion?.choices?.getOrNull(0)?.key?.let { onAnswerQuestion(it) }
-                            true
-                        }
-                        Key.Two, Key.NumPad2 -> {
-                            uiState.currentQuestion?.choices?.getOrNull(1)?.key?.let { onAnswerQuestion(it) }
-                            true
-                        }
-                        Key.Three, Key.NumPad3 -> {
-                            uiState.currentQuestion?.choices?.getOrNull(2)?.key?.let { onAnswerQuestion(it) }
-                            true
-                        }
-                        Key.Four, Key.NumPad4 -> {
-                            uiState.currentQuestion?.choices?.getOrNull(3)?.key?.let { onAnswerQuestion(it) }
-                            true
-                        }
-                        else -> false
-                    }
-                }
+        showOverview = showOverview,
+        onDismissOverview = { showOverview = false },
+        totalQuestions = uiState.totalQuestions,
+        currentIndex = uiState.currentIndex,
+        onQuestionSelected = {
+            navigateToPage(it)
+            showOverview = false
+        },
+        getQuestionStatus = getQuestionStatus,
+        showAiChat = showAiChat,
+        onDismissAiChat = { showAiChat = false },
+        chat = uiState.chat,
+        onSwitchChatSession = onSwitchChatSession,
+        onCreateChatSession = onCreateChatSession,
+        onSendAiMessage = onSendAiMessage,
+        onCancelAiMessage = onCancelAiMessage,
+        onDeleteChatSession = onDeleteChatSession,
+        onSaveChatScrollPosition = onSaveChatScrollPosition,
+        aiModel = uiState.aiModel,
+        aiProvider = uiState.aiProvider,
+        showNodeSelector = showNodeSelector,
+        onDismissNodeSelector = { showNodeSelector = false },
+        nodes = uiState.nodes,
+        currentPartitionId = uiState.currentPartitionId,
+        onSelectNode = { onSelectNode(it); showNodeSelector = false },
+        showCollectionSheet = showCollectionSheet,
+        onDismissCollection = { showCollectionSheet = false },
+        collections = uiState.availableCollections,
+        questionCollectionIds = uiState.questionCollectionIds,
+        onToggleCollection = onToggleQuestionInCollection,
+        onCreateCollection = onCreateCollection,
+        onDeleteCollection = onDeleteCollection
+    )
+}
+
+@Composable
+private fun PracticePager(
+    pagerState: PagerState,
+    questions: List<Question>,
+    userAnswers: Map<Int, UserAnswer>,
+    isPreviewMode: Boolean,
+    onAnswerQuestion: (String) -> Unit,
+    imageBasePath: String?
+) {
+    HorizontalPager(
+        state = pagerState,
+        modifier = Modifier.fillMaxSize(),
+        beyondViewportPageCount = 2,
+        contentPadding = PaddingValues(horizontal = 0.dp),
+        key = { page -> questions[page].id }
+    ) { page ->
+        val question = questions[page]
+        val answer = userAnswers[question.id]
+
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = MnemoraSpacing.Large,
+                vertical = MnemoraSpacing.Large
+            )
         ) {
-            if (uiState.showProgressBar) {
-                DopamineProgressBar(
-                    progress = uiState.progress,
-                    color = MaterialTheme.colorScheme.outline
+            item(key = question.id) {
+                Crossfade(
+                    targetState = answer != null || isPreviewMode,
+                    animationSpec = tween(250)
+                ) { showAnswer ->
+                    QuestionContent(
+                        question = question,
+                        selectedOption = answer?.selected,
+                        showAnswer = showAnswer,
+                        onOptionSelected = if (answer == null && !isPreviewMode) {
+                            { onAnswerQuestion(it) }
+                        } else null,
+                        imageBasePath = imageBasePath
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun PracticeBottomBar(
+    showPrev: Boolean,
+    showNext: Boolean,
+    showAi: Boolean,
+    isMarked: Boolean,
+    showReset: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onAi: () -> Unit,
+    onToggleMark: () -> Unit,
+    onLongPressBookmark: () -> Unit,
+    onReset: () -> Unit
+) {
+    androidx.compose.material3.Surface(
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 0.dp,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onPrevious, enabled = showPrev) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Previous")
+            }
+
+            IconButton(onClick = onAi, enabled = showAi) {
+                Icon(Icons.Default.AutoAwesome, contentDescription = "AI Assistant")
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .combinedClickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = ripple(bounded = false, radius = 24.dp),
+                        onClick = onToggleMark,
+                        onLongClick = onLongPressBookmark
+                    ),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = if (isMarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                    contentDescription = "Bookmark / Add to collection",
+                    tint = if (isMarked)
+                        MaterialTheme.colorScheme.tertiary
+                    else
+                        MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
-            if (uiState.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.questions.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(
-                        "No questions available",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            } else {
-                HorizontalPager(
-                    state = pagerState,
-                    modifier = Modifier.weight(1f),
-                    beyondViewportPageCount = 2,
-                    contentPadding = PaddingValues(horizontal = 0.dp)
-                ) { page ->
-                    val question = uiState.questions[page]
-                    val answer = uiState.userAnswers[question.id]
-                    val isCurrent = page == uiState.currentIndex
+            IconButton(onClick = onReset, enabled = showReset) {
+                Icon(Icons.Filled.Refresh, contentDescription = "Clear answer")
+            }
 
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(
-                            horizontal = MnemoraSpacing.Large,
-                            vertical = MnemoraSpacing.Large
-                        )
-                    ) {
-                        item {
-                            Crossfade(
-                                targetState = answer != null || uiState.isPreviewMode,
-                                animationSpec = tween(250)
-                            ) { showAnswer ->
-                                QuestionContent(
-                                    question = question,
-                                    selectedOption = answer?.selected,
-                                    showAnswer = showAnswer,
-                                    onOptionSelected = if (isCurrent && answer == null && !uiState.isPreviewMode) {
-                                        { onAnswerQuestion(it) }
-                                    } else null,
-                                    imageBasePath = imageBasePath
-                                )
-                            }
-                        }
-                    }
-                }
+            IconButton(onClick = onNext, enabled = showNext) {
+                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Next")
             }
         }
     }
+}
 
-    if (uiState.confettiId > 0L) {
-        androidx.compose.runtime.key(uiState.confettiId) {
-            ConfettiOverlay(onFinished = onConfettiFinished)
-        }
-    }
-
-    } // end Box
-
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun PracticeDialogs(
+    showResetDialog: Boolean,
+    onDismissReset: () -> Unit,
+    onConfirmReset: () -> Unit,
+    showOverview: Boolean,
+    onDismissOverview: () -> Unit,
+    totalQuestions: Int,
+    currentIndex: Int,
+    onQuestionSelected: (Int) -> Unit,
+    getQuestionStatus: (Int) -> QuestionStatus,
+    showAiChat: Boolean,
+    onDismissAiChat: () -> Unit,
+    chat: AiChatUiState,
+    onSwitchChatSession: (Int) -> Unit,
+    onCreateChatSession: (String) -> Unit,
+    onSendAiMessage: (String) -> Unit,
+    onCancelAiMessage: () -> Unit,
+    onDeleteChatSession: () -> Unit,
+    onSaveChatScrollPosition: (Int, Int) -> Unit,
+    aiModel: String,
+    aiProvider: String,
+    showNodeSelector: Boolean,
+    onDismissNodeSelector: () -> Unit,
+    nodes: List<Node>,
+    currentPartitionId: String,
+    onSelectNode: (String) -> Unit,
+    showCollectionSheet: Boolean,
+    onDismissCollection: () -> Unit,
+    collections: List<Collection>,
+    questionCollectionIds: Set<Int>,
+    onToggleCollection: (Int) -> Unit,
+    onCreateCollection: (String) -> Unit,
+    onDeleteCollection: (Int) -> Unit
+) {
     if (showResetDialog) {
         MnemoraAlertDialog(
-            onDismissRequest = { showResetDialog = false },
+            onDismissRequest = onDismissReset,
             title = "Clear Answer",
             message = "Reset your choices for this question?",
             confirmText = "Reset",
-            onConfirm = {
-                onResetCurrentQuestion()
-                showResetDialog = false
-            },
+            onConfirm = onConfirmReset,
             dismissText = "Cancel",
             isDestructive = true
         )
@@ -397,57 +536,57 @@ internal fun PracticeScreenContent(
 
     if (showOverview) {
         OverviewSheet(
-            totalQuestions = uiState.totalQuestions,
-            currentIndex = uiState.currentIndex,
+            totalQuestions = totalQuestions,
+            currentIndex = currentIndex,
             getStatus = getQuestionStatus,
-            onQuestionSelected = { onGoToQuestion(it); showOverview = false },
-            onDismiss = { showOverview = false }
+            onQuestionSelected = onQuestionSelected,
+            onDismiss = onDismissOverview
         )
     }
 
     if (showAiChat) {
         AiChatPanel(
-            sessions = uiState.chatSessions,
-            currentSessionId = uiState.currentChatSessionId,
-            history = uiState.chatHistory,
-            isLoading = uiState.isCurrentSessionLoading,
-            streamingResponse = uiState.currentStreamingResponse,
+            sessions = chat.sessions,
+            currentSessionId = chat.currentSessionId,
+            history = chat.history,
+            isLoading = chat.isLoading,
+            streamingResponse = chat.streamingResponse,
             onSessionSelected = onSwitchChatSession,
-            onCreateSession = onCreateChatSession,
+            onCreateSession = { onCreateChatSession("New Chat") },
             onSendMessage = onSendAiMessage,
             onCancelMessage = onCancelAiMessage,
-            onDismiss = { showAiChat = false },
+            onDismiss = onDismissAiChat,
             onDeleteSession = onDeleteChatSession,
-            modelLabel = uiState.aiModel,
-            providerLabel = uiState.aiProvider,
-            initialScrollIndex = uiState.chatScrollIndex,
-            initialScrollOffset = uiState.chatScrollOffset,
+            modelLabel = aiModel,
+            providerLabel = aiProvider,
+            initialScrollIndex = chat.scrollIndex,
+            initialScrollOffset = chat.scrollOffset,
             onSaveScrollPosition = onSaveChatScrollPosition
         )
     }
 
     if (showNodeSelector) {
         NodeSelector(
-            nodes = uiState.nodes,
-            currentPartitionId = uiState.currentPartitionId,
-            onNodeSelected = { onSelectNode(it); showNodeSelector = false },
-            onDismiss = { showNodeSelector = false }
+            nodes = nodes,
+            currentPartitionId = currentPartitionId,
+            onNodeSelected = onSelectNode,
+            onDismiss = onDismissNodeSelector
         )
     }
 
     if (showCollectionSheet) {
         CollectionSheet(
-            collections = uiState.availableCollections,
-            questionCollectionIds = uiState.questionCollectionIds,
-            onToggle = onToggleQuestionInCollection,
+            collections = collections,
+            questionCollectionIds = questionCollectionIds,
+            onToggle = onToggleCollection,
             onCreate = onCreateCollection,
             onDelete = onDeleteCollection,
-            onDismiss = { showCollectionSheet = false }
+            onDismiss = onDismissCollection
         )
     }
 }
 
-//region Preview helpers
+// ── Previews ────────────────────────────────────────────────────────
 
 private val mockBook = Book(id = 1, filename = "mock_book", name = "Mock Subject")
 
@@ -493,8 +632,6 @@ private fun mockPracticeUiState(
     availableCollections = availableCollections
 )
 
-//endregion
-
 @Preview(showBackground = true)
 @Composable
 private fun PracticeScreenContentPreview() {
@@ -502,8 +639,6 @@ private fun PracticeScreenContentPreview() {
         PracticeScreenContent(
             uiState = mockPracticeUiState(),
             onBack = {},
-            onPreviousQuestion = {},
-            onNextQuestion = {},
             onToggleMark = {},
             onResetCurrentQuestion = {},
             onAnswerQuestion = {},
@@ -534,8 +669,6 @@ private fun PracticeScreenContentLoadingPreview() {
         PracticeScreenContent(
             uiState = mockPracticeUiState(isLoading = true),
             onBack = {},
-            onPreviousQuestion = {},
-            onNextQuestion = {},
             onToggleMark = {},
             onResetCurrentQuestion = {},
             onAnswerQuestion = {},
@@ -569,8 +702,6 @@ private fun PracticeScreenContentAnsweredPreview() {
                 userAnswers = mapOf(1 to UserAnswer(selected = "A", isCorrect = true))
             ),
             onBack = {},
-            onPreviousQuestion = {},
-            onNextQuestion = {},
             onToggleMark = {},
             onResetCurrentQuestion = {},
             onAnswerQuestion = {},

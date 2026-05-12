@@ -18,7 +18,9 @@ class ChatRepository @Inject constructor(
                 id = it.id,
                 questionId = it.questionId,
                 title = it.title ?: "",
-                createdAt = it.createdAt
+                createdAt = it.createdAt,
+                lastScrollIndex = it.lastScrollIndex,
+                lastScrollOffset = it.lastScrollOffset
             )
         }
     }
@@ -55,6 +57,10 @@ class ChatRepository @Inject constructor(
                 timestamp = message.timestamp
             )
         )
+    }
+
+    suspend fun saveScrollPosition(sessionId: Int, index: Int, offset: Int) {
+        db.chatSessionDao().updateScrollPosition(sessionId, index, offset)
     }
 
     suspend fun clearBookChats(bookId: Int) {

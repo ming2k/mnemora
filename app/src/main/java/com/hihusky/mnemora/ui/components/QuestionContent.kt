@@ -57,8 +57,8 @@ fun QuestionContent(
     onOptionSelected: ((String) -> Unit)? = null,
     imageBasePath: String? = null
 ) {
-    val textAnswer = remember { mutableStateOf("") }
-    var flashcardRevealed by remember { mutableStateOf(showAnswer) }
+    val textAnswer = remember(question.id) { mutableStateOf("") }
+    var flashcardRevealed by remember(question.id, showAnswer) { mutableStateOf(showAnswer) }
 
     // Flashcard auto-reveals when showAnswer becomes true
     if (showAnswer && !flashcardRevealed) {
@@ -76,7 +76,6 @@ fun QuestionContent(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = MnemoraSpacing.Small)
-            .animateContentSize(tween(300))
     ) {
             // Question content
             MarkdownText(

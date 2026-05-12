@@ -1,5 +1,6 @@
 package com.hihusky.mnemora.data.local.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -22,5 +23,9 @@ data class ChatSessionEntity(
     val id: Int = 0,
     val questionId: Int,
     val title: String? = null,
-    val createdAt: Long
+    val createdAt: Long,
+    @ColumnInfo(defaultValue = "0")
+    val lastScrollIndex: Int = 0,
+    @ColumnInfo(defaultValue = "0")
+    val lastScrollOffset: Int = 0
 )

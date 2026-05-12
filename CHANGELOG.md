@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.11] - 2026-05-12
+
+### Added
+- **AI chat scroll position persistence** — scroll position saved to Room on panel dismiss and restored per-session across app restarts. New `lastScrollIndex`/`lastScrollOffset` columns on `ai_chat_sessions` (DB v19, auto-migration).
+
+### Changed
+- **Smart auto-scroll in AI chat** — replaces unconditional scroll-to-bottom with user-aware behavior: new messages auto-scroll only when the user is already at the bottom. Scrolling up to read history disables auto-scroll until the user returns to the bottom.
+
+### Refactored
+- **`PracticeUiState` flattening** — AI chat fields grouped into nested `AiChatUiState` data class with convenience `chatUpdate()` helper, reducing state atom count and boilerplate.
+- **`PracticeScreen` decomposition** — extracted `PracticePager`, `PracticeBottomBar`, and `PracticeDialogs` sub-composables from the 585-line monolith.
+- **`PracticeViewModel` method consolidation** — merged `debouncedSaveProgress`/`saveSessionProgress` into single method with `debounceMs` parameter; chat methods prefixed `chat*` for clear grouping.
+
 ## [0.0.10] - 2026-05-12
 
 ### Fixed
@@ -182,7 +195,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.10...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.11...HEAD
+[0.0.11]: https://github.com/ming2k/mnemora/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/ming2k/mnemora/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/ming2k/mnemora/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/ming2k/mnemora/compare/v0.0.7...v0.0.8

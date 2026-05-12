@@ -1,5 +1,6 @@
 package com.hihusky.mnemora.data.local.db
 
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.hihusky.mnemora.data.local.db.dao.BookDao
@@ -36,7 +37,10 @@ import com.hihusky.mnemora.data.local.db.entity.UserAnswerEntity
         CollectionItemEntity::class,
         StudySessionEntity::class,
     ],
-    version = 18,
+    version = 19,
+    autoMigrations = [
+        AutoMigration(from = 18, to = 19)
+    ],
     exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {

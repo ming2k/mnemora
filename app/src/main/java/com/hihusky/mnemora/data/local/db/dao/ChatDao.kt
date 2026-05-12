@@ -27,6 +27,9 @@ interface ChatSessionDao {
 
     @Query("DELETE FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId)")
     suspend fun deleteByBookId(bookId: Int)
+
+    @Query("UPDATE ai_chat_sessions SET lastScrollIndex = :index, lastScrollOffset = :offset WHERE id = :sessionId")
+    suspend fun updateScrollPosition(sessionId: Int, index: Int, offset: Int)
 }
 
 @Dao

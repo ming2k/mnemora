@@ -10,5 +10,7 @@ data class ChatSession(
     val id: Int = 0,
     val questionId: Int,
     val title: String,
-    val createdAt: Long
+    val createdAt: Long,
+    val lastScrollIndex: Int = 0,
+    val lastScrollOffset: Int = 0
 )
