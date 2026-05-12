@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.9] - 2026-05-12
+
+### Added
+- **Clear records** — BookDetailScreen gains a "Clear all records" button that resets all practice answers, SRS reviews, study sessions, and AI chat history for a book while preserving questions and collections.
+
 ## [0.0.8] - 2026-05-10
 
 ### Added
@@ -172,7 +177,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.8...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.9...HEAD
+[0.0.9]: https://github.com/ming2k/mnemora/compare/v0.0.8...v0.0.9
 [0.0.8]: https://github.com/ming2k/mnemora/compare/v0.0.7...v0.0.8
 [0.0.7]: https://github.com/ming2k/mnemora/compare/v0.0.6...v0.0.7
 [0.0.6]: https://github.com/ming2k/mnemora/compare/v0.0.5...v0.0.6

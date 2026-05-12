@@ -552,13 +552,14 @@ private fun MarkdownBlock(
         dividerColor = MaterialTheme.colorScheme.outline,
         tableBackground = Color.Transparent
     )
+    val baseSize = textStyle.fontSize.takeOrElse { 16.sp }
     val typography = DefaultMarkdownTypography(
-        h1 = MaterialTheme.typography.headlineSmall.copy(fontWeight = FontWeight.Bold),
-        h2 = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-        h3 = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-        h4 = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-        h5 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
-        h6 = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.SemiBold),
+        h1 = textStyle.copy(fontSize = baseSize * 1.25f, fontWeight = FontWeight.Bold),
+        h2 = textStyle.copy(fontSize = baseSize * 1.15f, fontWeight = FontWeight.Bold),
+        h3 = textStyle.copy(fontSize = baseSize * 1.05f, fontWeight = FontWeight.Bold),
+        h4 = textStyle.copy(fontWeight = FontWeight.Bold),
+        h5 = textStyle.copy(fontSize = baseSize * 0.9f, fontWeight = FontWeight.Bold),
+        h6 = textStyle.copy(fontSize = baseSize * 0.85f, fontWeight = FontWeight.Bold),
         text = textStyle,
         code = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
         inlineCode = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
@@ -746,7 +747,9 @@ private fun ModernBlockQuote(
 // ------------------------------------------------------------------
 private fun parseRenderBlocks(content: String): List<RenderBlock> {
     val result = mutableListOf<RenderBlock>()
-    val paragraphs = content.split(Regex("\\n{2,}"))
+    // Preprocess: ensure tables are preceded by an empty line
+    val preprocessed = content.replace(Regex("([^\\n])\\n(\\|.*\\n\\|[-:| ]+\\|)"), "$1\n\n$2")
+    val paragraphs = preprocessed.split(Regex("\\n{2,}"))
     for (rawPara in paragraphs) {
         val para = rawPara.trim()
         if (para.isEmpty()) continue
@@ -756,11 +759,12 @@ private fun parseRenderBlocks(content: String): List<RenderBlock> {
 }
 
 private val WHOLE_IMAGE = Regex("^!\\[([^\\]]*)]\\(([^)]+)\\)$")
-private val WHOLE_DISPLAY_MATH = Regex("^\\\$\\\$([\\s\\S]+?)\\\$\\\$$")
-private val WHOLE_INLINE_MATH = Regex("^\\\$([^\\\$]+?)\\\$$")
+private val WHOLE_DISPLAY_MATH = Regex("^\\\$\\\$([\\s\\S]+?)\\\$\\\$$|^\\\\\\[([\\s\\S]+?)\\\\\\]$")
+private val WHOLE_INLINE_MATH = Regex("^\\\$([^\\\$]+?)\\\$$|^\\\\\\((?!\\s*\\\\\\))(.+?)\\\\\\)$")
 private val ANCHOR_REGEX = Regex(
     "(!\\[[^\\]]*]\\([^)]+\\))" +    // group 1: image
-        "|(\\\$\\\$[\\s\\S]+?\\\$\\\$)"  // group 2: display math
+        "|(\\\$\\\$[\\s\\S]+?\\\$\\\$)" + // group 2: display math $$...$$
+        "|(\\\\\\[[\\s\\S]+?\\\\\\])"    // group 3: display math \[...\]
 )
 private val IMAGE_PARTS = Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")
 
@@ -769,12 +773,13 @@ private fun parseParagraph(paragraph: String): List<RenderBlock> {
         return listOf(RenderBlock.Image(it.groupValues[1], it.groupValues[2]))
     }
     WHOLE_DISPLAY_MATH.matchEntire(paragraph)?.let {
-        return listOf(RenderBlock.DisplayMath(it.groupValues[1].trim()))
+        val mathContent = if (it.groups[1] != null) it.groupValues[1] else it.groupValues[2]
+        return listOf(RenderBlock.DisplayMath(mathContent.trim()))
     }
     // A whole-paragraph $...$ is treated as display math too — common in
     // imported textbook content where standalone formulas use single-$.
     WHOLE_INLINE_MATH.matchEntire(paragraph)?.let {
-        val body = it.groupValues[1]
+        val body = if (it.groups[1] != null) it.groupValues[1] else it.groupValues[2]
         if (!body.contains('\n')) {
             return listOf(RenderBlock.DisplayMath(body.trim()))
         }
@@ -792,13 +797,18 @@ private fun parseParagraph(paragraph: String): List<RenderBlock> {
         if (before.isNotBlank()) {
             result.addAll(parseTextSegment(before))
         }
-        if (m.groupValues[1].isNotEmpty()) {
+        if (m.groups[1] != null) {
             val img = IMAGE_PARTS.matchEntire(m.value)
             if (img != null) {
                 result.add(RenderBlock.Image(img.groupValues[1], img.groupValues[2]))
             }
         } else {
-            val mathContent = m.value.removePrefix("$$").removeSuffix("$$").trim()
+            val isEscapedBracket = m.value.startsWith("\\[")
+            val mathContent = if (isEscapedBracket) {
+                m.value.removePrefix("\\[").removeSuffix("\\]").trim()
+            } else {
+                m.value.removePrefix("$$").removeSuffix("$$").trim()
+            }
             result.add(RenderBlock.DisplayMath(mathContent))
         }
         lastEnd = m.range.last + 1
@@ -843,7 +853,7 @@ private fun parseTextSegment(text: String): List<RenderBlock> {
 }
 
 private val INLINE_MATH_REGEX =
-    Regex("(?<!\\\$)\\\$(?!\\\$)([^\\n\\\$]+?)\\\$(?!\\\$)")
+    Regex("(?<!\\\$)\\\$(?!\\\$)([^\\n\\\$]+?)\\\$(?!\\\$)|\\\\\\((?!\\s*\\\\\\))([^\\n]+?)\\\\\\)")
 
 private fun parseInlinePartsForLine(line: String): List<InlinePart> {
     if (line.isEmpty()) return emptyList()
@@ -854,7 +864,8 @@ private fun parseInlinePartsForLine(line: String): List<InlinePart> {
         if (before.isNotEmpty()) {
             parts.add(InlinePart.Text(before))
         }
-        parts.add(InlinePart.Math(m.groupValues[1].trim()))
+        val mathContent = if (m.groups[1] != null) m.groupValues[1] else m.groupValues[2]
+        parts.add(InlinePart.Math(mathContent.trim()))
         lastEnd = m.range.last + 1
     }
     val after = line.substring(lastEnd)

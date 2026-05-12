@@ -1,5 +1,6 @@
 package com.hihusky.mnemora.ui.screens.debug
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,11 +44,36 @@ private val TEST_CASES = listOf(
         "| Volume | ${'$'}V = \\frac{4}{3}\\pi r^3${'$'} | The three-dimensional space occupied by a spherical object, essential in fluid dynamics and material science | m³ |\n" +
         "| Velocity | ${'$'}v = \\frac{ds}{dt}${'$'} | The rate of change of position with respect to time, representing both speed and direction of motion in kinematics | m/s |"
     ),
+    "math_no_spaces" to (
+        "测试中文环境下公式${'$'}E=mc^2${'$'}前后没有空格的情况，以及英文环境The formula\\(x=1\\)is valid.\n\n" +
+        "The formula${'$'}E=mc^2${'$'}without spaces.\n" +
+        "Block math without spaces:\n" +
+        "text\$\$\\int_0^1 x dx\$\$text\n" +
+        "Escaped bracket \\[ y=2 \\] test."
+    ),
+    "empty_brackets" to (
+        "Empty brackets \\(\\) and \\( \\) should not render as math formulas.\n" +
+        "They often appear in LLM text as normal punctuation like fill-in-the-blank blanks.\n" +
+        "But actual math \\( x = 1 \\) works fine."
+    ),
+    "table_no_newline" to (
+        "This is a paragraph immediately followed by a table without an empty line.\n" +
+        "| A | B |\n" +
+        "|---|---|\n" +
+        "| 1 | 2 |"
+    ),
     "list_bold" to (
         "Key points:\n" +
         "- **Newton's First Law**: object in motion stays in motion\n" +
         "- **Second Law**: ${'$'}F = ma${'$'} relates force and acceleration\n" +
         "- **Third Law**: action **reaction** pairs"
+    ),
+    "mixed_paragraphs" to (
+        "This is paragraph one.\n\n" +
+        "This is paragraph two.\n" +
+        "It has a soft break.\n\n" +
+        "> Blockquote time\n" +
+        "> with ${'$'}x=2${'$'} inside."
     ),
     "code_block" to (
         "Example Kotlin code:\n" +
@@ -119,6 +145,7 @@ fun MarkdownTestScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {

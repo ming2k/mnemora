@@ -5,26 +5,26 @@ import com.hihusky.mnemora.data.local.db.entity.CollectionItemEntity
 import com.hihusky.mnemora.data.model.Collection
 import com.hihusky.mnemora.data.model.CollectionBehavior
 import com.hihusky.mnemora.data.model.CollectionKind
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.CollectionRepository
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class CollectionManager @Inject constructor(
-    private val dbRepository: DatabaseRepository
+    private val collectionRepository: CollectionRepository
 ) {
 
     suspend fun getAllCollections(): List<Collection> {
-        return dbRepository.getAllCollections()
+        return collectionRepository.getAllCollections()
     }
 
     suspend fun getCollectionById(id: Int): Collection? {
-        return dbRepository.getCollectionById(id)
+        return collectionRepository.getCollectionById(id)
     }
 
     suspend fun createCollection(bookId: Int, name: String, description: String? = null): Collection? {
         val now = System.currentTimeMillis()
-        val id = dbRepository.insertCollection(
+        val id = collectionRepository.insertCollection(
             CollectionEntity(
                 bookId = bookId,
                 kind = CollectionKind.Custom.name.lowercase(),
@@ -36,20 +36,20 @@ class CollectionManager @Inject constructor(
                 updatedAt = now
             )
         ).toInt()
-        return dbRepository.getCollectionById(id)
+        return collectionRepository.getCollectionById(id)
     }
 
     suspend fun deleteCollection(collectionId: Int): Boolean {
-        dbRepository.deleteCollection(collectionId)
+        collectionRepository.deleteCollection(collectionId)
         return true
     }
 
     suspend fun addToCollection(collectionId: Int, bookId: Int, questionId: Int): Boolean {
-        val collection = dbRepository.getCollectionById(collectionId) ?: return false
+        val collection = collectionRepository.getCollectionById(collectionId) ?: return false
         if (collection.isSmart) return false
         if (collection.bookId != bookId) return false
 
-        dbRepository.insertCollectionItem(
+        collectionRepository.insertCollectionItem(
             CollectionItemEntity(
                 collectionId = collectionId,
                 questionId = questionId,
@@ -60,15 +60,15 @@ class CollectionManager @Inject constructor(
     }
 
     suspend fun removeFromCollection(collectionId: Int, questionId: Int): Boolean {
-        dbRepository.deleteCollectionItem(collectionId, questionId)
+        collectionRepository.deleteCollectionItem(collectionId, questionId)
         return true
     }
 
-    suspend fun getCollectionItems(collectionId: Int) = dbRepository.getCollectionItems(collectionId)
+    suspend fun getCollectionItems(collectionId: Int) = collectionRepository.getCollectionItems(collectionId)
 
     suspend fun getCollectionsForQuestion(bookId: Int, questionId: Int): List<Collection> {
-        val collectionIds = dbRepository.getCollectionIdsForQuestion(bookId, questionId)
-        return collectionIds.mapNotNull { dbRepository.getCollectionById(it) }
+        val collectionIds = collectionRepository.getCollectionIdsForQuestion(bookId, questionId)
+        return collectionIds.mapNotNull { collectionRepository.getCollectionById(it) }
     }
 
     suspend fun getCustomCollectionIdsForQuestion(bookId: Int, questionId: Int): Set<Int> {

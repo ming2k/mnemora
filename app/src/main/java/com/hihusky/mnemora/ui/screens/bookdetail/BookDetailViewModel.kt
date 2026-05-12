@@ -9,7 +9,13 @@ import com.hihusky.mnemora.data.model.Collection
 import com.hihusky.mnemora.data.model.CollectionBehavior
 import com.hihusky.mnemora.data.model.CollectionKind
 import com.hihusky.mnemora.data.model.Node
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.BookRepository
+import com.hihusky.mnemora.data.repository.ChatRepository
+import com.hihusky.mnemora.data.repository.CollectionRepository
+import com.hihusky.mnemora.data.repository.NodeRepository
+import com.hihusky.mnemora.data.repository.SrsRepository
+import com.hihusky.mnemora.data.repository.StudySessionRepository
+import com.hihusky.mnemora.data.repository.UserAnswerRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +27,13 @@ import javax.inject.Inject
 @HiltViewModel
 class BookDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val dbRepository: DatabaseRepository
+    private val bookRepository: BookRepository,
+    private val nodeRepository: NodeRepository,
+    private val collectionRepository: CollectionRepository,
+    private val sessionRepository: StudySessionRepository,
+    private val srsRepository: SrsRepository,
+    private val userAnswerRepository: UserAnswerRepository,
+    private val chatRepository: ChatRepository
 ) : ViewModel() {
 
     private val bookId: Int = checkNotNull(savedStateHandle["bookId"])
@@ -37,12 +49,12 @@ class BookDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val book = dbRepository.getBookById(bookId)
-                val nodes = dbRepository.getNodes(bookId)
-                val collections = dbRepository.getCollectionsByBook(bookId)
-                val sessions = dbRepository.getSessionsByBookOnce(bookId)
-                val stats = dbRepository.getSrsStats(bookId)
-                val answers = dbRepository.getUserAnswers(bookId)
+                val book = bookRepository.getBookById(bookId)
+                val nodes = nodeRepository.getNodes(bookId)
+                val collections = collectionRepository.getCollectionsByBook(bookId)
+                val sessions = sessionRepository.getSessionsByBookOnce(bookId)
+                val stats = srsRepository.getSrsStats(bookId)
+                val answers = userAnswerRepository.getUserAnswers(bookId)
                 val answeredCount = answers.size
 
                 _uiState.update {
@@ -65,7 +77,7 @@ class BookDetailViewModel @Inject constructor(
     fun createCollection(name: String, description: String) {
         viewModelScope.launch {
             val now = System.currentTimeMillis()
-            dbRepository.insertCollection(
+            collectionRepository.insertCollection(
                 CollectionEntity(
                     bookId = bookId,
                     kind = CollectionKind.Custom.name.lowercase(),
@@ -83,8 +95,17 @@ class BookDetailViewModel @Inject constructor(
 
     fun deleteBook(onDeleted: () -> Unit) {
         viewModelScope.launch {
-            dbRepository.deleteBook(bookId)
+            bookRepository.deleteBook(bookId)
             onDeleted()
+        }
+    }
+
+    fun clearRecords() {
+        viewModelScope.launch {
+            userAnswerRepository.clearBookProgress(bookId)
+            sessionRepository.clearBookSessions(bookId)
+            chatRepository.clearBookChats(bookId)
+            loadData()
         }
     }
 }

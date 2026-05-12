@@ -54,8 +54,6 @@ Hilt modules (`AppModule`, `DatabaseModule`) provide singleton and scoped depend
 
 ## Known architectural limitations
 
-- **`DatabaseRepository` is large**: At ~600 lines it still mixes DAO delegation for 10 tables, entity-to-domain conversion, and collection/session logic. The import pipeline has been extracted to `BookImporter`, but further domain splits (e.g., separate session and SRS repositories) remain as future targets.
-
 - **Test mode resume is broken by design**: `TestViewModel` accepts a `sessionId` nav parameter to resume a test, but `loadTest()` always re-shuffles the question list. Restoring `currentIndex` against a different list is meaningless. The session resume entry point for Test mode in `RecordsScreen` is misleading — see [ADR-0006](../adr/0006-test-session-resume-limitation.md).
 
 ## Related decisions
@@ -63,6 +61,7 @@ Hilt modules (`AppModule`, `DatabaseModule`) provide singleton and scoped depend
 - [ADR-0001: Record architecture decisions](../adr/0001-record-architecture-decisions.md)
 - [ADR-0005: Library recency ordering](../adr/0005-library-recency-ordering.md)
 - [ADR-0006: Test session resume limitation](../adr/0006-test-session-resume-limitation.md)
+- [ADR-0007: Domain repositories, usecases and AI strategy](../adr/0007-domain-repositories-usecases-and-strategy.md)
 
 ## Further reading
 

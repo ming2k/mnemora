@@ -39,12 +39,122 @@ erDiagram
     books ||--o{ study_sessions : has
     books ||--o{ collections : owns
     nodes ||--o{ questions : groups
-    questions ||--o{ user_answers : answered_as
-    questions ||--o{ srs_reviews : scheduled_as
-    questions ||--o{ ai_chat_sessions : discussed_in
-    questions ||--o{ collection_items : collected_as
+    questions ||--o{ user_answers : "answered_as"
+    questions ||--o{ srs_reviews : "scheduled_as"
+    questions ||--o{ ai_chat_sessions : "discussed_in"
+    questions ||--o{ collection_items : "collected_as"
     ai_chat_sessions ||--o{ ai_chat_history : contains
     collections ||--o{ collection_items : contains
+
+    books {
+        INTEGER id PK
+        TEXT filename "NOT NULL"
+        TEXT name
+        TEXT description
+        INTEGER totalQuestions "NOT NULL"
+        INTEGER totalNodes "NOT NULL"
+        INTEGER sortOrder "NOT NULL"
+        TEXT icon
+        INTEGER createdAt "NOT NULL"
+        INTEGER updatedAt "NOT NULL"
+    }
+
+    nodes {
+        TEXT id PK
+        INTEGER bookId "FK NOT NULL"
+        TEXT parentId
+        TEXT title
+        INTEGER questionCount "NOT NULL"
+        INTEGER sortOrder "NOT NULL"
+        INTEGER depth "NOT NULL"
+    }
+
+    questions {
+        INTEGER id PK
+        INTEGER bookId "FK NOT NULL"
+        TEXT nodeId "FK"
+        INTEGER parentId
+        TEXT content
+        TEXT choices "JSON"
+        TEXT answer
+        TEXT explanation
+        TEXT questionType "NOT NULL"
+        TEXT frontTemplate
+        TEXT backTemplate
+    }
+
+    user_answers {
+        INTEGER questionId "PK FK"
+        INTEGER bookId "FK NOT NULL"
+        TEXT selected
+        INTEGER isCorrect "nullable"
+        INTEGER markedWrong "NOT NULL"
+        INTEGER isMarked "NOT NULL"
+        INTEGER timestamp "NOT NULL"
+    }
+
+    srs_reviews {
+        INTEGER questionId "PK FK"
+        INTEGER bookId "FK NOT NULL"
+        INTEGER intervalDays "NOT NULL"
+        REAL easeFactor "NOT NULL"
+        INTEGER repetitions "NOT NULL"
+        INTEGER lapses "NOT NULL"
+        INTEGER dueDate "nullable"
+        INTEGER lastReviewed "nullable"
+        INTEGER reviewState "NOT NULL"
+    }
+
+    ai_chat_sessions {
+        INTEGER id PK
+        INTEGER questionId "FK NOT NULL"
+        TEXT title
+        INTEGER createdAt "NOT NULL"
+    }
+
+    ai_chat_history {
+        INTEGER id PK
+        INTEGER sessionId "FK NOT NULL"
+        TEXT text "NOT NULL"
+        INTEGER isUser "NOT NULL"
+        INTEGER timestamp "NOT NULL"
+    }
+
+    collections {
+        INTEGER id PK
+        INTEGER bookId "FK NOT NULL"
+        TEXT kind "NOT NULL"
+        TEXT behavior "NOT NULL"
+        TEXT name "NOT NULL"
+        TEXT description
+        TEXT config "JSON"
+        INTEGER sortOrder "NOT NULL"
+        INTEGER createdAt "NOT NULL"
+        INTEGER updatedAt "nullable"
+    }
+
+    collection_items {
+        INTEGER id PK
+        INTEGER collectionId "FK NOT NULL"
+        INTEGER questionId "FK NOT NULL"
+        INTEGER position "NOT NULL"
+        INTEGER addedAt "NOT NULL"
+    }
+
+    study_sessions {
+        INTEGER id PK
+        INTEGER bookId "FK NOT NULL"
+        TEXT mode "NOT NULL"
+        INTEGER startTime "NOT NULL"
+        INTEGER lastActiveTime "NOT NULL"
+        INTEGER currentIndex "NOT NULL"
+        INTEGER totalQuestions "NOT NULL"
+        INTEGER isCompleted "NOT NULL"
+        INTEGER isActive "NOT NULL"
+        TEXT answersJson "nullable"
+        INTEGER collectionId
+        TEXT nodeId
+    }
 ```
 
 `nodes.parentId` and `questions.parentId` are logical parent links. They are
@@ -303,15 +413,209 @@ through declared foreign keys to `nodes`, `questions`, `user_answers`,
 to AI chat sessions, AI chat history, and collection items that reference those
 questions.
 
-## Migration Strategy
+```mermaid
+erDiagram
+    books ||--o{ nodes : "cascade"
+    books ||--o{ questions : "cascade"
+    books ||--o{ study_sessions : "cascade"
+    books ||--o{ collections : "cascade"
+    questions ||--o{ user_answers : "cascade"
+    questions ||--o{ srs_reviews : "cascade"
+    questions ||--o{ ai_chat_sessions : "cascade"
+    questions ||--o{ collection_items : "cascade"
+    ai_chat_sessions ||--o{ ai_chat_history : "cascade"
+    collections ||--o{ collection_items : "cascade"
+```
+
+The cascade is guaranteed by SQLite. There is no repository-level cleanup loop.
+
+Non-declared foreign keys — `nodes.parentId`, `questions.parentId`,
+`study_sessions.collectionId`, `study_sessions.nodeId` — are logical links
+only. They do not cascade because Room auto-generates primary keys for these
+references.
+
+## Schema-as-Contract
+
+Every Room schema version is exported as JSON under
+`app/schemas/com.hihusky.mnemora.data.local.db.AppDatabase/`. These files
+serve as the authoritative record of the database shape at each version.
+
+This pattern supports:
+
+- Migration verification: Room can diff the expected schema against the actual
+  database file.
+- Tooling: schema files can be used to generate documentation or migration
+  scripts.
+- Historical traceability: future developers can see exactly what changed
+  between versions.
 
 `DatabaseModule` builds Room with
-`fallbackToDestructiveMigration(dropAllTables = true)`. There are no hand-written
-migrations for version 17. Schema JSON files are exported so Room can verify the
-schema and future migrations can be written from a concrete historical record.
+`.addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)`. Before shipping with persistent user data,
+hand-written migrations must be added to `DatabaseMigrations` and tested against the exported schemas.
 
 Database backup is excluded by `res/xml/backup_rules.xml` and
 `res/xml/data_extraction_rules.xml`.
+
+## Design Patterns
+
+### Pattern Summary
+
+| Pattern | Where Applied | Problem It Solves |
+|---|---|---|
+| Repository | `DatabaseRepository` | Decouples domain logic from persistence details |
+| Data Access Object | `data/local/db/dao/` | Encapsulates SQL in a single responsibility class |
+| Local-first persistence | Entire Room layer | Offline capability; no network dependency |
+| Single source of truth | `questions`, `user_answers` | Prevents stale or conflicting data |
+| Transactional boundary | `BookImporter`, import flows | Atomic multi-entity writes |
+| Cascade delete | Foreign key declarations | Ensures referential integrity on deletion |
+| Schema-as-contract | Exported JSON schemas | Enables migration verification and tooling |
+| Storage segregation | DataStore vs Room | Separates mutable preferences from structured data |
+| Soft state | `user_answers` REPLACE | Avoids unbounded append-only history |
+| Redundant foreign key | `bookId` on child tables | Simplifies repository-scoped queries |
+
+### Repository Pattern
+
+```mermaid
+flowchart LR
+    domain["Domain Code\nViewModels / Services"] --> repo["DatabaseRepository\nEntity ↔ Domain conversion"]
+    repo --> dao["DAOs\n@Query / @Insert / @Update"]
+    dao --> sqlite[("SQLite\nquiz.db")]
+```
+
+`DatabaseRepository` converts Room entities into domain models and back, so the
+rest of the app never imports `data.local.db.entity.*`. This keeps the domain
+layer independent of the storage schema.
+
+The repository is also where coordination logic lives — for example, when adding
+a question to a collection, the repository validates package ownership before
+calling the DAO.
+
+### Data Access Object (DAO)
+
+Room DAOs in `data/local/db/dao/` own every SQL query. ViewModels and
+repositories never write raw SQL. Two benefits:
+
+- **Testability**: DAOs can be unit-tested with Room's in-memory database
+  without involving repositories or ViewModels.
+- **Discoverability**: Every query that touches a table lives in that table's
+  DAO. There is no scattered `rawQuery` call hidden in a ViewModel.
+
+Each DAO declares queries through annotated interface methods (`@Query`,
+`@Insert`, `@Update`, `@Delete`). Suspending functions are used for writes;
+`Flow` return types are used for reactive reads.
+
+### Local-First Persistence
+
+The database is entirely local. There is no remote server, no sync engine, and
+no network dependency for reading or writing. Imports are the only external
+data path (`.zip`, `.quizpkg`, `.mnemorapkg` archives).
+
+This avoids race conditions between local and remote writes, conflict resolution
+logic, and offline/online state management. The trade-off is that data lives
+only on the device.
+
+### Single Source of Truth
+
+Each domain concept maps to one table, and no data is duplicated across tables.
+Examples:
+
+- `questions` is the only table that stores question content. Collections
+  reference questions by id through `collection_items` but never copy content
+  fields.
+- `user_answers` stores exactly one answer row per question (`REPLACE` on
+  conflict). There is no separate answer history table.
+
+When displaying both answer state and review state on the same screen, the
+repository performs a join in the DAO query rather than denormalizing into a
+cache table.
+
+### Transactional Boundary
+
+Operations that modify multiple entities are wrapped in a Room `@Transaction`.
+The main example is package import:
+
+```
+BookImporter.importData()
+  ├── insert books row
+  ├── insert all nodes
+  ├── insert all questions
+  └── update books.totalQuestions / totalNodes
+```
+
+If any step fails, the entire import rolls back. Room transactions do not span
+filesystem operations, so `PackageService` coordinates directory cleanup in the
+caller.
+
+Other transactional boundaries: session creation (deactivate previous + insert
+new) and collection membership changes (validate ownership + insert/delete
+items).
+
+### Storage Segregation
+
+The app splits persistent data into two stores:
+
+| Store | Technology | Content |
+|---|---|---|
+| Room (`quiz.db`) | SQLite | App content: packages, questions, answers, reviews, collections, AI chat |
+| DataStore | Proto / Preferences | User settings: AI provider, model, sound, haptic preferences |
+
+This segregation exists because the datasets have different access patterns:
+Room data is queried, joined, filtered, and ordered (benefits from SQL).
+Settings are read on app start, written occasionally, and never joined with
+other data (key-value is simpler).
+
+`SettingsRepository` wraps DataStore and exposes `Flow<Settings>` for reactive
+consumption, mirroring the repository pattern used for Room data.
+
+### Soft State
+
+`user_answers` uses `OnConflictStrategy.REPLACE` to keep exactly one row per
+question. Each answer overwrites the previous one for the same question.
+Clearing an answer sets `selected` and `isCorrect` to `NULL` instead of
+deleting the row, preserving the mark state.
+
+`study_sessions` uses a similar approach: at most one active session per book
+and mode is enforced by the DAO deactivating previous sessions before creating
+or resuming. Old sessions are retained but marked inactive.
+
+The trade-off is that answer-level analytics (e.g., "how many times did the
+user get this wrong?") are not supported. `srs_reviews` captures aggregated
+review statistics (`repetitions`, `lapses`) rather than a per-attempt log.
+
+### Redundant Foreign Key
+
+Most child tables carry a `bookId` column in addition to their referenced
+entity's primary key. For example, `user_answers` has both `questionId`
+(referencing `questions.id`) and `bookId` (referencing `books.id`). Since
+`questionId` uniquely identifies the parent question, `bookId` is derivable
+through a join — but the redundancy is intentional:
+
+- Repository-scoped queries filter by `bookId` without joining through the
+  parent table. `SELECT * FROM user_answers WHERE bookId = ?` is simpler and
+  faster than `SELECT ua.* FROM user_answers ua JOIN questions q ON
+  ua.questionId = q.id WHERE q.bookId = ?`.
+- Multiple repository methods (delete by package, count by package, fetch
+  stats by package) benefit from this direct filter.
+
+The cost is an extra integer column and index per table — negligible in a
+local database of this scale. Consistency is maintained by import transactions
+and the single-book-per-question data model.
+
+### When Not to Use a Pattern
+
+Some common patterns are intentionally absent:
+
+- **Active Record**: Room does not support it; DAOs are the canonical query
+  interface.
+- **DTO projections**: Used sparingly. Most DAO queries return entity classes
+  directly because the entity schema closely matches the UI's data shape. `@Relation`
+  annotations handle one-to-many joins for display.
+- **Database views**: Not used. Room's `@DatabaseView` requires compile-time
+  schema knowledge, and the complexity has not been needed.
+- **Triggers**: Not used. Application-level logic in repositories and DAOs is
+  easier to debug and test.
+- **Multi-tenant isolation**: Not applicable. The database serves a single
+  user on a single device.
 
 ## Consistency Checklist
 

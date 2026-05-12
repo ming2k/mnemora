@@ -139,6 +139,8 @@
     <string name="reset_progress">重置进度</string>
     <string name="confirm_reset_progress">确定要重置所有进度吗？此操作不可撤销。</string>
     <string name="do_reset">重置</string>
+    <string name="reset_answer">清除答案</string>
+    <string name="confirm_reset_answer">重置当前题目的选项？</string>
 
     <string name="ai_chat_title">AI 解析</string>
     <string name="chat_history">聊天记录</string>

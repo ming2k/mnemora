@@ -4,7 +4,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hihusky.mnemora.data.model.Question
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.BookRepository
+import com.hihusky.mnemora.data.repository.CollectionRepository
 import com.hihusky.mnemora.domain.service.PackageService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,8 @@ import javax.inject.Inject
 @HiltViewModel
 class CollectionDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val dbRepository: DatabaseRepository,
+    private val collectionRepository: CollectionRepository,
+    private val bookRepository: BookRepository,
     private val packageService: PackageService
 ) : ViewModel() {
 
@@ -34,13 +36,13 @@ class CollectionDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val collection = dbRepository.getCollectionById(collectionId)
+                val collection = collectionRepository.getCollectionById(collectionId)
                     ?: throw IllegalStateException("Collection not found")
 
-                val book = dbRepository.getBookById(collection.bookId)
+                val book = bookRepository.getBookById(collection.bookId)
                 val imageBasePath = book?.let { packageService.getPackageImagePath(it.filename) }
 
-                val questions = dbRepository.getQuestionsByCollection(collectionId)
+                val questions = collectionRepository.getQuestionsByCollection(collectionId)
 
                 _uiState.update {
                     it.copy(
@@ -59,7 +61,7 @@ class CollectionDetailViewModel @Inject constructor(
 
     fun deleteCollection() {
         viewModelScope.launch {
-            dbRepository.deleteCollection(collectionId)
+            collectionRepository.deleteCollection(collectionId)
             _uiState.update { it.copy(deleted = true) }
         }
     }
@@ -69,7 +71,7 @@ class CollectionDetailViewModel @Inject constructor(
             val bookId = _uiState.value.questions.find { it.id == questionId }?.bookId
                 ?: _uiState.value.representativeBookId
                 ?: return@launch
-            dbRepository.deleteCollectionItem(collectionId, questionId)
+            collectionRepository.deleteCollectionItem(collectionId, questionId)
             loadCollection()
         }
     }

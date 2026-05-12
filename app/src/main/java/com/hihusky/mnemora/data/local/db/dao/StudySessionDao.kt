@@ -63,4 +63,7 @@ interface StudySessionDao {
 
     @Query("SELECT * FROM study_sessions WHERE id = :sessionId")
     suspend fun getById(sessionId: Long): StudySessionEntity?
+
+    @Query("DELETE FROM study_sessions WHERE bookId = :bookId")
+    suspend fun deleteByBookId(bookId: Int)
 }

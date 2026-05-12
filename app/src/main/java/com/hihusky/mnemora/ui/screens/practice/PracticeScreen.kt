@@ -24,7 +24,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.ListAlt
-import androidx.compose.material.icons.automirrored.filled.Undo
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -259,7 +259,7 @@ internal fun PracticeScreenContent(
                         onClick = { showResetDialog = true },
                         enabled = uiState.currentUserAnswer != null && !uiState.isPreviewMode
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Reset answer")
+                        Icon(Icons.Filled.Refresh, contentDescription = "Clear answer")
                     }
 
                     IconButton(
@@ -377,8 +377,8 @@ internal fun PracticeScreenContent(
     if (showResetDialog) {
         MnemoraAlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = "Reset Progress",
-            message = "Clear your answer for this question? This cannot be undone.",
+            title = "Clear Answer",
+            message = "Reset your choices for this question?",
             confirmText = "Reset",
             onConfirm = {
                 onResetCurrentQuestion()

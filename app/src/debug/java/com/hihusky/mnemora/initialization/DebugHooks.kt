@@ -4,7 +4,8 @@ import android.app.Application
 import android.util.Log
 import com.hihusky.mnemora.data.local.db.entity.StudySessionEntity
 import com.hihusky.mnemora.data.model.ImportResult
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.BookRepository
+import com.hihusky.mnemora.data.repository.StudySessionRepository
 import com.hihusky.mnemora.domain.service.PackageService
 import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
@@ -27,7 +28,8 @@ object DebugHooks {
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface Provider {
-        fun dbRepository(): DatabaseRepository
+        fun bookRepository(): BookRepository
+        fun studySessionRepository(): StudySessionRepository
         fun packageService(): PackageService
     }
 
@@ -36,10 +38,11 @@ object DebugHooks {
         GlobalScope.launch(Dispatchers.IO) {
             try {
                 val entryPoint = EntryPointAccessors.fromApplication(app, Provider::class.java)
-                val db = entryPoint.dbRepository()
+                val bookRepo = entryPoint.bookRepository()
+                val sessionRepo = entryPoint.studySessionRepository()
                 val pkg = entryPoint.packageService()
 
-                var books = db.getBooks()
+                var books = bookRepo.getBooks()
                 if (books.isEmpty()) {
                     val builtInPackages = listOf(
                         "demo-comprehensive.zip",
@@ -66,18 +69,18 @@ object DebugHooks {
                             }
                         }
                     }
-                    books = db.getBooks()
+                    books = bookRepo.getBooks()
                     Log.d("DebugHooks", "Total books after seeding: ${books.size}")
                 }
 
                 val book = books.firstOrNull() ?: return@launch
-                val existing = db.getSessionsByBookOnce(book.id)
+                val existing = sessionRepo.getSessionsByBookOnce(book.id)
                 if (existing.isNotEmpty()) return@launch
 
                 val now = System.currentTimeMillis()
 
                 // Active Practice session — mid-progress so Resume is immediately visible
-                db.saveSession(
+                sessionRepo.saveSession(
                     StudySessionEntity(
                         bookId = book.id,
                         mode = "Practice",
@@ -91,7 +94,7 @@ object DebugHooks {
                 )
 
                 // Completed Test session — shows up in Records
-                db.saveSession(
+                sessionRepo.saveSession(
                     StudySessionEntity(
                         bookId = book.id,
                         mode = "Test",
@@ -105,7 +108,7 @@ object DebugHooks {
                 )
 
                 // Active Review session
-                db.saveSession(
+                sessionRepo.saveSession(
                     StudySessionEntity(
                         bookId = book.id,
                         mode = "Review",

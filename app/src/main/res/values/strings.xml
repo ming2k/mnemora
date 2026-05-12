@@ -139,6 +139,8 @@
     <string name="reset_progress">Reset Progress</string>
     <string name="confirm_reset_progress">Are you sure you want to reset all progress? This cannot be undone.</string>
     <string name="do_reset">Reset</string>
+    <string name="reset_answer">Clear Answer</string>
+    <string name="confirm_reset_answer">Reset your choices for this question?</string>
 
     <string name="ai_chat_title">AI Analysis</string>
     <string name="chat_history">Chat History</string>

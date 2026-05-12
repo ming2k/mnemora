@@ -3,7 +3,7 @@ package com.hihusky.mnemora.ui.screens.collections
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.hihusky.mnemora.data.model.CollectionSummary
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.CollectionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -14,7 +14,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CollectionsViewModel @Inject constructor(
-    private val dbRepository: DatabaseRepository
+    private val collectionRepository: CollectionRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CollectionsUiState())
@@ -28,7 +28,7 @@ class CollectionsViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val summaries = dbRepository.getAllCollectionSummaries()
+                val summaries = collectionRepository.getAllCollectionSummaries()
                 _uiState.update { it.copy(summaries = summaries, isLoading = false, error = null) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
@@ -45,7 +45,7 @@ class CollectionsViewModel @Inject constructor(
     fun deleteCollection(collectionId: Int) {
         viewModelScope.launch {
             try {
-                dbRepository.deleteCollection(collectionId)
+                collectionRepository.deleteCollection(collectionId)
                 loadCollections()
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message) }

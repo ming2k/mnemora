@@ -3,6 +3,7 @@ package com.hihusky.mnemora.di
 import android.content.Context
 import androidx.room.Room
 import com.hihusky.mnemora.data.local.db.AppDatabase
+import com.hihusky.mnemora.data.local.db.migration.DatabaseMigrations
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -22,7 +23,7 @@ object DatabaseModule {
             AppDatabase::class.java,
             "quiz.db"
         )
-            .fallbackToDestructiveMigration(dropAllTables = true)
+            .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
             .build()
     }
 

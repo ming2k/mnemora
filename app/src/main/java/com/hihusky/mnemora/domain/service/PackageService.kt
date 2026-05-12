@@ -3,7 +3,6 @@ package com.hihusky.mnemora.domain.service
 import android.content.Context
 import android.net.Uri
 import com.hihusky.mnemora.data.model.ImportResult
-import com.hihusky.mnemora.data.repository.DatabaseRepository
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +17,6 @@ import javax.inject.Singleton
 @Singleton
 class PackageService @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val dbRepository: DatabaseRepository,
     private val bookImporter: BookImporter
 ) {
     private val json = Json { ignoreUnknownKeys = true }

@@ -6,8 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.hihusky.mnemora.data.local.db.entity.StudySessionEntity
 import com.hihusky.mnemora.data.model.Book
 import com.hihusky.mnemora.data.model.ImportResult
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.BookRepository
 import com.hihusky.mnemora.data.repository.SettingsRepository
+import com.hihusky.mnemora.data.repository.StudySessionRepository
 import com.hihusky.mnemora.domain.service.PackageService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,7 +20,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val dbRepository: DatabaseRepository,
+    private val bookRepository: BookRepository,
+    private val studySessionRepository: StudySessionRepository,
     private val packageService: PackageService,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
@@ -36,8 +38,8 @@ class HomeViewModel @Inject constructor(
     private fun collectBooks() {
         booksCollectorJob?.cancel()
         booksCollectorJob = viewModelScope.launch {
-            dbRepository.getBooksFlow(_uiState.value.searchQuery).collect { books ->
-                val sessions = dbRepository.getActiveSessionsPerMode(books.map { it.id })
+            bookRepository.getBooksFlow(_uiState.value.searchQuery).collect { books ->
+                val sessions = studySessionRepository.getActiveSessionsPerMode(books.map { it.id })
                 _uiState.update {
                     it.copy(books = books, activeSessions = sessions, isLoading = false, error = null)
                 }
@@ -54,8 +56,8 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, error = null) }
             try {
-                val books = dbRepository.getBooks()
-                val sessions = dbRepository.getActiveSessionsPerMode(books.map { it.id })
+                val books = bookRepository.getBooks()
+                val sessions = studySessionRepository.getActiveSessionsPerMode(books.map { it.id })
                 _uiState.update { it.copy(books = books, activeSessions = sessions, isLoading = false) }
             } catch (e: Exception) {
                 _uiState.update { it.copy(error = e.message, isLoading = false) }
@@ -94,7 +96,7 @@ class HomeViewModel @Inject constructor(
 
     fun deleteBook(bookId: Int) {
         viewModelScope.launch {
-            dbRepository.deleteBook(bookId)
+            bookRepository.deleteBook(bookId)
             loadBooks()
         }
     }
@@ -106,7 +108,7 @@ class HomeViewModel @Inject constructor(
             val targetIndex = if (toIndex > fromIndex) toIndex - 1 else toIndex
             current.add(targetIndex, moved)
             current.forEachIndexed { index, book ->
-                dbRepository.updateBookSortOrder(book.id, index)
+                bookRepository.updateBookSortOrder(book.id, index)
             }
             _uiState.update { it.copy(books = current) }
         }

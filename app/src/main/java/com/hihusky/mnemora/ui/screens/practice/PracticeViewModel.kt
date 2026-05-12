@@ -3,8 +3,6 @@ package com.hihusky.mnemora.ui.screens.practice
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.hihusky.mnemora.data.local.db.entity.CollectionItemEntity
-import com.hihusky.mnemora.data.local.db.entity.StudySessionEntity
 import com.hihusky.mnemora.data.model.Book
 import com.hihusky.mnemora.data.model.ChatMessage
 import com.hihusky.mnemora.data.model.ChatSession
@@ -12,11 +10,14 @@ import com.hihusky.mnemora.data.model.Node
 import com.hihusky.mnemora.data.model.Question
 import com.hihusky.mnemora.data.model.QuestionStatus
 import com.hihusky.mnemora.data.model.UserAnswer
-import com.hihusky.mnemora.data.repository.DatabaseRepository
 import com.hihusky.mnemora.data.repository.SettingsRepository
 import com.hihusky.mnemora.domain.service.AiService
 import com.hihusky.mnemora.domain.service.FeedbackService
-import com.hihusky.mnemora.domain.service.PackageService
+import com.hihusky.mnemora.domain.usecase.practice.AiChatUseCase
+import com.hihusky.mnemora.domain.usecase.practice.LoadPracticeSessionUseCase
+import com.hihusky.mnemora.domain.usecase.practice.ManageCollectionUseCase
+import com.hihusky.mnemora.domain.usecase.practice.ManageProgressUseCase
+import com.hihusky.mnemora.domain.usecase.practice.SubmitAnswerUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -30,11 +31,14 @@ import javax.inject.Inject
 @HiltViewModel
 class PracticeViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val dbRepository: DatabaseRepository,
+    private val loadPracticeSessionUseCase: LoadPracticeSessionUseCase,
+    private val submitAnswerUseCase: SubmitAnswerUseCase,
+    private val manageCollectionUseCase: ManageCollectionUseCase,
+    private val manageProgressUseCase: ManageProgressUseCase,
+    private val aiChatUseCase: AiChatUseCase,
     private val settingsRepository: SettingsRepository,
     private val aiService: AiService,
-    private val feedbackService: FeedbackService,
-    private val packageService: PackageService
+    private val feedbackService: FeedbackService
 ) : ViewModel() {
 
     private val navBookId: Int = checkNotNull(savedStateHandle["bookId"])
@@ -54,14 +58,22 @@ class PracticeViewModel @Inject constructor(
     private var currentSessionId: Long = -1L
     private var effectiveBookId: Int = navBookId
 
+    init {
+        observePreferences()
+        loadBook()
+        _uiState.update {
+            it.copy(aiModel = aiService.config.value.model, aiProvider = aiService.config.value.provider)
+        }
+    }
+
     fun loadCollectionData() {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
             try {
-                val collections = dbRepository.getCustomCollections(question.bookId)
-                val questionCollectionIds = dbRepository.getCollectionIdsForQuestion(
+                val collections = manageCollectionUseCase.getAvailableCollections(question.bookId)
+                val questionCollectionIds = manageCollectionUseCase.getQuestionCollectionIds(
                     question.bookId, question.id
-                ).toSet()
+                )
                 _uiState.update {
                     it.copy(
                         availableCollections = collections,
@@ -81,17 +93,7 @@ class PracticeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             try {
-                if (isIn) {
-                    dbRepository.deleteCollectionItem(collectionId, question.id)
-                } else {
-                    dbRepository.insertCollectionItem(
-                        CollectionItemEntity(
-                            collectionId = collectionId,
-                            questionId = question.id,
-                            addedAt = System.currentTimeMillis()
-                        )
-                    )
-                }
+                manageCollectionUseCase.toggleQuestionInCollection(collectionId, question.id, isIn)
             } catch (_: Exception) {
                 _uiState.update { state ->
                     val reverted = if (isIn) state.questionCollectionIds + collectionId else state.questionCollectionIds - collectionId
@@ -104,17 +106,7 @@ class PracticeViewModel @Inject constructor(
     fun createCollection(name: String) {
         viewModelScope.launch {
             try {
-                val now = System.currentTimeMillis()
-                dbRepository.insertCollection(
-                    com.hihusky.mnemora.data.local.db.entity.CollectionEntity(
-                        bookId = effectiveBookId,
-                        kind = com.hihusky.mnemora.data.model.CollectionKind.Custom.name.lowercase(),
-                        behavior = com.hihusky.mnemora.data.model.CollectionBehavior.Manual.name.lowercase(),
-                        name = name,
-                        createdAt = now,
-                        updatedAt = now
-                    )
-                )
+                manageCollectionUseCase.createCollection(effectiveBookId, name)
                 loadCollectionData()
             } catch (_: Exception) {}
         }
@@ -123,7 +115,7 @@ class PracticeViewModel @Inject constructor(
     fun deleteCollection(collectionId: Int) {
         viewModelScope.launch {
             try {
-                dbRepository.deleteCollection(collectionId)
+                manageCollectionUseCase.deleteCollection(collectionId)
                 _uiState.update { state ->
                     state.copy(
                         availableCollections = state.availableCollections.filter { it.id != collectionId },
@@ -131,14 +123,6 @@ class PracticeViewModel @Inject constructor(
                     )
                 }
             } catch (_: Exception) {}
-        }
-    }
-
-    init {
-        observePreferences()
-        loadBook()
-        _uiState.update {
-            it.copy(aiModel = aiService.config.value.model, aiProvider = aiService.config.value.provider)
         }
     }
 
@@ -179,66 +163,27 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val allQuestions = dbRepository.getQuestions(navBookId).filter { it.isAnswerable }
+                val data = loadPracticeSessionUseCase(
+                    navBookId = navBookId,
+                    collectionId = collectionId,
+                    filter = filter,
+                    initialNodeId = initialNodeId,
+                    mode = mode
+                )
 
-                val questions = when {
-                    collectionId > 0 -> {
-                        dbRepository.getQuestionsByCollection(collectionId).filter { it.isAnswerable }
-                    }
-                    filter.isNotBlank() -> {
-                        applyFilter(allQuestions, filter)
-                    }
-                    initialNodeId.isNotBlank() -> {
-                        allQuestions.filter { it.nodeId == initialNodeId }
-                    }
-                    else -> allQuestions
-                }
-
-                effectiveBookId = if (collectionId > 0 && questions.isNotEmpty()) {
-                    questions.first().bookId
-                } else navBookId
-
-                val book = dbRepository.getBookById(effectiveBookId)
-                imageBasePath = book?.let { packageService.getPackageImagePath(it.filename) }
-                val nodes = if (book != null) dbRepository.getNodes(effectiveBookId) else emptyList()
-                val answers = dbRepository.getUserAnswers(effectiveBookId)
-                val marks = dbRepository.getMarkedQuestions(effectiveBookId)
-
-                val partitionId = when {
-                    collectionId > 0 -> "collection_$collectionId"
-                    filter.isNotBlank() -> "filter_$filter"
-                    initialNodeId.isNotBlank() -> initialNodeId
-                    else -> "all"
-                }
-
-                val session = dbRepository.getActiveSession(effectiveBookId, mode)
-                val startIndex = session?.currentIndex?.coerceIn(0, questions.size - 1) ?: 0
-                currentSessionId = session?.id ?: -1L
-
-                if (session == null && questions.isNotEmpty()) {
-                    currentSessionId = dbRepository.saveSession(
-                        StudySessionEntity(
-                            bookId = effectiveBookId,
-                            mode = mode,
-                            startTime = System.currentTimeMillis(),
-                            lastActiveTime = System.currentTimeMillis(),
-                            currentIndex = 0,
-                            totalQuestions = questions.size,
-                            collectionId = collectionId.takeIf { it > 0 },
-                            nodeId = initialNodeId.takeIf { it.isNotBlank() }
-                        )
-                    )
-                }
+                effectiveBookId = data.effectiveBookId
+                currentSessionId = data.sessionId
+                imageBasePath = data.imageBasePath
 
                 _uiState.update {
                     it.copy(
-                        book = book,
-                        nodes = nodes,
-                        questions = questions,
-                        userAnswers = answers,
-                        markedQuestions = marks,
-                        currentIndex = startIndex,
-                        currentPartitionId = partitionId,
+                        book = data.book,
+                        nodes = data.nodes,
+                        questions = data.questions,
+                        userAnswers = data.userAnswers,
+                        markedQuestions = data.markedQuestions,
+                        currentIndex = data.currentIndex,
+                        currentPartitionId = data.currentPartitionId,
                         isLoading = false
                     )
                 }
@@ -249,45 +194,28 @@ class PracticeViewModel @Inject constructor(
         }
     }
 
-    private suspend fun applyFilter(questions: List<Question>, filter: String): List<Question> {
-        return when (filter.lowercase()) {
-            "marked" -> {
-                val markedIds = dbRepository.getMarkedQuestions(navBookId)
-                questions.filter { it.id in markedIds }
-            }
-            "wrong" -> {
-                val wrongIds = dbRepository.getWrongQuestionIds(navBookId).toSet()
-                questions.filter { it.id in wrongIds }
-            }
-            "unanswered" -> {
-                val answeredIds = dbRepository.getAnsweredQuestionIds(navBookId).toSet()
-                questions.filter { it.id !in answeredIds }
-            }
-            "srs_due" -> {
-                val dueIds = dbRepository.getSrsDueQuestionIds(navBookId).toSet()
-                questions.filter { it.id in dueIds }
-            }
-            else -> questions
-        }
-    }
-
     fun selectNode(nodeId: String) {
         viewModelScope.launch {
-            val allQuestions = dbRepository.getQuestions(effectiveBookId).filter { it.isAnswerable }
-            val filtered = if (nodeId == "all") {
-                allQuestions
-            } else {
-                allQuestions.filter { it.nodeId == nodeId }
-            }
-            _uiState.update {
-                it.copy(
-                    questions = filtered,
-                    currentIndex = 0,
-                    currentPartitionId = nodeId
+            try {
+                val data = loadPracticeSessionUseCase(
+                    navBookId = effectiveBookId,
+                    collectionId = -1,
+                    filter = "",
+                    initialNodeId = if (nodeId == "all") "" else nodeId,
+                    mode = mode
                 )
+                _uiState.update {
+                    it.copy(
+                        questions = data.questions,
+                        currentIndex = 0,
+                        currentPartitionId = nodeId
+                    )
+                }
+                saveSessionProgress(0, data.questions.size)
+                loadChatHistory()
+            } catch (e: Exception) {
+                _uiState.update { it.copy(error = e.message) }
             }
-            saveSessionProgress(0, filtered.size)
-            loadChatHistory()
         }
     }
 
@@ -309,20 +237,17 @@ class PracticeViewModel @Inject constructor(
     fun answerQuestion(option: String) {
         val state = _uiState.value
         val question = state.currentQuestion ?: return
-        val isCorrect = option.uppercase() == question.answer.uppercase()
-        val answer = UserAnswer(selected = option, isCorrect = isCorrect)
 
         viewModelScope.launch {
-            dbRepository.saveUserAnswer(effectiveBookId, question.id, answer)
+            val answer = submitAnswerUseCase(effectiveBookId, question, option)
+            
             _uiState.update {
                 it.copy(
                     userAnswers = it.userAnswers.toMutableMap().apply { put(question.id, answer) }
                 )
             }
 
-            if (isCorrect) {
-                feedbackService.incrementStreak()
-                feedbackService.playCorrect()
+            if (answer.isCorrect == true) {
                 if (_uiState.value.confettiEnabled) {
                     _uiState.update { it.copy(confettiId = System.currentTimeMillis()) }
                     confettiJob?.cancel()
@@ -331,12 +256,9 @@ class PracticeViewModel @Inject constructor(
                         _uiState.update { it.copy(confettiId = 0L) }
                     }
                 }
-            } else {
-                feedbackService.resetStreak()
-                feedbackService.playWrong()
             }
 
-            if (isCorrect && state.autoAdvance && state.currentIndex < state.questions.size - 1) {
+            if (answer.isCorrect == true && state.autoAdvance && state.currentIndex < state.questions.size - 1) {
                 delay(1000)
                 nextQuestion()
             }
@@ -347,7 +269,7 @@ class PracticeViewModel @Inject constructor(
         val question = _uiState.value.currentQuestion ?: return
         val isMarked = !_uiState.value.markedQuestions.contains(question.id)
         viewModelScope.launch {
-            dbRepository.setUserMark(effectiveBookId, question.id, isMarked)
+            manageProgressUseCase.toggleMark(effectiveBookId, question.id, isMarked)
             _uiState.update {
                 val marks = it.markedQuestions.toMutableSet()
                 if (isMarked) marks.add(question.id) else marks.remove(question.id)
@@ -359,7 +281,7 @@ class PracticeViewModel @Inject constructor(
     fun resetCurrentQuestion() {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
-            dbRepository.deleteUserAnswer(question.id)
+            manageProgressUseCase.resetCurrentQuestion(question.id)
             _uiState.update {
                 it.copy(
                     userAnswers = it.userAnswers.toMutableMap().apply { remove(question.id) }
@@ -370,11 +292,8 @@ class PracticeViewModel @Inject constructor(
 
     fun resetAllProgress() {
         viewModelScope.launch {
-            dbRepository.clearBookProgress(effectiveBookId)
-            if (currentSessionId > 0) {
-                dbRepository.deactivateSession(currentSessionId)
-                currentSessionId = -1L
-            }
+            manageProgressUseCase.resetAllProgress(effectiveBookId, currentSessionId)
+            currentSessionId = -1L
             _uiState.update {
                 it.copy(
                     userAnswers = emptyMap(),
@@ -387,14 +306,12 @@ class PracticeViewModel @Inject constructor(
 
     private fun saveSessionProgress(index: Int, total: Int? = null) {
         viewModelScope.launch {
-            if (currentSessionId > 0) {
-                val state = _uiState.value
-                dbRepository.updateSessionProgress(
-                    sessionId = currentSessionId,
-                    currentIndex = index,
-                    totalQuestions = total ?: state.questions.size
-                )
-            }
+            val state = _uiState.value
+            manageProgressUseCase.saveSessionProgress(
+                sessionId = currentSessionId,
+                currentIndex = index,
+                totalQuestions = total ?: state.questions.size
+            )
         }
     }
 
@@ -403,9 +320,9 @@ class PracticeViewModel @Inject constructor(
     private fun loadChatHistory() {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
-            val sessions = dbRepository.getChatSessions(question.id)
+            val sessions = aiChatUseCase.getChatSessions(question.id)
             val currentSessionId = sessions.firstOrNull()?.id
-            val history = currentSessionId?.let { dbRepository.getChatHistory(it) } ?: emptyList()
+            val history = currentSessionId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
             _uiState.update {
                 it.copy(
                     chatSessions = sessions,
@@ -419,7 +336,7 @@ class PracticeViewModel @Inject constructor(
     fun createChatSession(title: String = "New Chat") {
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
-            val session = dbRepository.createChatSession(question.id, title)
+            val session = aiChatUseCase.createChatSession(question.id, title)
             _uiState.update {
                 it.copy(
                     chatSessions = listOf(session) + it.chatSessions,
@@ -434,7 +351,7 @@ class PracticeViewModel @Inject constructor(
 
     fun switchChatSession(sessionId: Int) {
         viewModelScope.launch {
-            val history = dbRepository.getChatHistory(sessionId)
+            val history = aiChatUseCase.getChatHistory(sessionId)
             _uiState.update {
                 it.copy(
                     currentChatSessionId = sessionId,
@@ -452,13 +369,12 @@ class PracticeViewModel @Inject constructor(
 
     fun deleteChatSession() {
         val sessionId = _uiState.value.currentChatSessionId ?: return
+        val questionId = _uiState.value.currentQuestion?.id ?: return
         viewModelScope.launch {
-            dbRepository.deleteChatSession(sessionId)
-            val remaining = dbRepository.getChatSessions(
-                _uiState.value.currentQuestion?.id ?: return@launch
-            )
+            aiChatUseCase.deleteChatSession(sessionId)
+            val remaining = aiChatUseCase.getChatSessions(questionId)
             val newCurrentId = remaining.firstOrNull()?.id
-            val newHistory = newCurrentId?.let { dbRepository.getChatHistory(it) } ?: emptyList()
+            val newHistory = newCurrentId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
             _uiState.update {
                 it.copy(
                     chatSessions = remaining,
@@ -473,7 +389,7 @@ class PracticeViewModel @Inject constructor(
         val question = _uiState.value.currentQuestion ?: return
         viewModelScope.launch {
             val sessionId = _uiState.value.currentChatSessionId ?: run {
-                val session = dbRepository.createChatSession(question.id, message.take(30))
+                val session = aiChatUseCase.createChatSession(question.id, message.take(30))
                 _uiState.update {
                     it.copy(
                         chatSessions = listOf(session) + it.chatSessions,
@@ -484,8 +400,7 @@ class PracticeViewModel @Inject constructor(
                 session.id
             }
 
-            val userMsg = ChatMessage(text = message, isUser = true)
-            dbRepository.saveChatMessage(sessionId, userMsg)
+            val userMsg = aiChatUseCase.saveUserMessage(sessionId, message)
             _uiState.update { state ->
                 state.copy(
                     chatHistory = state.chatHistory + userMsg,
@@ -493,17 +408,14 @@ class PracticeViewModel @Inject constructor(
                 )
             }
 
-            // Cancel any in-flight request for this same session before starting a new one
             aiJobs[sessionId]?.cancel()
             val history = _uiState.value.chatHistory
             aiJobs[sessionId] = launch {
                 try {
-                    val stream = aiService.explain(
-                        questionStem = question.content,
-                        options = question.choices.associate { it.key to it.content },
-                        correctAnswer = question.answer,
-                        explanation = question.explanation,
-                        userQuestion = message,
+                    val stream = aiChatUseCase.streamAiResponse(
+                        sessionId = sessionId,
+                        question = question,
+                        userMessage = message,
                         history = history
                     )
                     var response = ""
@@ -513,8 +425,7 @@ class PracticeViewModel @Inject constructor(
                             state.copy(aiStreamingResponses = state.aiStreamingResponses + (sessionId to response))
                         }
                     }
-                    val botMsg = ChatMessage(text = response, isUser = false)
-                    dbRepository.saveChatMessage(sessionId, botMsg)
+                    val botMsg = aiChatUseCase.saveBotMessage(sessionId, response)
                     _uiState.update { state ->
                         state.copy(
                             chatHistory = if (state.currentChatSessionId == sessionId) state.chatHistory + botMsg else state.chatHistory,
@@ -524,8 +435,7 @@ class PracticeViewModel @Inject constructor(
                     }
                 } catch (e: Exception) {
                     if (e is kotlinx.coroutines.CancellationException) throw e
-                    val botMsg = ChatMessage(text = "Error: ${e.message}", isUser = false)
-                    dbRepository.saveChatMessage(sessionId, botMsg)
+                    val botMsg = aiChatUseCase.saveBotMessage(sessionId, "Error: ${e.message}")
                     _uiState.update { state ->
                         state.copy(
                             chatHistory = if (state.currentChatSessionId == sessionId) state.chatHistory + botMsg else state.chatHistory,

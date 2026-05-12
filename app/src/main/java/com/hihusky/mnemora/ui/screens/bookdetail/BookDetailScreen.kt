@@ -21,6 +21,7 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FolderOpen
 import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
@@ -86,7 +87,8 @@ fun BookDetailScreen(
         onNavigateToCollection = onNavigateToCollection,
         onResumeSession = onResumeSession,
         onCreateCollection = { name, desc -> viewModel.createCollection(name, desc) },
-        onDeleteBook = { viewModel.deleteBook(onBack) }
+        onDeleteBook = { viewModel.deleteBook(onBack) },
+        onClearRecords = { viewModel.clearRecords() }
     )
 }
 
@@ -100,10 +102,12 @@ internal fun BookDetailScreenContent(
     onResumeSession: (Int, String, Long?) -> Unit,
     onCreateCollection: (String, String) -> Unit,
     onDeleteBook: () -> Unit,
+    onClearRecords: () -> Unit,
 ) {
     val book = uiState.book
     var showCreateSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showClearRecordsDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -128,6 +132,13 @@ internal fun BookDetailScreenContent(
                                 Icons.Default.Add,
                                 contentDescription = "New collection",
                                 tint = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        IconButton(onClick = { showClearRecordsDialog = true }) {
+                            Icon(
+                                Icons.Default.DeleteForever,
+                                contentDescription = "Clear all records",
+                                tint = MaterialTheme.colorScheme.error
                             )
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
@@ -225,6 +236,21 @@ internal fun BookDetailScreenContent(
             onConfirm = {
                 showDeleteDialog = false
                 onDeleteBook()
+            },
+            dismissText = "Cancel",
+            isDestructive = true
+        )
+    }
+
+    if (showClearRecordsDialog && book != null) {
+        MnemoraAlertDialog(
+            onDismissRequest = { showClearRecordsDialog = false },
+            title = "Clear all records?",
+            message = "All practice answers, study sessions, and AI chat history for \"${book.displayName}\" will be permanently removed. Questions and collections will be kept.",
+            confirmText = "Clear",
+            onConfirm = {
+                showClearRecordsDialog = false
+                onClearRecords()
             },
             dismissText = "Cancel",
             isDestructive = true
@@ -525,7 +551,8 @@ private fun BookDetailScreenPreviewLoading() {
             onNavigateToCollection = {},
             onResumeSession = { _, _, _ -> },
             onCreateCollection = { _, _ -> },
-            onDeleteBook = {}
+            onDeleteBook = {},
+            onClearRecords = {}
         )
     }
 }
@@ -562,7 +589,8 @@ private fun BookDetailScreenPreviewLoaded() {
             onNavigateToCollection = {},
             onResumeSession = { _, _, _ -> },
             onCreateCollection = { _, _ -> },
-            onDeleteBook = {}
+            onDeleteBook = {},
+            onClearRecords = {}
         )
     }
 }

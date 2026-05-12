@@ -6,8 +6,9 @@ import androidx.lifecycle.viewModelScope
 import com.hihusky.mnemora.data.local.db.entity.StudySessionEntity
 import com.hihusky.mnemora.data.model.Question
 import com.hihusky.mnemora.data.model.UserAnswer
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.QuestionRepository
 import com.hihusky.mnemora.data.repository.SettingsRepository
+import com.hihusky.mnemora.data.repository.StudySessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +22,8 @@ import javax.inject.Inject
 @HiltViewModel
 class TestViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
-    private val dbRepository: DatabaseRepository,
+    private val questionRepository: QuestionRepository,
+    private val studySessionRepository: StudySessionRepository,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
@@ -41,7 +43,7 @@ class TestViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             try {
-                val allQuestions = dbRepository.getQuestions(bookId)
+                val allQuestions = questionRepository.getQuestions(bookId)
                     .filter { it.isAnswerable }
                     .shuffled()
                 val count = settingsRepository.testQuestionCount.first()
@@ -49,7 +51,7 @@ class TestViewModel @Inject constructor(
                     .coerceAtLeast(1)
                 val questions = allQuestions.take(count)
 
-                currentSessionId = dbRepository.saveSession(
+                currentSessionId = studySessionRepository.saveSession(
                     StudySessionEntity(
                         bookId = bookId,
                         mode = "Test",
@@ -80,7 +82,7 @@ class TestViewModel @Inject constructor(
         viewModelScope.launch {
             if (currentSessionId > 0) {
                 val state = _uiState.value
-                dbRepository.updateSessionProgress(
+                studySessionRepository.updateSessionProgress(
                     sessionId = currentSessionId,
                     currentIndex = index,
                     totalQuestions = state.questions.size
@@ -131,7 +133,7 @@ class TestViewModel @Inject constructor(
         _uiState.update { it.copy(isRunning = false, showResults = true) }
         viewModelScope.launch {
             if (currentSessionId > 0) {
-                dbRepository.updateSessionProgress(
+                studySessionRepository.updateSessionProgress(
                     sessionId = currentSessionId,
                     currentIndex = _uiState.value.currentIndex,
                     totalQuestions = _uiState.value.questions.size,
@@ -146,7 +148,7 @@ class TestViewModel @Inject constructor(
         timerJob?.cancel()
         if (currentSessionId > 0) {
             viewModelScope.launch {
-                dbRepository.deactivateSession(currentSessionId)
+                studySessionRepository.deactivateSession(currentSessionId)
             }
         }
         _uiState.update { TestUiState() }

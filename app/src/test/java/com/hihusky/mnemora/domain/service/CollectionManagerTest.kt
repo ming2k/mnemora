@@ -5,7 +5,7 @@ import com.hihusky.mnemora.data.local.db.entity.CollectionItemEntity
 import com.hihusky.mnemora.data.model.Collection
 import com.hihusky.mnemora.data.model.CollectionBehavior
 import com.hihusky.mnemora.data.model.CollectionKind
-import com.hihusky.mnemora.data.repository.DatabaseRepository
+import com.hihusky.mnemora.data.repository.CollectionRepository
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -19,7 +19,7 @@ import org.junit.Test
 
 class CollectionManagerTest {
 
-    private val dbRepository = mockk<DatabaseRepository>(relaxed = true)
+    private val dbRepository = mockk<CollectionRepository>(relaxed = true)
     private val manager = CollectionManager(dbRepository)
 
     private fun createTestCollection(id: Int = 1, bookId: Int = 1, behavior: CollectionBehavior = CollectionBehavior.Manual): Collection {

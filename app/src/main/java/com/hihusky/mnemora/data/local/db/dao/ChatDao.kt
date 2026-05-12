@@ -24,6 +24,9 @@ interface ChatSessionDao {
 
     @Query("DELETE FROM ai_chat_sessions WHERE id = :id")
     suspend fun deleteById(id: Int)
+
+    @Query("DELETE FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId)")
+    suspend fun deleteByBookId(bookId: Int)
 }
 
 @Dao
@@ -36,4 +39,7 @@ interface ChatHistoryDao {
 
     @Query("DELETE FROM ai_chat_history WHERE sessionId = :sessionId")
     suspend fun deleteBySessionId(sessionId: Int)
+
+    @Query("DELETE FROM ai_chat_history WHERE sessionId IN (SELECT id FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId))")
+    suspend fun deleteByBookId(bookId: Int)
 }
