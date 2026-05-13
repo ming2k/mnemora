@@ -41,6 +41,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.SubcomposeLayout
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -64,7 +67,9 @@ import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
 import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
+import com.mikepenz.markdown.compose.elements.MarkdownParagraph
 import com.mikepenz.markdown.m3.Markdown
+import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import com.mikepenz.markdown.model.DefaultMarkdownColors
 import com.mikepenz.markdown.model.DefaultMarkdownTypography
 import com.mikepenz.markdown.model.rememberMarkdownState
@@ -194,13 +199,13 @@ private fun InlineFlowParagraph(
                 line.forEach { part ->
                     when (part) {
                         is InlinePart.Text -> {
-                            // Splitting on punctuation/whitespace lets FlowRow
-                            // wrap each phrase independently instead of treating
-                            // the whole sentence as one block (which would push
-                            // following formulas onto a new row).
-                            splitIntoPhrases(part.text).forEach { phrase ->
-                                val annotated = remember(phrase) {
-                                    buildInlineMarkdown(phrase, baseSpanStyle)
+                            val fullText = part.text
+                            val hasMarks = remember(fullText) {
+                                collectInlineMarks(fullText).isNotEmpty()
+                            }
+                            if (hasMarks) {
+                                val annotated = remember(fullText) {
+                                    buildInlineMarkdown(fullText, baseSpanStyle)
                                 }
                                 Text(
                                     text = annotated,
@@ -208,6 +213,22 @@ private fun InlineFlowParagraph(
                                     color = contentColor,
                                     modifier = Modifier.align(Alignment.CenterVertically)
                                 )
+                            } else {
+                                // Splitting on CJK/punctuation lets FlowRow
+                                // wrap each phrase independently instead of treating
+                                // the whole sentence as one block (which would push
+                                // following formulas onto a new row).
+                                splitIntoPhrases(fullText).forEach { phrase ->
+                                    val annotated = remember(phrase) {
+                                        buildInlineMarkdown(phrase, baseSpanStyle)
+                                    }
+                                    Text(
+                                        text = annotated,
+                                        style = textStyle,
+                                        color = contentColor,
+                                        modifier = Modifier.align(Alignment.CenterVertically)
+                                    )
+                                }
                             }
                         }
 
@@ -351,6 +372,9 @@ private fun ImagePreviewDialog(
 // ------------------------------------------------------------------
 // Custom table: horizontal scroll, line borders, cell content supports
 // inline LaTeX via FlowRow mixing Text + Latex composables.
+// Column widths come from a SubcomposeLayout measurement pass — text
+// columns cap at maxColWidth (wrapping), LaTeX columns use the
+// formula's natural rendered width (no cap).
 // ------------------------------------------------------------------
 @Composable
 private fun CustomMarkdownTable(
@@ -361,7 +385,6 @@ private fun CustomMarkdownTable(
     val headerNode = node.findChildOfType(HEADER)
     val rows = node.children.filter { it.type == ROW }
 
-    // Extract raw text for each cell using AST offsets.
     val headerCells = headerNode?.children?.filter { it.type == CELL }?.map { cell ->
         content.substring(cell.startOffset, cell.endOffset).trim()
     } ?: emptyList()
@@ -375,119 +398,162 @@ private fun CustomMarkdownTable(
     if (headerCells.isEmpty()) return
 
     val columnCount = headerCells.size
-    val cellWidth = when {
-        columnCount <= 2 -> 140.dp
-        columnCount <= 4 -> 120.dp
-        else -> 100.dp
+
+    val maxColWidth = when {
+        columnCount <= 2 -> 270.dp
+        columnCount <= 4 -> 225.dp
+        else -> 180.dp
     }
+    val minColWidth = 60.dp
     val dividerThickness = 0.5.dp
-    val tableWidth = (columnCount * cellWidth.value +
-        (columnCount + 1) * dividerThickness.value).dp
+    val cellPaddingH = 12.dp
+    val cellPaddingV = 10.dp
+    val tablePaddingV = 8.dp
 
     val outlineColor = MaterialTheme.colorScheme.outlineVariant
     val headerDividerColor = MaterialTheme.colorScheme.outline
+    val textColor = MaterialTheme.colorScheme.onSurface
 
-    Box(
-        modifier = Modifier
-            .horizontalScroll(rememberScrollState())
-            .padding(vertical = 8.dp)
-    ) {
-        Column {
-            // Top border
-            HorizontalDivider(
-                modifier = Modifier.width(tableWidth),
-                color = outlineColor,
-                thickness = dividerThickness
-            )
+    val hasLatex = Regex("\\\$[^\\\$]+\\\$|\\\\\\([^)]+\\\\\\)")
+    val density = LocalDensity.current
+    val scrollState = rememberScrollState()
 
-            // Header row
-            Row(
-                modifier = Modifier
-                    .width(tableWidth)
-                    .height(IntrinsicSize.Min)
-            ) {
-                // Left border
-                VerticalDivider(
-                    modifier = Modifier.fillMaxHeight(),
-                    color = outlineColor,
-                    thickness = dividerThickness
-                )
-                headerCells.forEachIndexed { _, cellText ->
-                    Box(
-                        modifier = Modifier
-                            .width(cellWidth)
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.CenterStart
-                    ) {
-                        TableCellContent(
-                            text = cellText,
-                            style = style.copy(fontWeight = FontWeight.SemiBold),
-                            contentColor = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    // Vertical divider after each cell (including last for right border)
-                    VerticalDivider(
-                        modifier = Modifier.fillMaxHeight(),
-                        color = outlineColor,
-                        thickness = dividerThickness
-                    )
-                }
+    SubcomposeLayout { constraints ->
+        // ----- Phase 1: measure every cell at natural width -----
+        data class Cell(val col: Int, val row: Int, val text: String, val isHeader: Boolean)
+        val allCells = headerCells.mapIndexed { col, t -> Cell(col, 0, t, true) } +
+            dataRows.flatMapIndexed { rowIdx, row ->
+                row.mapIndexed { col, t -> Cell(col, rowIdx + 1, t, false) }
             }
 
-            HorizontalDivider(
-                modifier = Modifier.width(tableWidth),
-                color = headerDividerColor,
-                thickness = dividerThickness
-            )
+        val measurements = allCells.map { cell ->
+            val cellStyle = if (cell.isHeader) style.copy(fontWeight = FontWeight.SemiBold) else style
+            val p = subcompose("m_${cell.row}_${cell.col}") {
+                TableCellContent(cell.text, cellStyle, textColor)
+            }.first().measure(Constraints(maxWidth = Constraints.Infinity))
+            Triple(cell.col, cell.row, p.width)
+        }
 
-            // Data rows
-            dataRows.forEach { rowCells ->
-                Row(
-                    modifier = Modifier
-                        .width(tableWidth)
-                        .height(IntrinsicSize.Min)
-                ) {
-                    // Left border
-                    VerticalDivider(
-                        modifier = Modifier.fillMaxHeight(),
+        // ----- Phase 2: compute per-column widths -----
+        val padHPx = with(density) { (cellPaddingH * 2).roundToPx() }
+        val maxColWidthPx = with(density) { maxColWidth.roundToPx() }
+        val minColWidthPx = with(density) { minColWidth.roundToPx() }
+
+        val columnWidthsDp = (0 until columnCount).map { col ->
+            val maxCellW = measurements.filter { it.first == col }.maxOf { it.third }
+            val padded = maxCellW + padHPx
+            val hasFormula = allCells.any { it.col == col && hasLatex.containsMatchIn(it.text) }
+            val px = if (hasFormula) padded.coerceAtLeast(minColWidthPx)
+                      else padded.coerceAtLeast(minColWidthPx).coerceAtMost(maxColWidthPx)
+            with(density) { px.toDp() }
+        }
+
+        val tableWidth = (columnWidthsDp.map { it.value }.sum() +
+            (columnCount + 1).toFloat() * dividerThickness.value).dp
+
+        // ----- Phase 3: compose & measure the final table -----
+        val tableMeasurable = subcompose("table") {
+            Box(
+                modifier = Modifier
+                    .horizontalScroll(scrollState)
+                    .padding(vertical = tablePaddingV)
+            ) {
+                Column {
+                    HorizontalDivider(
+                        modifier = Modifier.width(tableWidth),
                         color = outlineColor,
                         thickness = dividerThickness
                     )
-                    rowCells.forEachIndexed { _, cellText ->
-                        Box(
-                            modifier = Modifier
-                                .width(cellWidth)
-                                .padding(horizontal = 12.dp, vertical = 10.dp),
-                            contentAlignment = Alignment.CenterStart
-                        ) {
-                            TableCellContent(
-                                text = cellText,
-                                style = style,
-                                contentColor = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                        // Vertical divider after each cell (including last for right border)
+                    // Header row
+                    Row(
+                        modifier = Modifier
+                            .width(tableWidth)
+                            .height(IntrinsicSize.Min)
+                    ) {
                         VerticalDivider(
                             modifier = Modifier.fillMaxHeight(),
                             color = outlineColor,
                             thickness = dividerThickness
                         )
+                        headerCells.forEachIndexed { col, cellText ->
+                            Box(
+                                modifier = Modifier
+                                    .width(columnWidthsDp[col])
+                                    .padding(horizontal = cellPaddingH, vertical = cellPaddingV),
+                                contentAlignment = Alignment.CenterStart
+                            ) {
+                                TableCellContent(
+                                    text = cellText,
+                                    style = style.copy(fontWeight = FontWeight.SemiBold),
+                                    contentColor = textColor
+                                )
+                            }
+                            VerticalDivider(
+                                modifier = Modifier.fillMaxHeight(),
+                                color = outlineColor,
+                                thickness = dividerThickness
+                            )
+                        }
+                    }
+                    HorizontalDivider(
+                        modifier = Modifier.width(tableWidth),
+                        color = headerDividerColor,
+                        thickness = dividerThickness
+                    )
+                    // Data rows
+                    dataRows.forEach { rowCells ->
+                        Row(
+                            modifier = Modifier
+                                .width(tableWidth)
+                                .height(IntrinsicSize.Min)
+                        ) {
+                            VerticalDivider(
+                                modifier = Modifier.fillMaxHeight(),
+                                color = outlineColor,
+                                thickness = dividerThickness
+                            )
+                            rowCells.forEachIndexed { col, cellText ->
+                                Box(
+                                    modifier = Modifier
+                                        .width(columnWidthsDp[col])
+                                        .padding(horizontal = cellPaddingH, vertical = cellPaddingV),
+                                    contentAlignment = Alignment.CenterStart
+                                ) {
+                                    TableCellContent(
+                                        text = cellText,
+                                        style = style,
+                                        contentColor = textColor
+                                    )
+                                }
+                                VerticalDivider(
+                                    modifier = Modifier.fillMaxHeight(),
+                                    color = outlineColor,
+                                    thickness = dividerThickness
+                                )
+                            }
+                        }
+                        HorizontalDivider(
+                            modifier = Modifier.width(tableWidth),
+                            color = outlineColor,
+                            thickness = dividerThickness
+                        )
                     }
                 }
-                HorizontalDivider(
-                    modifier = Modifier.width(tableWidth),
-                    color = outlineColor,
-                    thickness = dividerThickness
-                )
             }
+        }
+        val tableP = tableMeasurable.first().measure(constraints)
+        layout(tableP.width, tableP.height) {
+            tableP.placeRelative(0, 0)
         }
     }
 }
+
 
 /**
  * Renders a single table cell, mixing inline Markdown (bold/italic/code)
  * with inline LaTeX formulas.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun TableCellContent(
     text: String,
@@ -502,7 +568,7 @@ private fun TableCellContent(
         )
     }
 
-    Row {
+    FlowRow(modifier = Modifier.fillMaxWidth()) {
         parts.forEach { part ->
             when (part) {
                 is InlinePart.Text -> {
@@ -512,8 +578,6 @@ private fun TableCellContent(
                             text = annotated,
                             style = style,
                             color = contentColor,
-                            maxLines = 1,
-                            overflow = androidx.compose.ui.text.style.TextOverflow.Clip,
                             modifier = Modifier.align(Alignment.CenterVertically)
                         )
                     }
@@ -575,6 +639,27 @@ private fun MarkdownBlock(
     )
     val markdownState = rememberMarkdownState(text, retainState = true)
     val components = markdownComponents(
+        paragraph = { model ->
+            val paragraphText = model.node.getUnescapedTextInNode(model.content)
+            if ('$' in paragraphText) {
+                val lines = paragraphText.split('\n')
+                    .map { parseInlinePartsForLine(it) }
+                    .filter { it.isNotEmpty() }
+                if (lines.isNotEmpty()) {
+                    InlineFlowParagraph(
+                        lines = lines,
+                        textStyle = model.typography.paragraph,
+                        contentColor = contentColor
+                    )
+                }
+            } else {
+                MarkdownParagraph(
+                    content = model.content,
+                    node = model.node,
+                    style = model.typography.paragraph
+                )
+            }
+        },
         table = { model ->
             CustomMarkdownTable(
                 content = model.content,

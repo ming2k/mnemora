@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.12] - 2026-05-13
+
+### Fixed
+- **Inline LaTeX in lists and blockquotes** — added `paragraph` component override in the Markdown engine that detects `$...$` inline LaTeX and renders it via `InlineFlowParagraph` instead of treating it as literal text. Fixes `- $s$: xxx` in list items and `> $x=2$` in blockquotes.
+- **CJK bold rendering** — `你**好**` now correctly applies bold. `InlineFlowParagraph` detects markdown formatting markers in text parts and renders them as a single `Text` composable instead of splitting into individual CJK characters (which broke `**delimiter` matching).
+- **Table column widths** — replaced fixed-width columns with `SubcomposeLayout` measurement: every cell (including LaTeX) is composed and measured at its natural width. Text columns cap at `maxColWidth` (270dp/225dp/180dp) and wrap; LaTeX columns use the formula's actual rendered width with no artificial cap. `TableCellContent` switched from `Row` to `FlowRow` for proper text wrapping instead of truncation.
+- **Markdown preview button layout** — replaced cumbersome horizontal-scroll `Row` with a `FlowRow` wrapping naturally; first 9 preset buttons shown inline, remaining 2 accessible via a "More…" popup.
+
+### Changed
+- **Table max column widths** — increased from 140dp/120dp/100dp to 270dp/225dp/180dp (1.5×) to give formulas and longer text more breathing room before wrapping.
+
 ## [0.0.11] - 2026-05-12
 
 ### Added

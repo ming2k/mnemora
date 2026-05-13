@@ -1,10 +1,11 @@
 package com.hihusky.mnemora.ui.screens.debug
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,10 +16,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -113,7 +117,7 @@ private val TEST_CASES = listOf(
     )
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun MarkdownTestScreen(
     onBack: () -> Unit
@@ -122,6 +126,8 @@ fun MarkdownTestScreen(
     var streamingText by remember { mutableStateOf("") }
     var isStreaming by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+
+    var moreExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -141,15 +147,19 @@ fun MarkdownTestScreen(
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Preset buttons
-            Row(
+            // Preset buttons — 3 rows max, overflow in "More" popup
+            val visibleCount = 9
+            val visibleCases = TEST_CASES.take(visibleCount)
+            val hiddenCases = TEST_CASES.drop(visibleCount)
+
+            FlowRow(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .horizontalScroll(rememberScrollState())
                     .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                TEST_CASES.forEach { (label, content) ->
+                visibleCases.forEach { (label, content) ->
                     Button(
                         onClick = {
                             rawText = content
@@ -159,6 +169,32 @@ fun MarkdownTestScreen(
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(label.replace("_", " "), style = MaterialTheme.typography.labelSmall)
+                    }
+                }
+                if (hiddenCases.isNotEmpty()) {
+                    Box {
+                        OutlinedButton(
+                            onClick = { moreExpanded = true },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("More…", style = MaterialTheme.typography.labelSmall)
+                        }
+                        DropdownMenu(
+                            expanded = moreExpanded,
+                            onDismissRequest = { moreExpanded = false }
+                        ) {
+                            hiddenCases.forEach { (label, content) ->
+                                DropdownMenuItem(
+                                    text = { Text(label.replace("_", " ")) },
+                                    onClick = {
+                                        rawText = content
+                                        streamingText = ""
+                                        isStreaming = false
+                                        moreExpanded = false
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
             }
