@@ -38,13 +38,7 @@ class AnthropicProvider : AiProvider {
             else -> 8192
         }
 
-        val body = mapOf<String, Any?>(
-            "model" to cfg.model,
-            "system" to "${cfg.systemPrompt}\n\nContext:\n$context",
-            "messages" to messages,
-            "max_tokens" to maxTokens,
-            "stream" to true
-        )
+        val body = buildBody(cfg, maxTokens, context, messages)
 
         val request = Request.Builder()
             .url(url)
@@ -70,8 +64,11 @@ class AnthropicProvider : AiProvider {
                             val type = data.jsonObject["type"]?.jsonPrimitive?.contentOrNull
                             if (type == "content_block_delta") {
                                 val delta = data.jsonObject["delta"]?.jsonObject ?: continue
-                                val text = delta["text"]?.jsonPrimitive?.contentOrNull
-                                if (!text.isNullOrBlank()) emit(text)
+                                val deltaType = delta["type"]?.jsonPrimitive?.contentOrNull
+                                if (deltaType == "text_delta") {
+                                    val text = delta["text"]?.jsonPrimitive?.contentOrNull
+                                    if (!text.isNullOrBlank()) emit(text)
+                                }
                             }
                         } catch (_: Exception) {
                         }
@@ -79,5 +76,49 @@ class AnthropicProvider : AiProvider {
                 }
             }
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun buildBody(
+        cfg: AiConfig,
+        maxTokens: Int,
+        context: String,
+        messages: MutableList<Map<String, String>>
+    ): Map<String, Any?> {
+        val body = mutableMapOf<String, Any?>(
+            "model" to cfg.model,
+            "system" to "${cfg.systemPrompt}\n\nContext:\n$context",
+            "messages" to messages,
+            "max_tokens" to maxTokens,
+            "stream" to true
+        )
+
+        val isAdaptiveOnly = cfg.model.contains("opus-4-8", ignoreCase = true) ||
+                cfg.model.contains("opus-4-7", ignoreCase = true)
+        val isOpus47 = cfg.model.contains("opus", ignoreCase = true)
+        val supportsAdaptive = isOpus47 ||
+                cfg.model.contains("sonnet-4-6", ignoreCase = true)
+
+        when (cfg.thinkingMode) {
+            "adaptive" -> {
+                if (supportsAdaptive) {
+                    body["thinking"] = mapOf(
+                        "type" to "adaptive",
+                        "display" to "summarized"
+                    )
+                }
+            }
+            "enabled" -> {
+                if (!isAdaptiveOnly) {
+                    body["thinking"] = mapOf(
+                        "type" to "enabled",
+                        "budget_tokens" to (maxTokens - 1).coerceAtLeast(1024),
+                        "display" to "summarized"
+                    )
+                }
+            }
+        }
+
+        return body
     }
 }

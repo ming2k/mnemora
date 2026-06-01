@@ -94,8 +94,8 @@ private sealed class RenderBlock {
 }
 
 private sealed class InlinePart {
-    data class Text(val text: String) : InlinePart()
-    data class Math(val formula: String) : InlinePart()
+    data class Text(val text: String, val isBold: Boolean = false) : InlinePart()
+    data class Math(val formula: String, val isBold: Boolean = false) : InlinePart()
 }
 
 /**
@@ -200,12 +200,13 @@ private fun InlineFlowParagraph(
                     when (part) {
                         is InlinePart.Text -> {
                             val fullText = part.text
+                            val effectiveStyle = if (part.isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
                             val hasMarks = remember(fullText) {
                                 collectInlineMarks(fullText).isNotEmpty()
                             }
                             if (hasMarks) {
                                 val annotated = remember(fullText) {
-                                    buildInlineMarkdown(fullText, baseSpanStyle)
+                                    buildInlineMarkdown(fullText, effectiveStyle)
                                 }
                                 Text(
                                     text = annotated,
@@ -214,13 +215,9 @@ private fun InlineFlowParagraph(
                                     modifier = Modifier.align(Alignment.CenterVertically)
                                 )
                             } else {
-                                // Splitting on CJK/punctuation lets FlowRow
-                                // wrap each phrase independently instead of treating
-                                // the whole sentence as one block (which would push
-                                // following formulas onto a new row).
                                 splitIntoPhrases(fullText).forEach { phrase ->
                                     val annotated = remember(phrase) {
-                                        buildInlineMarkdown(phrase, baseSpanStyle)
+                                        buildInlineMarkdown(phrase, effectiveStyle)
                                     }
                                     Text(
                                         text = annotated,
@@ -573,7 +570,8 @@ private fun TableCellContent(
             when (part) {
                 is InlinePart.Text -> {
                     if (part.text.isNotEmpty()) {
-                        val annotated = buildInlineMarkdown(part.text, baseSpanStyle)
+                        val effectiveStyle = if (part.isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
+                        val annotated = buildInlineMarkdown(part.text, effectiveStyle)
                         Text(
                             text = annotated,
                             style = style,
@@ -940,24 +938,65 @@ private fun parseTextSegment(text: String): List<RenderBlock> {
 private val INLINE_MATH_REGEX =
     Regex("(?<!\\\$)\\\$(?!\\\$)([^\\n\\\$]+?)\\\$(?!\\\$)|\\\\\\((?!\\s*\\\\\\))([^\\n]+?)\\\\\\)")
 
+private val BOLD_DELIMITER = Regex("\\*\\*")
+
 private fun parseInlinePartsForLine(line: String): List<InlinePart> {
     if (line.isEmpty()) return emptyList()
+
+    val mathRanges = INLINE_MATH_REGEX.findAll(line).map { it.range }.toList()
+
+    val boldPositions = BOLD_DELIMITER.findAll(line)
+        .map { it.range.first }
+        .filter { pos -> mathRanges.none { pos in it } }
+        .toList()
+
+    if (boldPositions.size < 2) {
+        return splitOnMath(line, bold = false)
+    }
+
+    val paired = boldPositions.chunked(2).mapNotNull { pair ->
+        if (pair.size == 2) pair[0] to pair[1] else null
+    }
+
+    if (paired.isEmpty()) return splitOnMath(line, bold = false)
+
+    val parts = mutableListOf<InlinePart>()
+    var pos = 0
+
+    for ((openPos, closePos) in paired) {
+        if (openPos > pos) {
+            parts.addAll(splitOnMath(line.substring(pos, openPos), bold = false))
+        }
+        val inner = line.substring(openPos + 2, closePos)
+        parts.addAll(splitOnMath(inner, bold = true))
+        pos = closePos + 2
+    }
+    if (pos < line.length) {
+        parts.addAll(splitOnMath(line.substring(pos), bold = false))
+    }
+
+    return parts.ifEmpty { splitOnMath(line, bold = false) }
+}
+
+private fun splitOnMath(text: String, bold: Boolean): List<InlinePart> {
+    if (text.isEmpty()) return emptyList()
     val parts = mutableListOf<InlinePart>()
     var lastEnd = 0
-    for (m in INLINE_MATH_REGEX.findAll(line)) {
-        val before = line.substring(lastEnd, m.range.first)
-        if (before.isNotEmpty()) {
-            parts.add(InlinePart.Text(before))
+    for (m in INLINE_MATH_REGEX.findAll(text)) {
+        if (m.range.first > lastEnd) {
+            val t = text.substring(lastEnd, m.range.first)
+            if (t.isNotEmpty()) parts.add(InlinePart.Text(t, isBold = bold))
         }
         val mathContent = if (m.groups[1] != null) m.groupValues[1] else m.groupValues[2]
-        parts.add(InlinePart.Math(mathContent.trim()))
+        parts.add(InlinePart.Math(mathContent.trim(), isBold = bold))
         lastEnd = m.range.last + 1
     }
-    val after = line.substring(lastEnd)
-    if (after.isNotEmpty()) {
-        parts.add(InlinePart.Text(after))
+    if (lastEnd < text.length) {
+        parts.add(InlinePart.Text(text.substring(lastEnd), isBold = bold))
     }
-    return parts
+    return parts.ifEmpty {
+        if (text.isNotEmpty()) listOf(InlinePart.Text(text, isBold = bold)) else emptyList()
+    }
 }
 
 // ------------------------------------------------------------------

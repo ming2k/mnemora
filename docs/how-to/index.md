@@ -14,6 +14,7 @@ Task-oriented recipes. Each guide assumes you have already completed [Getting St
 ## Study
 
 - [Resume a study session](resume-study-session.md)
+- [Configure a custom AI provider](configure-custom-ai-provider.md)
 
 ## Looking for something else?
 

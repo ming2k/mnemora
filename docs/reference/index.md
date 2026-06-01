@@ -4,6 +4,7 @@ Lookup-oriented documentation. Dry, complete, and accurate.
 
 ## Available References
 
+- [AI Providers](ai-providers.md) — Supported providers, models, endpoints, thinking modes, and configuration keys
 - [CLI Commands and Flags](cli.md) — `dev.sh` commands, Gradle tasks, and `adb` snippets
 - [Configuration](configuration.md) — Build variants, package names, and SDK versions
 

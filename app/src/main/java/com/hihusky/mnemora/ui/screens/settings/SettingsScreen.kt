@@ -106,6 +106,7 @@ fun SettingsScreen(
         onAiContextIncludeOptionsChange = { viewModel.setAiContextIncludeOptions(it) },
         onAiContextIncludeAnswerChange = { viewModel.setAiContextIncludeAnswer(it) },
         onAiContextIncludeExplanationChange = { viewModel.setAiContextIncludeExplanation(it) },
+        onAiThinkingModeChange = { viewModel.setAiThinkingMode(it) },
         onAiSystemPromptChange = { viewModel.setAiSystemPrompt(it) },
         onNavigateToMarkdownTest = onNavigateToMarkdownTest
     )
@@ -134,6 +135,7 @@ internal fun SettingsScreenContent(
     onAiContextIncludeOptionsChange: (Boolean) -> Unit,
     onAiContextIncludeAnswerChange: (Boolean) -> Unit,
     onAiContextIncludeExplanationChange: (Boolean) -> Unit,
+    onAiThinkingModeChange: (String) -> Unit,
     onAiSystemPromptChange: (String) -> Unit,
     onNavigateToMarkdownTest: () -> Unit = {},
 ) {
@@ -278,8 +280,10 @@ internal fun SettingsScreenContent(
                     id = "anthropic",
                     display = "Anthropic",
                     models = listOf(
+                        "Claude Opus 4.8" to "claude-opus-4-8",
                         "Claude Opus 4.7" to "claude-opus-4-7",
-                        "Claude Sonnet 4.6" to "claude-sonnet-4-6"
+                        "Claude Sonnet 4.6" to "claude-sonnet-4-6",
+                        "Claude Haiku 4.5" to "claude-haiku-4-5"
                     ),
                     providers = listOf(
                         "Anthropic API" to "anthropic",
@@ -369,6 +373,34 @@ internal fun SettingsScreenContent(
                 )
 
                 MnemoraSettingsDivider()
+
+                // Thinking Mode (only for Anthropic provider)
+                val isAnthropicProvider = uiState.aiProvider.lowercase() in listOf("anthropic", "custom")
+                if (isAnthropicProvider) {
+                    val thinkingOptions = listOf("Disabled" to "disabled", "Adaptive" to "adaptive", "Extended" to "enabled")
+                    val model = uiState.aiModel.lowercase()
+                    val availableOptions = when {
+                        model.contains("opus-4-8") || model.contains("opus-4-7") ->
+                            thinkingOptions.filter { it.second != "enabled" }
+                        model.contains("haiku") ->
+                            thinkingOptions.filter { it.second != "adaptive" }
+                        else -> thinkingOptions
+                    }
+                    val thinkingIndex = availableOptions.indexOfFirst { it.second == uiState.aiThinkingMode }
+                        .coerceAtLeast(0)
+                    MnemoraSettingsDropdownRow(
+                        headline = "Thinking Mode",
+                        supporting = availableOptions[thinkingIndex].first,
+                        icon = Icons.Default.AutoFixHigh,
+                        options = availableOptions.map { it.first },
+                        selectedIndex = thinkingIndex,
+                        onSelect = { index ->
+                            onAiThinkingModeChange(availableOptions[index].second)
+                        }
+                    )
+
+                    MnemoraSettingsDivider()
+                }
 
                 // API Key
                 var apiKeyVisible by remember { mutableStateOf(false) }
@@ -607,6 +639,7 @@ private fun SettingsScreenPreviewDefault() {
             onAiContextIncludeOptionsChange = {},
             onAiContextIncludeAnswerChange = {},
             onAiContextIncludeExplanationChange = {},
+            onAiThinkingModeChange = {},
             onAiSystemPromptChange = {},
             onNavigateToMarkdownTest = {}
         )
@@ -649,6 +682,7 @@ private fun SettingsScreenPreviewModified() {
             onAiContextIncludeOptionsChange = {},
             onAiContextIncludeAnswerChange = {},
             onAiContextIncludeExplanationChange = {},
+            onAiThinkingModeChange = {},
             onAiSystemPromptChange = {},
             onNavigateToMarkdownTest = {}
         )

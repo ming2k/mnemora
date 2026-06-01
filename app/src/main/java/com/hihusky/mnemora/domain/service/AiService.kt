@@ -29,7 +29,8 @@ data class AiConfig(
     val contextIncludeStem: Boolean = true,
     val contextIncludeOptions: Boolean = true,
     val contextIncludeAnswer: Boolean = true,
-    val contextIncludeExplanation: Boolean = false
+    val contextIncludeExplanation: Boolean = false,
+    val thinkingMode: String = "disabled"
 )
 
 @Singleton

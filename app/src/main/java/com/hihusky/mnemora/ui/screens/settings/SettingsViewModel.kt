@@ -53,6 +53,7 @@ class SettingsViewModel @Inject constructor(
             val includeOptions = settingsRepository.aiContextIncludeOptions.first()
             val includeAnswer = settingsRepository.aiContextIncludeAnswer.first()
             val includeExplanation = settingsRepository.aiContextIncludeExplanation.first()
+            val thinkingMode = settingsRepository.aiThinkingMode.first()
 
             _uiState.update {
                 it.copy(
@@ -76,7 +77,8 @@ class SettingsViewModel @Inject constructor(
                     aiContextIncludeStem = includeStem,
                     aiContextIncludeOptions = includeOptions,
                     aiContextIncludeAnswer = includeAnswer,
-                    aiContextIncludeExplanation = includeExplanation
+                    aiContextIncludeExplanation = includeExplanation,
+                    aiThinkingMode = thinkingMode
                 )
             }
 
@@ -91,7 +93,8 @@ class SettingsViewModel @Inject constructor(
                 contextIncludeStem = includeStem,
                 contextIncludeOptions = includeOptions,
                 contextIncludeAnswer = includeAnswer,
-                contextIncludeExplanation = includeExplanation
+                contextIncludeExplanation = includeExplanation,
+                thinkingMode = thinkingMode
             ))
         }
     }
@@ -128,7 +131,8 @@ class SettingsViewModel @Inject constructor(
             contextIncludeStem = state.aiContextIncludeStem,
             contextIncludeOptions = state.aiContextIncludeOptions,
             contextIncludeAnswer = state.aiContextIncludeAnswer,
-            contextIncludeExplanation = state.aiContextIncludeExplanation
+            contextIncludeExplanation = state.aiContextIncludeExplanation,
+            thinkingMode = state.aiThinkingMode
         ))
     }
 
@@ -275,6 +279,12 @@ class SettingsViewModel @Inject constructor(
         syncAiConfig(_uiState.value)
     }
 
+    fun setAiThinkingMode(value: String) {
+        viewModelScope.launch { settingsRepository.setAiThinkingMode(value) }
+        _uiState.update { it.copy(aiThinkingMode = value) }
+        syncAiConfig(_uiState.value)
+    }
+
     private fun isProviderCompatible(model: String, provider: String): Boolean {
         val lowerModel = model.lowercase()
         return when {
@@ -317,5 +327,6 @@ data class SettingsUiState(
     val aiContextIncludeStem: Boolean = true,
     val aiContextIncludeOptions: Boolean = true,
     val aiContextIncludeAnswer: Boolean = true,
-    val aiContextIncludeExplanation: Boolean = true
+    val aiContextIncludeExplanation: Boolean = true,
+    val aiThinkingMode: String = "disabled"
 )

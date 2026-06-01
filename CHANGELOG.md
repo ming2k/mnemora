@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.13] - 2026-06-01
+
+### Added
+- **Claude Opus 4.8 support** — added `claude-opus-4-8` and `claude-haiku-4-5` model options in the Anthropic AI settings.
+- **Thinking mode for Anthropic models** — new "Thinking Mode" dropdown in AI settings (visible for Anthropic/custom providers). Supports Adaptive Thinking (`thinking.type: adaptive`, recommended for Opus 4.8/4.7 and Sonnet 4.6) and Extended Thinking (`thinking.type: enabled` with `budget_tokens`, for Sonnet 4.6 and Haiku 4.5). Model-specific compatibility is enforced automatically.
+- **Bold+LaTeX rendering fix** — `**$formula$**` and `**text $formula$ text**` now correctly render with both bold styling and inline LaTeX. The inline parser now identifies `**...**` bold regions first (excluding math internals), then splits on `$...$` within each region, producing parts with an `isBold` flag that flows through `InlineFlowParagraph` and `TableCellContent`.
+- **Bold+LaTeX preview test case** — new `bold_latex` preset in the debug Markdown Preview screen.
+- **Streaming toggle in Markdown Preview** — "Simulate Streaming" button is now a toggle (Simulate/Stop); stopping cancels the coroutine and clears streaming text. Switching presets or editing input auto-cancels active streaming.
+- **AI providers reference documentation** — `docs/reference/ai-providers.md` with full provider/model matrix, thinking compatibility, SSE event types, and configuration keys.
+- **Custom AI provider how-to guide** — `docs/how-to/configure-custom-ai-provider.md` with Sub2API setup instructions and Mnemora configuration steps.
+
+### Fixed
+- **`clipToBounds()` unresolved reference** — removed stray `clipToBounds()` call in `PracticeScreen.kt` that caused compilation failure.
+
 ## [0.0.12] - 2026-05-13
 
 ### Fixed

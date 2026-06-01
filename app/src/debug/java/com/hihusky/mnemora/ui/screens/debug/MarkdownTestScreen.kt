@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hihusky.mnemora.ui.components.MarkdownText
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -111,6 +112,11 @@ private val TEST_CASES = listOf(
         "**Warning**. period too.\n" +
         "**Key**, comma as well."
     ),
+    "bold_latex" to (
+        "**${'$'}E=mc^2${'$'}** is the most famous equation.\n\n" +
+        "The **formula ${'$'}F=ma${'$'}** relates force and acceleration.\n\n" +
+        "**Key concept**: the energy ${'$'}E${'$'} equals mass ${'$'}m${'$'} times ${'$'}c^2${'$'}."
+    ),
     "streaming" to (
         "The **quick** brown ${'$'}f(x)${'$'} jumps over the lazy dog. " +
         "This simulates how ${'$'}\\frac{1}{2}${'$'} appears during token streaming."
@@ -125,6 +131,7 @@ fun MarkdownTestScreen(
     var rawText by remember { mutableStateOf(TEST_CASES.first().second) }
     var streamingText by remember { mutableStateOf("") }
     var isStreaming by remember { mutableStateOf(false) }
+    var streamingJob by remember { mutableStateOf<Job?>(null) }
     val scope = rememberCoroutineScope()
 
     var moreExpanded by remember { mutableStateOf(false) }
@@ -165,6 +172,8 @@ fun MarkdownTestScreen(
                             rawText = content
                             streamingText = ""
                             isStreaming = false
+                            streamingJob?.cancel()
+                            streamingJob = null
                         },
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
@@ -190,6 +199,8 @@ fun MarkdownTestScreen(
                                         rawText = content
                                         streamingText = ""
                                         isStreaming = false
+                                        streamingJob?.cancel()
+                                        streamingJob = null
                                         moreExpanded = false
                                     }
                                 )
@@ -199,24 +210,38 @@ fun MarkdownTestScreen(
                 }
             }
 
-            // Streaming simulation
-            Button(
-                onClick = {
-                    if (isStreaming) return@Button
-                    isStreaming = true
-                    streamingText = ""
-                    val source = TEST_CASES.first().second
-                    scope.launch {
-                        source.forEach { ch ->
-                            streamingText += ch
-                            delay(30)
-                        }
+            // Streaming simulation toggle
+            if (isStreaming) {
+                OutlinedButton(
+                    onClick = {
+                        streamingJob?.cancel()
+                        streamingJob = null
+                        streamingText = ""
                         isStreaming = false
-                    }
-                },
-                modifier = Modifier.padding(horizontal = MnemoraSpacing.Large)
-            ) {
-                Text("Simulate Streaming")
+                    },
+                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Large)
+                ) {
+                    Text("Stop Streaming")
+                }
+            } else {
+                Button(
+                    onClick = {
+                        isStreaming = true
+                        streamingText = ""
+                        val source = rawText
+                        streamingJob = scope.launch {
+                            source.forEach { ch ->
+                                streamingText += ch
+                                delay(30)
+                            }
+                            isStreaming = false
+                            streamingJob = null
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Large)
+                ) {
+                    Text("Simulate Streaming")
+                }
             }
 
             Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
@@ -227,6 +252,9 @@ fun MarkdownTestScreen(
                 onValueChange = {
                     rawText = it
                     streamingText = ""
+                    streamingJob?.cancel()
+                    streamingJob = null
+                    isStreaming = false
                 },
                 label = { Text("Raw Markdown") },
                 modifier = Modifier

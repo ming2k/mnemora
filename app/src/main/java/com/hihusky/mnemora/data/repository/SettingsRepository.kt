@@ -38,6 +38,7 @@ class SettingsRepository @Inject constructor(
         val AI_CONTEXT_INCLUDE_OPTIONS = booleanPreferencesKey("ai_context_include_options")
         val AI_CONTEXT_INCLUDE_ANSWER = booleanPreferencesKey("ai_context_include_answer")
         val AI_CONTEXT_INCLUDE_EXPLANATION = booleanPreferencesKey("ai_context_include_explanation")
+        val AI_THINKING_MODE = stringPreferencesKey("ai_thinking_mode")
         val LAST_OPENED_BANK = stringPreferencesKey("last_opened_bank")
         val FIRST_LAUNCH_COMPLETED = booleanPreferencesKey("first_launch_completed")
     }
@@ -120,6 +121,9 @@ class SettingsRepository @Inject constructor(
 
     val aiContextIncludeExplanation: Flow<Boolean> = dataStore.data.map { it[AI_CONTEXT_INCLUDE_EXPLANATION] ?: true }
     suspend fun setAiContextIncludeExplanation(value: Boolean) = dataStore.edit { it[AI_CONTEXT_INCLUDE_EXPLANATION] = value }
+
+    val aiThinkingMode: Flow<String> = dataStore.data.map { it[AI_THINKING_MODE] ?: "disabled" }
+    suspend fun setAiThinkingMode(value: String) = dataStore.edit { it[AI_THINKING_MODE] = value }
 
     // Last opened bank
     val lastOpenedBank: Flow<String?> = dataStore.data.map { it[LAST_OPENED_BANK] }
