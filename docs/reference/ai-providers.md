@@ -19,6 +19,7 @@ Supported AI providers, models, API endpoints, and feature compatibility.
 
 | Model | API ID | Context Window | Max Output |
 |:------|:-------|:---------------|:-----------|
+| Claude Fable 5 | `claude-fable-5` | 1M tokens | 128k tokens |
 | Claude Opus 4.8 | `claude-opus-4-8` | 1M tokens | 128k tokens |
 | Claude Opus 4.7 | `claude-opus-4-7` | 1M tokens | 128k tokens |
 | Claude Sonnet 4.6 | `claude-sonnet-4-6` | 1M tokens | 64k tokens |
@@ -28,6 +29,7 @@ Supported AI providers, models, API endpoints, and feature compatibility.
 
 | Model | Adaptive Thinking | Extended Thinking |
 |:------|:------------------|:------------------|
+| Claude Fable 5 | Supported (only mode) | Not supported (400 error) |
 | Claude Opus 4.8 | Supported (only mode) | Not supported (400 error) |
 | Claude Opus 4.7 | Supported (only mode) | Not supported (400 error) |
 | Claude Sonnet 4.6 | Supported (recommended) | Deprecated but functional |
@@ -52,7 +54,9 @@ Supported AI providers, models, API endpoints, and feature compatibility.
 |:-----|:-------------|:------------|
 | `disabled` | _(omit `thinking` key)_ | No thinking. Lowest latency. |
 | `adaptive` | `"thinking": {"type": "adaptive", "display": "summarized"}` | Model decides when and how much to think. |
-| `enabled` | `"thinking": {"type": "enabled", "budget_tokens": N, "display": "summarized"}` | Manual budget control. Not valid on Opus 4.8/4.7. |
+| `enabled` | `"thinking": {"type": "enabled", "budget_tokens": N, "display": "summarized"}` | Manual budget control. Not valid on Fable 5 or Opus 4.8/4.7. |
+
+On Claude Fable 5, an explicit `"thinking": {"type": "disabled"}` returns a 400 error; the `disabled` mode omits the `thinking` key, which is the required form.
 
 ### SSE Event Types (Streaming)
 

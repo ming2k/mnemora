@@ -33,6 +33,7 @@ class AnthropicProvider : AiProvider {
         }
 
         val maxTokens = when {
+            cfg.model.contains("fable", ignoreCase = true) -> 128000
             cfg.model.contains("opus", ignoreCase = true) -> 128000
             cfg.model.contains("sonnet", ignoreCase = true) -> 64000
             else -> 8192
@@ -93,10 +94,15 @@ class AnthropicProvider : AiProvider {
             "stream" to true
         )
 
-        val isAdaptiveOnly = cfg.model.contains("opus-4-8", ignoreCase = true) ||
+        // Fable 5, Opus 4.8, and Opus 4.7 reject "enabled"/budget_tokens with a 400;
+        // adaptive is their only thinking mode. Fable 5 additionally rejects an
+        // explicit {"type": "disabled"} — the thinking key must be omitted entirely,
+        // which the when below already does for "disabled" (no matching branch).
+        val isAdaptiveOnly = cfg.model.contains("fable", ignoreCase = true) ||
+                cfg.model.contains("opus-4-8", ignoreCase = true) ||
                 cfg.model.contains("opus-4-7", ignoreCase = true)
-        val isOpus47 = cfg.model.contains("opus", ignoreCase = true)
-        val supportsAdaptive = isOpus47 ||
+        val supportsAdaptive = isAdaptiveOnly ||
+                cfg.model.contains("opus", ignoreCase = true) ||
                 cfg.model.contains("sonnet-4-6", ignoreCase = true)
 
         when (cfg.thinkingMode) {

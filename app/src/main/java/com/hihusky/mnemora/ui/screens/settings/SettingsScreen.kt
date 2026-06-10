@@ -280,6 +280,7 @@ internal fun SettingsScreenContent(
                     id = "anthropic",
                     display = "Anthropic",
                     models = listOf(
+                        "Claude Fable 5" to "claude-fable-5",
                         "Claude Opus 4.8" to "claude-opus-4-8",
                         "Claude Opus 4.7" to "claude-opus-4-7",
                         "Claude Sonnet 4.6" to "claude-sonnet-4-6",
@@ -380,7 +381,7 @@ internal fun SettingsScreenContent(
                     val thinkingOptions = listOf("Disabled" to "disabled", "Adaptive" to "adaptive", "Extended" to "enabled")
                     val model = uiState.aiModel.lowercase()
                     val availableOptions = when {
-                        model.contains("opus-4-8") || model.contains("opus-4-7") ->
+                        model.contains("fable") || model.contains("opus-4-8") || model.contains("opus-4-7") ->
                             thinkingOptions.filter { it.second != "enabled" }
                         model.contains("haiku") ->
                             thinkingOptions.filter { it.second != "adaptive" }

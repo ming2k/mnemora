@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.14] - 2026-06-10
+
+### Added
+- **Claude Fable 5 support** — added `claude-fable-5` (Anthropic's new top-tier model, 1M context / 128k output) to the Anthropic model options. Fable 5 is adaptive-thinking-only: the Extended thinking mode is hidden for it in settings, and the request builder never sends `budget_tokens` or an explicit `thinking.type: disabled` (both return a 400 on this model).
+
 ## [0.0.13] - 2026-06-01
 
 ### Added
@@ -220,7 +225,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.11...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.14...HEAD
+[0.0.14]: https://github.com/ming2k/mnemora/compare/v0.0.13...v0.0.14
+[0.0.13]: https://github.com/mihusky/mnemora/compare/v0.0.12...v0.0.13
+[0.0.12]: https://github.com/ming2k/mnemora/compare/v0.0.11...v0.0.12
 [0.0.11]: https://github.com/ming2k/mnemora/compare/v0.0.10...v0.0.11
 [0.0.10]: https://github.com/ming2k/mnemora/compare/v0.0.9...v0.0.10
 [0.0.9]: https://github.com/ming2k/mnemora/compare/v0.0.8...v0.0.9
