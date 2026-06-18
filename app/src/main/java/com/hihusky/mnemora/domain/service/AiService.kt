@@ -64,7 +64,7 @@ class AiService @Inject constructor() {
         val effectiveHistory = buildEffectiveHistory(history, userQuestion)
 
         val provider = when (cfg.provider.lowercase()) {
-            "gemini" -> GeminiProvider()
+            "gemini", "custom-gemini" -> GeminiProvider()
             "vertex-ai" -> VertexAiProvider()
             "kimi" -> KimiProvider()
             "deepseek" -> DeepSeekProvider()

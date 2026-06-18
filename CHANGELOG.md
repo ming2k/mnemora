@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.15] - 2026-06-19
+
+### Added
+- **Custom Google AI provider** — added a "Custom" provider option for Google models to allow setting custom Base URLs (e.g., for third-party proxies). Base URL configuration is now visible whenever a "Custom" provider is selected.
+- **Expanded Google models** — added support for all major Gemini 2.5 and 3.0/3.5 models (`gemini-3.5-flash`, `gemini-3-pro-preview`, `gemini-3-flash-preview`, `gemini-2.5-pro`, `gemini-2.5-flash`).
+
 ## [0.0.14] - 2026-06-10
 
 ### Added

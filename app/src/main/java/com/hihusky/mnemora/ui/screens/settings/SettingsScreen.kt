@@ -268,12 +268,18 @@ internal fun SettingsScreenContent(
                     id = "google",
                     display = "Google",
                     models = listOf(
+                        "Gemini 3.5 Flash" to "gemini-3.5-flash",
                         "Gemini 3.1 Pro Preview" to "gemini-3.1-pro-preview",
-                        "Gemini 3.1 Flash Lite Preview" to "gemini-3.1-flash-lite-preview"
+                        "Gemini 3.1 Flash Lite Preview" to "gemini-3.1-flash-lite-preview",
+                        "Gemini 3.0 Pro Preview" to "gemini-3-pro-preview",
+                        "Gemini 3.0 Flash Preview" to "gemini-3-flash-preview",
+                        "Gemini 2.5 Pro" to "gemini-2.5-pro",
+                        "Gemini 2.5 Flash" to "gemini-2.5-flash"
                     ),
                     providers = listOf(
                         "Google AI Studio" to "gemini",
-                        "GCP Vertex AI" to "vertex-ai"
+                        "GCP Vertex AI" to "vertex-ai",
+                        "Custom" to "custom-gemini"
                     )
                 ),
                 AiCompany(
@@ -436,7 +442,7 @@ internal fun SettingsScreenContent(
                     }
                 )
 
-                if (uiState.aiProvider.lowercase() == "custom") {
+                if (uiState.aiProvider.lowercase().startsWith("custom")) {
                     MnemoraSettingsDivider()
 
                     // Base URL
