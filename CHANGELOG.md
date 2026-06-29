@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.16] - 2026-06-29
+
+### Added
+- **Question review entries** — book detail now has a "Review" section with quick links into a practice session of all wrong answers or all marked questions (disabled when the count is zero).
+- **Overview stats row** — the question overview sheet shows a summary of correct / wrong / marked / total counts above the grid.
+
+### Fixed
+- **AI model not remembered after restart** — the AI config is now loaded from persisted settings at app startup instead of only when the Settings screen is opened, so the saved model and provider survive a relaunch. The `custom-gemini` provider is also recognized as compatible with Google models so it is no longer reset on restart.
+- **Empty AI chat after a fast swipe** — the chat panel reloads its history once the question settles, instead of showing an empty conversation for the previous (unsettled) question.
+- **AI chat scroll glitches while streaming** — at-bottom detection is derived from the live list layout, and streaming replies pin to the end of the last message, removing the backward jump and the mid-stream auto-scroll drop-out.
+- **Accidental AI chat dismissal** — the chat sheet now uses a stable tall height so scrolling the messages no longer drags the drawer closed.
+
 ## [0.0.15] - 2026-06-19
 
 ### Added
