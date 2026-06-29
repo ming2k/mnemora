@@ -31,7 +31,7 @@ import com.hihusky.mnemora.ui.theme.MnemoraTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NodeSelector(
+fun NodeSheet(
     nodes: List<Node>,
     currentPartitionId: String,
     onNodeSelected: (String) -> Unit,
@@ -110,9 +110,9 @@ private fun NodeItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-private fun NodeSelectorPreview() {
+private fun NodeSheetPreview() {
     MnemoraTheme {
-        NodeSelector(
+        NodeSheet(
             nodes = listOf(
                 Node(id = "1", bookId = 1, title = "Algebra Basics", children = listOf(
                     Node(id = "1_0", bookId = 1, title = "Sub-topic 1.1", depth = 1)

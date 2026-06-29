@@ -3,6 +3,7 @@ package com.hihusky.mnemora.ui.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.DragInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
@@ -71,11 +71,14 @@ import com.hihusky.mnemora.ui.theme.MnemoraAlpha
 import com.hihusky.mnemora.ui.theme.MnemoraSize
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
-import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
+
+/** Slack (in px) when deciding the list is parked at the bottom, to absorb layout rounding. */
+private const val AT_BOTTOM_TOLERANCE_PX = 4
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AiChatPanel(
+fun AiChatSheet(
     sessions: List<ChatSession>,
     currentSessionId: Int?,
     history: List<ChatMessage>,
@@ -102,35 +105,42 @@ fun AiChatPanel(
         }
     )
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    // Start following the bottom only for a fresh conversation. When a saved scroll
+    // Follow the latest message only for a fresh conversation. When a saved scroll
     // position is restored we leave the user where they were until they act.
-    var shouldAutoScroll by remember {
+    var autoScroll by remember {
         mutableStateOf(initialScrollIndex == 0 && initialScrollOffset == 0)
     }
 
-    // Track whether the user is pinned to the bottom. Derived purely from the list
-    // layout (never from a captured message list) so it stays correct as the
-    // streaming reply grows.
+    // Whether the list is parked at the end. Derived purely from the list layout
+    // (never from a captured message list) so it stays correct as the streaming reply
+    // grows. A few-px tolerance keeps sub-pixel layout rounding from reading as
+    // "not at bottom".
     val isAtBottom by remember {
         derivedStateOf {
             val info = listState.layoutInfo
             val lastItem = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
             lastItem.index >= info.totalItemsCount - 1 &&
-                lastItem.offset + lastItem.size <= info.viewportEndOffset
+                lastItem.offset + lastItem.size <= info.viewportEndOffset + AT_BOTTOM_TOLERANCE_PX
         }
     }
 
-    // When a manual scroll settles, resume auto-scroll only if the user is at the bottom.
+    // The follow latch is driven only by genuine user drags. Once the finger lifts and
+    // any fling settles we adopt wherever the user landed. Programmatic scroll-to-bottom
+    // carries no DragInteraction, so it can never flip the latch — that decoupling is
+    // what removes the streaming/auto-scroll fight (the "bounce") at the bottom.
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress }
-            .filter { inProgress -> !inProgress }
-            .collect { shouldAutoScroll = isAtBottom }
+        listState.interactionSource.interactions.collect { interaction ->
+            if (interaction is DragInteraction.Stop || interaction is DragInteraction.Cancel) {
+                snapshotFlow { listState.isScrollInProgress }.first { inProgress -> !inProgress }
+                autoScroll = isAtBottom
+            }
+        }
     }
 
     // Sending a message (or a reply starting to stream) should bring the user back
     // to the bottom even if they had a restored position higher up.
     LaunchedEffect(isLoading) {
-        if (isLoading) shouldAutoScroll = true
+        if (isLoading) autoScroll = true
     }
 
     // Pin to the bottom as content arrives. Keyed on both the message count and the
@@ -139,7 +149,7 @@ fun AiChatPanel(
     // the backward jump that animating to the item's top would cause.
     val lastMessageLength = visibleMessages.lastOrNull()?.text?.length ?: 0
     LaunchedEffect(visibleMessages.size, lastMessageLength) {
-        if (visibleMessages.isNotEmpty() && shouldAutoScroll) {
+        if (visibleMessages.isNotEmpty() && autoScroll) {
             listState.scrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
         }
     }
@@ -173,14 +183,10 @@ fun AiChatPanel(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
-        // A stable, tall sheet keeps the scrollable message list as the dominant
-        // gesture target, so vertical scrolls land on the list instead of dragging
-        // the sheet down and dismissing it.
-        Column(
-            modifier = Modifier
-                .fillMaxHeight(0.9f)
-                .heightIn(max = MnemoraSize.SheetMaxHeight)
-        ) {
+        // The sheet wraps its content (the shared height cap lives in MnemoraBottomSheet):
+        // short chats stay compact, long ones grow until the cap, then the message list
+        // scrolls internally.
+        Column {
             AiChatHeader(
                 sessions = sessions,
                 currentSessionId = currentSessionId,
@@ -199,11 +205,14 @@ fun AiChatPanel(
             LazyColumn(
                 state = listState,
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(1f, fill = false)
+                    .heightIn(min = MnemoraSize.ChatListMinHeight)
                     .fillMaxWidth(),
                 contentPadding = PaddingValues(
-                    horizontal = MnemoraSpacing.Large,
-                    vertical = MnemoraSpacing.Medium
+                    start = MnemoraSpacing.Large,
+                    top = MnemoraSpacing.Medium,
+                    end = MnemoraSpacing.Large,
+                    bottom = MnemoraSpacing.Large
                 ),
                 verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
             ) {
@@ -581,9 +590,9 @@ private fun AiChatInputBar(
 @OptIn(ExperimentalMaterial3Api::class)
 @Preview(showBackground = true)
 @Composable
-private fun AiChatPanelPreview() {
+private fun AiChatSheetPreview() {
     MnemoraTheme {
-        AiChatPanel(
+        AiChatSheet(
             sessions = listOf(
                 ChatSession(id = 1, questionId = 1, title = "Main", createdAt = 0L),
                 ChatSession(id = 2, questionId = 1, title = "Why B?", createdAt = 0L)

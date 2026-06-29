@@ -69,12 +69,12 @@ import com.hihusky.mnemora.data.model.QuestionChoice
 import com.hihusky.mnemora.data.model.QuestionStatus
 import com.hihusky.mnemora.data.model.QuestionType
 import com.hihusky.mnemora.data.model.UserAnswer
-import com.hihusky.mnemora.ui.components.AiChatPanel
+import com.hihusky.mnemora.ui.components.AiChatSheet
 import com.hihusky.mnemora.ui.components.CollectionSheet
 import com.hihusky.mnemora.ui.components.ConfettiOverlay
 import com.hihusky.mnemora.ui.components.DopamineProgressBar
 import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
-import com.hihusky.mnemora.ui.components.NodeSelector
+import com.hihusky.mnemora.ui.components.NodeSheet
 import com.hihusky.mnemora.ui.components.OverviewSheet
 import com.hihusky.mnemora.ui.components.QuestionContent
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
@@ -548,7 +548,7 @@ private fun PracticeDialogs(
     }
 
     if (showAiChat) {
-        AiChatPanel(
+        AiChatSheet(
             sessions = chat.sessions,
             currentSessionId = chat.currentSessionId,
             history = chat.history,
@@ -569,7 +569,7 @@ private fun PracticeDialogs(
     }
 
     if (showNodeSelector) {
-        NodeSelector(
+        NodeSheet(
             nodes = nodes,
             currentPartitionId = currentPartitionId,
             onNodeSelected = onSelectNode,

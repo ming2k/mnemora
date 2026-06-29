@@ -25,6 +25,8 @@ object MnemoraSize {
     val AvatarLarge = 48.dp
     val EmptyStateIcon = 64.dp
     val SheetMaxHeight = 600.dp
+    const val SheetMaxHeightFraction = 0.72f
+    val ChatListMinHeight = 280.dp
 }
 
 object MnemoraElevation {
