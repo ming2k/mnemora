@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.PlayArrow
@@ -64,6 +66,7 @@ import com.hihusky.mnemora.ui.components.MnemoraSettingsSectionHeader
 import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
+import com.hihusky.mnemora.ui.theme.WarningColor
 import com.hihusky.mnemora.ui.theme.identityContainer
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -169,6 +172,27 @@ internal fun BookDetailScreenContent(
                     ) {
                         item {
                             BookSummaryCard(uiState, modifier = Modifier.padding(MnemoraSpacing.Large))
+                        }
+
+                        item {
+                            MnemoraSettingsSectionHeader(title = "Review")
+                            MnemoraSettingsGroup {
+                                ReviewRow(
+                                    icon = Icons.Default.Close,
+                                    tint = MaterialTheme.colorScheme.error,
+                                    label = "Wrong answers",
+                                    count = uiState.wrongCount,
+                                    onClick = { onNavigateToPractice(book.id, null, "wrong") }
+                                )
+                                MnemoraSettingsDivider()
+                                ReviewRow(
+                                    icon = Icons.Default.Bookmark,
+                                    tint = WarningColor,
+                                    label = "Marked",
+                                    count = uiState.markedCount,
+                                    onClick = { onNavigateToPractice(book.id, null, "marked") }
+                                )
+                            }
                         }
 
                         if (uiState.collections.isNotEmpty()) {
@@ -396,6 +420,55 @@ private fun StatCell(label: String, value: String) {
 }
 
 @Composable
+private fun ReviewRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    tint: androidx.compose.ui.graphics.Color,
+    label: String,
+    count: Int,
+    onClick: () -> Unit
+) {
+    val enabled = count > 0
+    val contentAlpha = if (enabled) 1f else 0.4f
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+    ) {
+        Surface(
+            modifier = Modifier.size(32.dp),
+            shape = MaterialTheme.shapes.small,
+            color = tint.identityContainer()
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = tint.copy(alpha = contentAlpha),
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+        }
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
+            modifier = Modifier.weight(1f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            count.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+        )
+    }
+}
+
+@Composable
 private fun CollectionRow(collection: Collection, onClick: () -> Unit) {
     val isSmart = collection.isSmart
     val accentColor = if (isSmart) MaterialTheme.colorScheme.tertiary
@@ -582,7 +655,10 @@ private fun BookDetailScreenPreviewLoaded() {
                         name = "Wrong Answers", createdAt = 0L)
                 ),
                 srsStats = SrsStats(total = 50, dueToday = 8, newCards = 5, learning = 12, review = 3),
-                answeredCount = 86
+                answeredCount = 86,
+                correctCount = 70,
+                wrongCount = 16,
+                markedCount = 9
             ),
             onBack = {},
             onNavigateToPractice = { _, _, _ -> },

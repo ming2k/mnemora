@@ -79,7 +79,7 @@ class VertexAiProvider : AiProvider {
         }
     }
 
-    private fun buildVertexAiUrl(cfg: AiConfig): String {
+    internal fun buildVertexAiUrl(cfg: AiConfig): String {
         val cleanProject = cfg.projectId.trim()
         val cleanLocation = cfg.location.trim().lowercase()
         val cleanModel = cfg.model.trim()

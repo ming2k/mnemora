@@ -186,7 +186,10 @@ internal fun PracticeScreenContent(
         }
     }
 
-    LaunchedEffect(showAiChat) {
+    // Reload when the chat opens, and again whenever the question settles — a fast
+    // swipe can open the panel before the pager settles, so we must re-key on the
+    // current question id to avoid showing an empty/stale conversation.
+    LaunchedEffect(showAiChat, uiState.currentQuestion?.id) {
         if (showAiChat) onLoadChatHistory()
     }
 

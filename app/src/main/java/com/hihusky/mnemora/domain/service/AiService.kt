@@ -1,18 +1,26 @@
 package com.hihusky.mnemora.domain.service
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
 import com.hihusky.mnemora.data.model.ChatMessage
+import com.hihusky.mnemora.data.repository.SettingsRepository
 import com.hihusky.mnemora.domain.service.ai.AnthropicProvider
 import com.hihusky.mnemora.domain.service.ai.DeepSeekProvider
 import com.hihusky.mnemora.domain.service.ai.GeminiProvider
 import com.hihusky.mnemora.domain.service.ai.KimiProvider
 import com.hihusky.mnemora.domain.service.ai.VertexAiProvider
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.Json
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -34,19 +42,90 @@ data class AiConfig(
 )
 
 @Singleton
-class AiService @Inject constructor() {
+class AiService @Inject constructor(
+    dataStore: DataStore<Preferences>
+) {
     private val client = OkHttpClient.Builder()
         .connectTimeout(30, TimeUnit.SECONDS)
         .readTimeout(60, TimeUnit.SECONDS)
         .build()
+
+    private val json = Json { ignoreUnknownKeys = true }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     private val _config = MutableStateFlow(AiConfig())
     val config: StateFlow<AiConfig> = _config.asStateFlow()
 
     val isConfigured: Boolean get() = _config.value.apiKey.isNotBlank()
 
+    init {
+        // Keep the in-memory config in sync with persisted settings so the
+        // user's saved model/provider is restored on every launch, even before
+        // the Settings screen is opened.
+        scope.launch {
+            dataStore.data
+                .map { it.toAiConfig() }
+                .collect { _config.value = it }
+        }
+    }
+
     fun updateConfig(config: AiConfig) {
         _config.value = config
+    }
+
+    private fun Preferences.toAiConfig(): AiConfig {
+        val model = this[SettingsRepository.AI_MODEL] ?: AiConfig().model
+        val savedProvider = this[SettingsRepository.AI_PROVIDER] ?: AiConfig().provider
+        val provider = if (isProviderCompatible(model, savedProvider)) {
+            savedProvider
+        } else {
+            defaultProviderForModel(model)
+        }
+        val activeKey = this[SettingsRepository.AI_API_KEY] ?: ""
+        val effectiveKey = cachedKeyFor(provider).ifBlank { activeKey }
+        return AiConfig(
+            apiKey = effectiveKey,
+            baseUrl = this[SettingsRepository.AI_BASE_URL] ?: "",
+            provider = provider,
+            model = model,
+            projectId = this[SettingsRepository.AI_PROJECT_ID] ?: "",
+            location = this[SettingsRepository.AI_LOCATION] ?: "",
+            systemPrompt = this[SettingsRepository.AI_SYSTEM_PROMPT] ?: AiConfig().systemPrompt,
+            contextIncludeStem = this[SettingsRepository.AI_CONTEXT_INCLUDE_STEM] ?: true,
+            contextIncludeOptions = this[SettingsRepository.AI_CONTEXT_INCLUDE_OPTIONS] ?: true,
+            contextIncludeAnswer = this[SettingsRepository.AI_CONTEXT_INCLUDE_ANSWER] ?: true,
+            contextIncludeExplanation = this[SettingsRepository.AI_CONTEXT_INCLUDE_EXPLANATION] ?: true,
+            thinkingMode = this[SettingsRepository.AI_THINKING_MODE] ?: "disabled"
+        )
+    }
+
+    private fun Preferences.cachedKeyFor(provider: String): String {
+        val raw = this[SettingsRepository.AI_API_KEY_CACHE] ?: "{}"
+        return try {
+            json.decodeFromString<Map<String, String>>(raw)[provider] ?: ""
+        } catch (_: Exception) {
+            ""
+        }
+    }
+
+    private fun isProviderCompatible(model: String, provider: String): Boolean {
+        val lowerModel = model.lowercase()
+        return when {
+            lowerModel.startsWith("kimi") -> provider == "kimi"
+            lowerModel.startsWith("deepseek") -> provider == "deepseek"
+            lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
+            else -> provider == "gemini" || provider == "vertex-ai" || provider == "custom-gemini"
+        }
+    }
+
+    private fun defaultProviderForModel(model: String): String {
+        val lowerModel = model.lowercase()
+        return when {
+            lowerModel.startsWith("kimi") -> "kimi"
+            lowerModel.startsWith("deepseek") -> "deepseek"
+            lowerModel.startsWith("claude") -> "anthropic"
+            else -> "gemini"
+        }
     }
 
     fun explain(

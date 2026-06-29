@@ -26,6 +26,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -69,6 +70,8 @@ fun OverviewSheet(
                 bottom = MnemoraSpacing.Large
             )
         ) {
+            OverviewStats(totalQuestions = totalQuestions, getStatus = getStatus)
+            Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
             OverviewLegend()
             Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
             LazyVerticalGrid(
@@ -113,6 +116,51 @@ fun OverviewSheet(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun OverviewStats(
+    totalQuestions: Int,
+    getStatus: (Int) -> QuestionStatus
+) {
+    val counts = remember(totalQuestions, getStatus) {
+        (0 until totalQuestions).groupingBy { getStatus(it) }.eachCount()
+    }
+    val correct = counts[QuestionStatus.Correct] ?: 0
+    val wrong = counts[QuestionStatus.Wrong] ?: 0
+    val marked = counts[QuestionStatus.Marked] ?: 0
+
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Large),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        StatItem(label = "Correct", value = correct.toString(), color = SuccessColor)
+        StatItem(label = "Wrong", value = wrong.toString(), color = MaterialTheme.colorScheme.error)
+        StatItem(label = "Marked", value = marked.toString(), color = WarningColor)
+        StatItem(
+            label = "Total",
+            value = totalQuestions.toString(),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String, color: Color) {
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            color = color
+        )
+        Spacer(modifier = Modifier.width(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 

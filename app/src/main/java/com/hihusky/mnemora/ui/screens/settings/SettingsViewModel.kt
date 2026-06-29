@@ -291,7 +291,7 @@ class SettingsViewModel @Inject constructor(
             lowerModel.startsWith("kimi") -> provider == "kimi"
             lowerModel.startsWith("deepseek") -> provider == "deepseek"
             lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
-            else -> provider == "gemini" || provider == "vertex-ai"
+            else -> provider == "gemini" || provider == "vertex-ai" || provider == "custom-gemini"
         }
     }
 

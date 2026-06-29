@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
@@ -101,29 +102,45 @@ fun AiChatPanel(
         }
     )
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    var shouldAutoScroll by remember { mutableStateOf(true) }
+    // Start following the bottom only for a fresh conversation. When a saved scroll
+    // position is restored we leave the user where they were until they act.
+    var shouldAutoScroll by remember {
+        mutableStateOf(initialScrollIndex == 0 && initialScrollOffset == 0)
+    }
 
-    // Track whether the user has scrolled away from the bottom
+    // Track whether the user is pinned to the bottom. Derived purely from the list
+    // layout (never from a captured message list) so it stays correct as the
+    // streaming reply grows.
     val isAtBottom by remember {
         derivedStateOf {
-            val lastItem = listState.layoutInfo.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
-            lastItem.index >= visibleMessages.lastIndex
+            val info = listState.layoutInfo
+            val lastItem = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
+            lastItem.index >= info.totalItemsCount - 1 &&
+                lastItem.offset + lastItem.size <= info.viewportEndOffset
         }
     }
 
-    // When the user scrolls, enable auto-scroll only when they return to the bottom
+    // When a manual scroll settles, resume auto-scroll only if the user is at the bottom.
     LaunchedEffect(listState) {
-        snapshotFlow { listState.isScrollInProgress to isAtBottom }
-            .filter { (inProgress, _) -> !inProgress }
-            .collect { (_, atBottom) ->
-                shouldAutoScroll = atBottom
-            }
+        snapshotFlow { listState.isScrollInProgress }
+            .filter { inProgress -> !inProgress }
+            .collect { shouldAutoScroll = isAtBottom }
     }
 
-    // Auto-scroll on new messages only when user is at bottom (or hasn't scrolled up)
-    LaunchedEffect(visibleMessages.size) {
+    // Sending a message (or a reply starting to stream) should bring the user back
+    // to the bottom even if they had a restored position higher up.
+    LaunchedEffect(isLoading) {
+        if (isLoading) shouldAutoScroll = true
+    }
+
+    // Pin to the bottom as content arrives. Keyed on both the message count and the
+    // length of the last message so streaming (which only grows one item) still
+    // follows. A large scroll offset lands on the *end* of the last item, avoiding
+    // the backward jump that animating to the item's top would cause.
+    val lastMessageLength = visibleMessages.lastOrNull()?.text?.length ?: 0
+    LaunchedEffect(visibleMessages.size, lastMessageLength) {
         if (visibleMessages.isNotEmpty() && shouldAutoScroll) {
-            listState.animateScrollToItem(visibleMessages.lastIndex)
+            listState.scrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
         }
     }
 
@@ -156,7 +173,14 @@ fun AiChatPanel(
         onDismissRequest = onDismiss,
         sheetState = sheetState
     ) {
-        Column(modifier = Modifier.heightIn(max = MnemoraSize.SheetMaxHeight)) {
+        // A stable, tall sheet keeps the scrollable message list as the dominant
+        // gesture target, so vertical scrolls land on the list instead of dragging
+        // the sheet down and dismissing it.
+        Column(
+            modifier = Modifier
+                .fillMaxHeight(0.9f)
+                .heightIn(max = MnemoraSize.SheetMaxHeight)
+        ) {
             AiChatHeader(
                 sessions = sessions,
                 currentSessionId = currentSessionId,

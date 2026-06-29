@@ -73,7 +73,7 @@ class DeepSeekProvider : AiProvider {
         }
     }
 
-    private fun buildDeepSeekUrl(cfg: AiConfig): String {
+    internal fun buildDeepSeekUrl(cfg: AiConfig): String {
         val host = cfg.baseUrl.takeIf { it.isNotBlank() } ?: "https://api.deepseek.com"
         return "${host.trimEnd('/')}/chat/completions"
     }

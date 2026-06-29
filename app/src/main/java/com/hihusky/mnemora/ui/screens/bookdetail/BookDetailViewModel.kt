@@ -56,6 +56,9 @@ class BookDetailViewModel @Inject constructor(
                 val stats = srsRepository.getSrsStats(bookId)
                 val answers = userAnswerRepository.getUserAnswers(bookId)
                 val answeredCount = answers.size
+                val correctCount = answers.values.count { it.isCorrect == true }
+                val wrongCount = answers.values.count { it.isCorrect == false }
+                val markedCount = answers.values.count { it.isMarked }
 
                 _uiState.update {
                     it.copy(
@@ -65,6 +68,9 @@ class BookDetailViewModel @Inject constructor(
                         sessions = sessions,
                         srsStats = stats,
                         answeredCount = answeredCount,
+                        correctCount = correctCount,
+                        wrongCount = wrongCount,
+                        markedCount = markedCount,
                         isLoading = false
                     )
                 }
@@ -117,6 +123,9 @@ data class BookDetailUiState(
     val sessions: List<StudySessionEntity> = emptyList(),
     val srsStats: com.hihusky.mnemora.data.model.SrsStats = com.hihusky.mnemora.data.model.SrsStats(),
     val answeredCount: Int = 0,
+    val correctCount: Int = 0,
+    val wrongCount: Int = 0,
+    val markedCount: Int = 0,
     val isLoading: Boolean = false,
     val error: String? = null
 )

@@ -62,9 +62,6 @@ class PracticeViewModel @Inject constructor(
     init {
         observePreferences()
         loadBook()
-        _uiState.update {
-            it.copy(aiModel = aiService.config.value.model, aiProvider = aiService.config.value.provider)
-        }
     }
 
     // ── Collections ──────────────────────────────────────────────────
@@ -160,6 +157,11 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             settingsRepository.autoAdvance.collect { enabled ->
                 _uiState.update { it.copy(autoAdvance = enabled) }
+            }
+        }
+        viewModelScope.launch {
+            aiService.config.collect { config ->
+                _uiState.update { it.copy(aiModel = config.model, aiProvider = config.provider) }
             }
         }
     }
