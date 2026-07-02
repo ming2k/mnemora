@@ -16,8 +16,13 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.hihusky.mnemora.ui.theme.MnemoraSize
 
@@ -28,10 +33,27 @@ import com.hihusky.mnemora.ui.theme.MnemoraSize
  * absolute cap keeps tall devices from feeling cavernous.
  */
 @Composable
-fun sheetMaxHeight(): Dp = minOf(
+private fun sheetMaxHeight(): Dp = minOf(
     MnemoraSize.SheetMaxHeight,
     (LocalConfiguration.current.screenHeightDp * MnemoraSize.SheetMaxHeightFraction).dp
 )
+
+/**
+ * Stops content scrolling from spilling into a sheet drag. When an inner scrollable runs out of
+ * room, this swallows the leftover scroll/fling so it never reaches the sheet's own dismiss
+ * connection. Closing the sheet stays an intentional gesture — the drag handle (and any
+ * non-scrolling area, which drags the Surface directly), scrim tap, and back — instead of an
+ * accidental over-scroll. Non-scrolling sheets are unaffected: they never produce nested scroll.
+ */
+private val SwallowOverscrollToSheet = object : NestedScrollConnection {
+    override fun onPostScroll(
+        consumed: Offset,
+        available: Offset,
+        source: NestedScrollSource
+    ): Offset = available
+
+    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = available
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,11 +77,13 @@ fun MnemoraBottomSheet(
             )
         }
     ) {
-        // Every drawer shares one height policy: wrap content, but never exceed the shared cap.
+        // Every drawer shares one height policy (wrap content, capped) and one gesture policy
+        // (content overscroll can't drag the sheet closed — only the handle/scrim/back do).
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = sheetMaxHeight()),
+                .heightIn(max = sheetMaxHeight())
+                .nestedScroll(SwallowOverscrollToSheet),
             content = content
         )
     }

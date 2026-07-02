@@ -97,7 +97,7 @@ fun AiChatSheet(
     onSaveScrollPosition: (Int, Int) -> Unit = { _, _ -> },
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
-    val listState = rememberLazyListState(initialScrollIndex, initialScrollOffset)
+    val listState = rememberLazyListState()
     val visibleMessages = history + listOfNotNull(
         streamingResponse.takeIf { it.isNotBlank() }?.let {
             // Use timestamp=0L so this item has a stable key across recompositions
@@ -105,11 +105,12 @@ fun AiChatSheet(
         }
     )
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    // Follow the latest message only for a fresh conversation. When a saved scroll
-    // position is restored we leave the user where they were until they act.
-    var autoScroll by remember {
-        mutableStateOf(initialScrollIndex == 0 && initialScrollOffset == 0)
-    }
+    // Whether we have positioned the list yet. Restoring a saved position has to wait until the
+    // messages actually exist, because history is loaded asynchronously and a LazyList cannot
+    // restore an index against an empty list.
+    var placed by remember { mutableStateOf(false) }
+    // Whether to keep the list pinned to the latest message as content arrives.
+    var autoScroll by remember { mutableStateOf(true) }
 
     // Whether the list is parked at the end. Derived purely from the list layout
     // (never from a captured message list) so it stays correct as the streaming reply
@@ -122,6 +123,18 @@ fun AiChatSheet(
             lastItem.index >= info.totalItemsCount - 1 &&
                 lastItem.offset + lastItem.size <= info.viewportEndOffset + AT_BOTTOM_TOLERANCE_PX
         }
+    }
+
+    // Restore the saved scroll position exactly once, as soon as the messages exist. We then
+    // keep following the bottom only if the restored position actually landed at the end — so a
+    // conversation reopened mid-history stays put, while one left at the latest message keeps
+    // streaming. This is authoritative even though history arrives asynchronously.
+    LaunchedEffect(visibleMessages.isEmpty()) {
+        if (placed || visibleMessages.isEmpty()) return@LaunchedEffect
+        val target = initialScrollIndex.coerceIn(0, visibleMessages.lastIndex)
+        autoScroll = target >= visibleMessages.lastIndex
+        placed = true
+        listState.scrollToItem(target, initialScrollOffset)
     }
 
     // The follow latch is driven only by genuine user drags. Once the finger lifts and
@@ -149,7 +162,7 @@ fun AiChatSheet(
     // the backward jump that animating to the item's top would cause.
     val lastMessageLength = visibleMessages.lastOrNull()?.text?.length ?: 0
     LaunchedEffect(visibleMessages.size, lastMessageLength) {
-        if (visibleMessages.isNotEmpty() && autoScroll) {
+        if (placed && autoScroll && visibleMessages.isNotEmpty()) {
             listState.scrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
         }
     }

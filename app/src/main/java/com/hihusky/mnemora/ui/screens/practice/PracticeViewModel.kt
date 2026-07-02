@@ -330,24 +330,24 @@ class PracticeViewModel @Inject constructor(
     fun chatLoadHistory() {
         val question = _uiState.value.currentQuestion ?: return
         val questionId = question.id
+        // Already loaded for this question: keep the in-memory state (including the live scroll
+        // position) untouched. Reloading here would overwrite the just-saved scroll offset with a
+        // stale DB read and lose the user's place on reopen.
+        if (_uiState.value.chat.questionId == questionId) return
         _uiState.update { state ->
-            if (state.chat.questionId == questionId) {
-                state
-            } else {
-                state.chatUpdate(
-                    questionId = questionId,
-                    sessions = emptyList(),
-                    currentId = null,
-                    history = emptyList(),
-                    scrollIndex = 0,
-                    scrollOffset = 0
-                )
-            }
+            state.chatUpdate(
+                questionId = questionId,
+                sessions = emptyList(),
+                currentId = null,
+                history = emptyList(),
+                scrollIndex = 0,
+                scrollOffset = 0
+            )
         }
         viewModelScope.launch {
             val sessions = aiChatUseCase.getChatSessions(questionId)
-            val currentId = sessions.firstOrNull()?.id
             val current = sessions.firstOrNull()
+            val currentId = current?.id
             val history = currentId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
             if (_uiState.value.currentQuestion?.id != questionId) return@launch
             _uiState.update {
