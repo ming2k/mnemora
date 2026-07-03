@@ -39,8 +39,7 @@ class VertexAiProvider : AiProvider {
             ),
             "contents" to contents,
             "generationConfig" to mapOf(
-                "temperature" to 0.7,
-                "maxOutputTokens" to 2048
+                "temperature" to 0.7
             )
         )
 

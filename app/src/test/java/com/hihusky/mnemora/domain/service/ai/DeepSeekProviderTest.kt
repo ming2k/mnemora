@@ -10,12 +10,13 @@ class DeepSeekProviderTest {
 
     private fun config(
         model: String = "deepseek-v4-pro",
-        baseUrl: String = ""
+        baseUrl: String = "",
+        providerId: String = "deepseek"
     ) = AiConfig(
         apiKey = "test-api-key",
         model = model,
         baseUrl = baseUrl,
-        provider = "deepseek"
+        provider = providerId
     )
 
     @Test
@@ -26,9 +27,27 @@ class DeepSeekProviderTest {
     }
 
     @Test
-    fun `trims trailing slash from custom base url`() {
+    fun `ignores stale base url for official deepseek provider`() {
         val url = provider.buildDeepSeekUrl(
-            config(model = "deepseek-v4-flash", baseUrl = "https://api.deepseek.com/")
+            config(model = "deepseek-v4-pro", baseUrl = "https://some-gateway.example.com")
+        )
+
+        assertEquals("https://api.deepseek.com/chat/completions", url)
+    }
+
+    @Test
+    fun `honors and trims custom base url for custom deepseek provider`() {
+        val url = provider.buildDeepSeekUrl(
+            config(providerId = "custom-deepseek", baseUrl = "https://gateway.example.com/")
+        )
+
+        assertEquals("https://gateway.example.com/chat/completions", url)
+    }
+
+    @Test
+    fun `falls back to official host when custom base url is blank`() {
+        val url = provider.buildDeepSeekUrl(
+            config(providerId = "custom-deepseek", baseUrl = "   ")
         )
 
         assertEquals("https://api.deepseek.com/chat/completions", url)

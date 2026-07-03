@@ -288,6 +288,7 @@ class SettingsViewModel @Inject constructor(
     private fun isProviderCompatible(model: String, provider: String): Boolean {
         val lowerModel = model.lowercase()
         return when {
+            lowerModel.startsWith("gpt") -> provider == "openai" || provider == "custom-openai"
             lowerModel.startsWith("kimi") -> provider == "kimi"
             lowerModel.startsWith("deepseek") -> provider == "deepseek"
             lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
@@ -298,6 +299,7 @@ class SettingsViewModel @Inject constructor(
     private fun defaultProviderForModel(model: String): String {
         val lowerModel = model.lowercase()
         return when {
+            lowerModel.startsWith("gpt") -> "openai"
             lowerModel.startsWith("kimi") -> "kimi"
             lowerModel.startsWith("deepseek") -> "deepseek"
             lowerModel.startsWith("claude") -> "anthropic"

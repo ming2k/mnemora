@@ -37,7 +37,6 @@ class DeepSeekProvider : AiProvider {
             "messages" to messages,
             "stream" to true,
             "temperature" to 0.7,
-            "max_tokens" to 2048,
             "thinking" to mapOf("type" to "enabled"),
             "reasoning_effort" to "high"
         )
@@ -74,7 +73,7 @@ class DeepSeekProvider : AiProvider {
     }
 
     internal fun buildDeepSeekUrl(cfg: AiConfig): String {
-        val host = cfg.baseUrl.takeIf { it.isNotBlank() } ?: "https://api.deepseek.com"
-        return "${host.trimEnd('/')}/chat/completions"
+        val host = cfg.resolveHost("https://api.deepseek.com")
+        return "$host/chat/completions"
     }
 }

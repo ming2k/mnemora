@@ -318,6 +318,22 @@ internal fun SettingsScreenContent(
                     providers = listOf(
                         "Moonshot API" to "kimi"
                     )
+                ),
+                AiCompany(
+                    id = "openai",
+                    display = "OpenAI",
+                    models = listOf(
+                        "GPT 5.5" to "gpt-5.5",
+                        "GPT 5.4" to "gpt-5.4",
+                        "GPT 5.4 Mini" to "gpt-5.4-mini",
+                        "GPT 5.2 Pro" to "gpt-5.2-pro",
+                        "GPT 5.2" to "gpt-5.2",
+                        "GPT 5.3 Codex Spark" to "gpt-5.3-codex-spark"
+                    ),
+                    providers = listOf(
+                        "OpenAI API" to "openai",
+                        "Custom" to "custom-openai"
+                    )
                 )
             )
 

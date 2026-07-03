@@ -24,9 +24,8 @@ class KimiProvider : AiProvider {
         history: List<ChatMessage>,
         client: OkHttpClient
     ): Flow<String> = flow {
-        val host = cfg.baseUrl.takeIf { it.isNotBlank() } ?: "https://api.moonshot.cn"
-        val cleanHost = host.trimEnd('/')
-        val url = "$cleanHost/v1/chat/completions"
+        val host = cfg.resolveHost("https://api.moonshot.cn")
+        val url = "$host/v1/chat/completions"
 
         val messages = mutableListOf<Map<String, String>>()
         messages.add(mapOf("role" to "system", "content" to "${cfg.systemPrompt}\n\nContext:\n$context"))
@@ -38,8 +37,7 @@ class KimiProvider : AiProvider {
             "model" to cfg.model,
             "messages" to messages,
             "stream" to true,
-            "temperature" to 0.7,
-            "max_tokens" to 2048
+            "temperature" to 0.7
         )
 
         val request = Request.Builder()

@@ -15,7 +15,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 
-class GeminiProvider : AiProvider {
+class OpenAIProvider : AiProvider {
     private val json = Json { ignoreUnknownKeys = true }
 
     override fun streamChat(
@@ -24,53 +24,45 @@ class GeminiProvider : AiProvider {
         history: List<ChatMessage>,
         client: OkHttpClient
     ): Flow<String> = flow {
-        val host = cfg.resolveHost("https://generativelanguage.googleapis.com")
-        val url = "$host/v1beta/models/${cfg.model}:streamGenerateContent?alt=sse&key=${cfg.apiKey}"
+        val host = cfg.resolveHost("https://api.openai.com/v1")
+        val url = "$host/chat/completions"
 
-        val contents = history.map {
-            mapOf(
-                "role" to if (it.isUser) "user" else "model",
-                "parts" to listOf(mapOf("text" to it.text))
-            )
+        val messages = mutableListOf<Map<String, String>>()
+        messages.add(mapOf("role" to "system", "content" to "${cfg.systemPrompt}\n\nContext:\n$context"))
+        history.forEach {
+            messages.add(mapOf("role" to if (it.isUser) "user" else "assistant", "content" to it.text))
         }
 
         val body = mapOf<String, Any?>(
-            "systemInstruction" to mapOf(
-                "parts" to listOf(mapOf("text" to "${cfg.systemPrompt}\n\nContext:\n$context"))
-            ),
-            "contents" to contents,
-            "generationConfig" to mapOf(
-                "temperature" to 0.7
-            )
+            "model" to cfg.model,
+            "messages" to messages,
+            "stream" to true,
+            "temperature" to 0.7
         )
 
         val request = Request.Builder()
             .url(url)
+            .header("Authorization", "Bearer ${cfg.apiKey}")
             .post(JSONObject(body as Map<*, *>).toString().toRequestBody("application/json".toMediaType()))
             .build()
 
         client.newCall(request).execute().use { response ->
             if (!response.isSuccessful) {
-                throw Exception("Gemini API error: ${response.code} - ${response.body.string()}")
+                throw Exception("OpenAI API error: ${response.code} - ${response.body.string()}")
             }
             response.body.source().use { source ->
                 while (!source.exhausted()) {
                     val line = source.readUtf8Line() ?: break
                     if (line.startsWith("data: ")) {
                         val jsonStr = line.substring(6).trim()
-                        if (jsonStr.isEmpty()) continue
+                        if (jsonStr.isEmpty() || jsonStr == "[DONE]") continue
                         try {
                             val data = json.parseToJsonElement(jsonStr)
-                            val candidates = data.jsonObject["candidates"]?.jsonArray ?: continue
-                            if (candidates.isEmpty()) continue
-                            val content = candidates[0].jsonObject["content"]?.jsonObject ?: continue
-                            val parts = content["parts"]?.jsonArray ?: continue
-                            for (part in parts) {
-                                val obj = part.jsonObject
-                                if (obj["thought"]?.jsonPrimitive?.contentOrNull == "true") continue
-                                val text = obj["text"]?.jsonPrimitive?.contentOrNull
-                                if (!text.isNullOrBlank()) emit(text)
-                            }
+                            val choices = data.jsonObject["choices"]?.jsonArray ?: continue
+                            if (choices.isEmpty()) continue
+                            val delta = choices[0].jsonObject["delta"]?.jsonObject ?: continue
+                            val content = delta["content"]?.jsonPrimitive?.contentOrNull
+                            if (!content.isNullOrBlank()) emit(content)
                         } catch (_: Exception) {
                         }
                     }

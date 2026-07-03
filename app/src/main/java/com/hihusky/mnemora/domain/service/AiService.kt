@@ -8,6 +8,7 @@ import com.hihusky.mnemora.domain.service.ai.AnthropicProvider
 import com.hihusky.mnemora.domain.service.ai.DeepSeekProvider
 import com.hihusky.mnemora.domain.service.ai.GeminiProvider
 import com.hihusky.mnemora.domain.service.ai.KimiProvider
+import com.hihusky.mnemora.domain.service.ai.OpenAIProvider
 import com.hihusky.mnemora.domain.service.ai.VertexAiProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -39,7 +40,12 @@ data class AiConfig(
     val contextIncludeAnswer: Boolean = true,
     val contextIncludeExplanation: Boolean = false,
     val thinkingMode: String = "disabled"
-)
+) {
+    fun resolveHost(official: String): String {
+        val custom = baseUrl.trim().trimEnd('/')
+        return if (provider.lowercase().startsWith("custom") && custom.isNotEmpty()) custom else official
+    }
+}
 
 @Singleton
 class AiService @Inject constructor(
@@ -111,6 +117,7 @@ class AiService @Inject constructor(
     private fun isProviderCompatible(model: String, provider: String): Boolean {
         val lowerModel = model.lowercase()
         return when {
+            lowerModel.startsWith("gpt") -> provider == "openai" || provider == "custom-openai"
             lowerModel.startsWith("kimi") -> provider == "kimi"
             lowerModel.startsWith("deepseek") -> provider == "deepseek"
             lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
@@ -121,6 +128,7 @@ class AiService @Inject constructor(
     private fun defaultProviderForModel(model: String): String {
         val lowerModel = model.lowercase()
         return when {
+            lowerModel.startsWith("gpt") -> "openai"
             lowerModel.startsWith("kimi") -> "kimi"
             lowerModel.startsWith("deepseek") -> "deepseek"
             lowerModel.startsWith("claude") -> "anthropic"
@@ -147,6 +155,7 @@ class AiService @Inject constructor(
             "vertex-ai" -> VertexAiProvider()
             "kimi" -> KimiProvider()
             "deepseek" -> DeepSeekProvider()
+            "openai", "custom-openai" -> OpenAIProvider()
             "anthropic", "custom" -> AnthropicProvider()
             else -> return flow { throw IllegalStateException("Unknown provider: ${cfg.provider}") }
         }

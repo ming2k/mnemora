@@ -23,9 +23,8 @@ class AnthropicProvider : AiProvider {
         history: List<ChatMessage>,
         client: OkHttpClient
     ): Flow<String> = flow {
-        val host = cfg.baseUrl.takeIf { it.isNotBlank() } ?: "https://api.anthropic.com"
-        val cleanHost = host.trimEnd('/')
-        val url = "$cleanHost/v1/messages"
+        val host = cfg.resolveHost("https://api.anthropic.com")
+        val url = "$host/v1/messages"
 
         val messages = mutableListOf<Map<String, String>>()
         history.forEach {
