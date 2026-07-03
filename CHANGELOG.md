@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.17] - 2026-07-03
+
+### Added
+- **OpenAI provider** — `OpenAIProvider` with custom base URL support. GPT 5.5, 5.4, 5.4 Mini, 5.2 Pro, 5.2, and 5.3 Codex Spark models are selectable in Settings under a new "OpenAI" company (OpenAI API and Custom providers).
+- **Gemini 3.1 Pro Low model option** — added to the Google AI model list.
+
+### Changed
+- **Centralized base URL resolution** — introduced `AiConfig.resolveHost()`. Custom base URLs are now honored only for `custom-*` providers; official providers ignore a stale base URL and always use their official host. All providers route host resolution through this single helper.
+- **Removed hardcoded output caps** — dropped `max_tokens` / `maxOutputTokens` limits across DeepSeek, Kimi, Gemini, and Vertex AI providers so responses are no longer truncated at 2048 tokens.
+- **Unified bottom-sheet height policy** — all drawers now share one height cap (`min(600dp, 72% screen)` via `MnemoraBottomSheet.sheetMaxHeight()`) and scroll internally instead of taking over the screen. Added `SheetMaxHeightFraction` and `ChatListMinHeight` design tokens.
+- **Component rename** — `AiChatPanel` → `AiChatSheet` and `NodeSelector` → `NodeSheet` to match the `*Sheet` naming convention.
+
+### Fixed
+- **AI chat scroll-restore** — the saved scroll position is now restored once chat history loads (instead of relying on `LazyList`'s initial state, which can't restore against an async/empty list), and auto-follow resumes only if the restored position actually landed at the bottom.
+- **Bottom-sheet overscroll dismissal** — `MnemoraBottomSheet` now swallows inner-scroll overscroll/fling so scrolling content can't accidentally drag a sheet closed; closing stays a handle/scrim/back gesture.
+- **AI chat scroll bounce** — the auto-scroll latch is now driven only by user `DragInteractions`, so programmatic scroll-to-bottom can no longer fight streaming growth (removed the "bouncing" at the bottom).
+- **Chat history reload clobbering scroll** — `PracticeViewModel` skips `chatLoadHistory` when history is already loaded for the current question, so the live scroll position isn't overwritten by a stale DB read on reopen.
+
 ## [0.0.16] - 2026-06-29
 
 ### Added
@@ -243,7 +261,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.14...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.17...HEAD
+[0.0.17]: https://github.com/ming2k/mnemora/compare/v0.0.16...v0.0.17
+[0.0.16]: https://github.com/ming2k/mnemora/compare/v0.0.15...v0.0.16
+[0.0.15]: https://github.com/ming2k/mnemora/compare/v0.0.14...v0.0.15
 [0.0.14]: https://github.com/ming2k/mnemora/compare/v0.0.13...v0.0.14
 [0.0.13]: https://github.com/mihusky/mnemora/compare/v0.0.12...v0.0.13
 [0.0.12]: https://github.com/ming2k/mnemora/compare/v0.0.11...v0.0.12
