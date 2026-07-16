@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.background
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -107,6 +108,7 @@ fun SettingsScreen(
         onAiContextIncludeAnswerChange = { viewModel.setAiContextIncludeAnswer(it) },
         onAiContextIncludeExplanationChange = { viewModel.setAiContextIncludeExplanation(it) },
         onAiThinkingModeChange = { viewModel.setAiThinkingMode(it) },
+        onAiReasoningEffortChange = { viewModel.setAiReasoningEffort(it) },
         onAiSystemPromptChange = { viewModel.setAiSystemPrompt(it) },
         onNavigateToMarkdownTest = onNavigateToMarkdownTest
     )
@@ -136,6 +138,7 @@ internal fun SettingsScreenContent(
     onAiContextIncludeAnswerChange: (Boolean) -> Unit,
     onAiContextIncludeExplanationChange: (Boolean) -> Unit,
     onAiThinkingModeChange: (String) -> Unit,
+    onAiReasoningEffortChange: (String) -> Unit,
     onAiSystemPromptChange: (String) -> Unit,
     onNavigateToMarkdownTest: () -> Unit = {},
 ) {
@@ -323,6 +326,9 @@ internal fun SettingsScreenContent(
                     id = "openai",
                     display = "OpenAI",
                     models = listOf(
+                        "GPT 5.6 Sol" to "gpt-5.6",
+                        "GPT 5.6 Terra" to "gpt-5.6-terra",
+                        "GPT 5.6 Luna" to "gpt-5.6-luna",
                         "GPT 5.5" to "gpt-5.5",
                         "GPT 5.4" to "gpt-5.4",
                         "GPT 5.4 Mini" to "gpt-5.4-mini",
@@ -426,6 +432,55 @@ internal fun SettingsScreenContent(
                     MnemoraSettingsDivider()
                 }
 
+                val isOpenAiProvider = uiState.aiProvider.lowercase() in
+                    listOf("openai", "custom-openai")
+                if (isOpenAiProvider) {
+                    val defaultOption = listOf("Provider default" to "")
+                    val reasoningOptions = when {
+                        uiState.aiModel.lowercase().startsWith("gpt-5.6") -> defaultOption + listOf(
+                            "None" to "none",
+                            "Low" to "low",
+                            "Medium" to "medium",
+                            "High" to "high",
+                            "Extra high" to "xhigh",
+                            "Maximum" to "max",
+                        )
+                        uiState.aiModel.lowercase().contains("-pro") -> defaultOption + listOf(
+                            "Medium" to "medium",
+                            "High" to "high",
+                            "Extra high" to "xhigh",
+                        )
+                        uiState.aiModel.lowercase().contains("codex") -> defaultOption + listOf(
+                            "Low" to "low",
+                            "Medium" to "medium",
+                            "High" to "high",
+                            "Extra high" to "xhigh",
+                        )
+                        else -> defaultOption + listOf(
+                            "None" to "none",
+                            "Low" to "low",
+                            "Medium" to "medium",
+                            "High" to "high",
+                            "Extra high" to "xhigh",
+                        )
+                    }
+                    val reasoningIndex = reasoningOptions
+                        .indexOfFirst { it.second == uiState.aiReasoningEffort }
+                        .coerceAtLeast(0)
+                    MnemoraSettingsDropdownRow(
+                        headline = "Reasoning Effort",
+                        supporting = reasoningOptions[reasoningIndex].first,
+                        icon = Icons.Default.AutoFixHigh,
+                        options = reasoningOptions.map { it.first },
+                        selectedIndex = reasoningIndex,
+                        onSelect = { index ->
+                            onAiReasoningEffortChange(reasoningOptions[index].second)
+                        },
+                    )
+
+                    MnemoraSettingsDivider()
+                }
+
                 // API Key
                 var apiKeyVisible by remember { mutableStateOf(false) }
                 val apiKeyFocus = remember { BringIntoViewRequester() }
@@ -461,6 +516,28 @@ internal fun SettingsScreenContent(
 
                 if (uiState.aiProvider.lowercase().startsWith("custom")) {
                     MnemoraSettingsDivider()
+
+                    val customHint = when (uiState.aiProvider.lowercase()) {
+                        "custom-openai" -> "OpenAI-compatible endpoint. Enter the base URL ending with \"/v1\" (e.g. https://your-relay.com/v1). Requests are sent to {Base URL}/chat/completions."
+                        "custom" -> "Anthropic-compatible endpoint. Enter the host root without \"/v1\" (e.g. https://your-relay.com). Requests are sent to {Base URL}/v1/messages."
+                        "custom-gemini" -> "Gemini-compatible endpoint. Enter the host root without \"/v1beta\" (e.g. https://your-relay.com). Requests are sent to {Base URL}/v1beta/models/...:streamGenerateContent."
+                        else -> ""
+                    }
+                    if (customHint.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small)
+                                .background(MaterialTheme.colorScheme.surfaceVariant, MaterialTheme.shapes.medium)
+                                .padding(MnemoraSpacing.Medium)
+                        ) {
+                            Text(
+                                text = customHint,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
 
                     // Base URL
                     val baseUrlFocus = remember { BringIntoViewRequester() }
@@ -664,6 +741,7 @@ private fun SettingsScreenPreviewDefault() {
             onAiContextIncludeAnswerChange = {},
             onAiContextIncludeExplanationChange = {},
             onAiThinkingModeChange = {},
+            onAiReasoningEffortChange = {},
             onAiSystemPromptChange = {},
             onNavigateToMarkdownTest = {}
         )
@@ -707,6 +785,7 @@ private fun SettingsScreenPreviewModified() {
             onAiContextIncludeAnswerChange = {},
             onAiContextIncludeExplanationChange = {},
             onAiThinkingModeChange = {},
+            onAiReasoningEffortChange = {},
             onAiSystemPromptChange = {},
             onNavigateToMarkdownTest = {}
         )

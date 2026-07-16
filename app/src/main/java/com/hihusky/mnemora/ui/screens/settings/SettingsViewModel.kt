@@ -4,6 +4,7 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.hihusky.mnemora.data.model.AiConnectionProfile
 import com.hihusky.mnemora.data.repository.SettingsRepository
 import com.hihusky.mnemora.domain.service.AiConfig
 import com.hihusky.mnemora.domain.service.AiService
@@ -14,6 +15,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -29,6 +32,7 @@ class SettingsViewModel @Inject constructor(
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
     private val json = Json { ignoreUnknownKeys = true }
+    private val aiConnectionMutex = Mutex()
 
     init {
         viewModelScope.launch {
@@ -39,12 +43,8 @@ class SettingsViewModel @Inject constructor(
             } else {
                 defaultProviderForModel(model)
             }
-            if (provider != savedProvider) {
-                settingsRepository.setAiProvider(provider)
-            }
             val activeKey = settingsRepository.aiApiKey.first()
             val cachedKey = getCachedKey(provider)
-            val effectiveKey = cachedKey.ifBlank { activeKey }
             val projectId = settingsRepository.aiProjectId.first()
             val location = settingsRepository.aiLocation.first()
             val baseUrl = settingsRepository.aiBaseUrl.first()
@@ -54,6 +54,24 @@ class SettingsViewModel @Inject constructor(
             val includeAnswer = settingsRepository.aiContextIncludeAnswer.first()
             val includeExplanation = settingsRepository.aiContextIncludeExplanation.first()
             val thinkingMode = settingsRepository.aiThinkingMode.first()
+            val reasoningEffort = settingsRepository.aiReasoningEffort.first()
+            val legacyProfile = if (provider == savedProvider) {
+                AiConnectionProfile(
+                    apiKey = cachedKey.ifBlank { activeKey },
+                    baseUrl = baseUrl,
+                    projectId = projectId,
+                    location = location,
+                    thinkingMode = thinkingMode,
+                    reasoningEffort = reasoningEffort,
+                )
+            } else {
+                AiConnectionProfile(apiKey = cachedKey)
+            }
+            val activeProfile = settingsRepository.initializeAiConnection(
+                provider = provider,
+                model = model,
+                fallback = legacyProfile,
+            )
 
             _uiState.update {
                 it.copy(
@@ -68,33 +86,35 @@ class SettingsViewModel @Inject constructor(
                     confettiEffect = settingsRepository.confettiEffect.first(),
                     testQuestionCount = settingsRepository.testQuestionCount.first(),
                     aiProvider = provider,
-                    aiApiKey = effectiveKey,
+                    aiApiKey = activeProfile.apiKey,
                     aiModel = model,
-                    aiProjectId = projectId,
-                    aiLocation = location,
-                    aiBaseUrl = baseUrl,
+                    aiProjectId = activeProfile.projectId,
+                    aiLocation = activeProfile.location,
+                    aiBaseUrl = activeProfile.baseUrl,
                     aiSystemPrompt = systemPrompt,
                     aiContextIncludeStem = includeStem,
                     aiContextIncludeOptions = includeOptions,
                     aiContextIncludeAnswer = includeAnswer,
                     aiContextIncludeExplanation = includeExplanation,
-                    aiThinkingMode = thinkingMode
+                    aiThinkingMode = activeProfile.thinkingMode,
+                    aiReasoningEffort = activeProfile.reasoningEffort,
                 )
             }
 
             aiService.updateConfig(AiConfig(
-                apiKey = effectiveKey,
-                baseUrl = baseUrl,
+                apiKey = activeProfile.apiKey,
+                baseUrl = activeProfile.baseUrl,
                 provider = provider,
                 model = model,
-                projectId = projectId,
-                location = location,
+                projectId = activeProfile.projectId,
+                location = activeProfile.location,
                 systemPrompt = systemPrompt,
                 contextIncludeStem = includeStem,
                 contextIncludeOptions = includeOptions,
                 contextIncludeAnswer = includeAnswer,
                 contextIncludeExplanation = includeExplanation,
-                thinkingMode = thinkingMode
+                thinkingMode = activeProfile.thinkingMode,
+                reasoningEffort = activeProfile.reasoningEffort,
             ))
         }
     }
@@ -132,8 +152,30 @@ class SettingsViewModel @Inject constructor(
             contextIncludeOptions = state.aiContextIncludeOptions,
             contextIncludeAnswer = state.aiContextIncludeAnswer,
             contextIncludeExplanation = state.aiContextIncludeExplanation,
-            thinkingMode = state.aiThinkingMode
+            thinkingMode = state.aiThinkingMode,
+            reasoningEffort = state.aiReasoningEffort,
         ))
+    }
+
+    private fun updateAiConnection(
+        cacheApiKey: Boolean = false,
+        transform: (SettingsUiState) -> SettingsUiState,
+    ) {
+        _uiState.update(transform)
+        val snapshot = _uiState.value
+        syncAiConfig(snapshot)
+        viewModelScope.launch {
+            aiConnectionMutex.withLock {
+                settingsRepository.saveAiConnectionProfile(
+                    provider = snapshot.aiProvider,
+                    model = snapshot.aiModel,
+                    profile = snapshot.toAiConnectionProfile(),
+                )
+                if (cacheApiKey) {
+                    setCachedKey(snapshot.aiProvider, snapshot.aiApiKey)
+                }
+            }
+        }
     }
 
     fun setThemeMode(value: Int) {
@@ -194,59 +236,65 @@ class SettingsViewModel @Inject constructor(
 
     fun setAiProvider(value: String) {
         viewModelScope.launch {
-            val oldProvider = uiState.value.aiProvider
-            val oldKey = uiState.value.aiApiKey
-            setCachedKey(oldProvider, oldKey)
-            val newKey = getCachedKey(value)
-
-            settingsRepository.setAiProvider(value)
-            _uiState.update { it.copy(aiProvider = value, aiApiKey = newKey) }
-            syncAiConfig(_uiState.value)
+            aiConnectionMutex.withLock {
+                val previous = _uiState.value
+                if (value == previous.aiProvider || !isProviderCompatible(previous.aiModel, value)) {
+                    return@withLock
+                }
+                val activeProfile = settingsRepository.switchAiConnection(
+                    previousProvider = previous.aiProvider,
+                    previousModel = previous.aiModel,
+                    previousProfile = previous.toAiConnectionProfile(),
+                    provider = value,
+                    model = previous.aiModel,
+                )
+                val updated = previous.withAiConnection(value, previous.aiModel, activeProfile)
+                _uiState.value = updated
+                syncAiConfig(updated)
+            }
         }
     }
 
     fun setAiApiKey(value: String) {
-        viewModelScope.launch {
-            settingsRepository.setAiApiKey(value)
-            setCachedKey(uiState.value.aiProvider, value)
-        }
-        _uiState.update { it.copy(aiApiKey = value) }
-        syncAiConfig(_uiState.value)
+        updateAiConnection(cacheApiKey = true) { it.copy(aiApiKey = value) }
     }
 
     fun setAiModel(value: String) {
         viewModelScope.launch {
-            val currentProvider = uiState.value.aiProvider
-            val providerCompatible = isProviderCompatible(value, currentProvider)
-
-            settingsRepository.setAiModel(value)
-            _uiState.update { it.copy(aiModel = value) }
-
-            if (!providerCompatible) {
-                val newProvider = defaultProviderForModel(value)
-                setAiProvider(newProvider)
-            } else {
-                syncAiConfig(_uiState.value)
+            aiConnectionMutex.withLock {
+                val previous = _uiState.value
+                if (value == previous.aiModel) {
+                    return@withLock
+                }
+                val provider = if (isProviderCompatible(value, previous.aiProvider)) {
+                    previous.aiProvider
+                } else {
+                    defaultProviderForModel(value)
+                }
+                val activeProfile = settingsRepository.switchAiConnection(
+                    previousProvider = previous.aiProvider,
+                    previousModel = previous.aiModel,
+                    previousProfile = previous.toAiConnectionProfile(),
+                    provider = provider,
+                    model = value,
+                )
+                val updated = previous.withAiConnection(provider, value, activeProfile)
+                _uiState.value = updated
+                syncAiConfig(updated)
             }
         }
     }
 
     fun setAiProjectId(value: String) {
-        viewModelScope.launch { settingsRepository.setAiProjectId(value) }
-        _uiState.update { it.copy(aiProjectId = value) }
-        syncAiConfig(_uiState.value)
+        updateAiConnection { it.copy(aiProjectId = value) }
     }
 
     fun setAiLocation(value: String) {
-        viewModelScope.launch { settingsRepository.setAiLocation(value) }
-        _uiState.update { it.copy(aiLocation = value) }
-        syncAiConfig(_uiState.value)
+        updateAiConnection { it.copy(aiLocation = value) }
     }
 
     fun setAiBaseUrl(value: String) {
-        viewModelScope.launch { settingsRepository.setAiBaseUrl(value) }
-        _uiState.update { it.copy(aiBaseUrl = value) }
-        syncAiConfig(_uiState.value)
+        updateAiConnection { it.copy(aiBaseUrl = value) }
     }
 
     fun setAiSystemPrompt(value: String) {
@@ -280,9 +328,11 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setAiThinkingMode(value: String) {
-        viewModelScope.launch { settingsRepository.setAiThinkingMode(value) }
-        _uiState.update { it.copy(aiThinkingMode = value) }
-        syncAiConfig(_uiState.value)
+        updateAiConnection { it.copy(aiThinkingMode = value) }
+    }
+
+    fun setAiReasoningEffort(value: String) {
+        updateAiConnection { it.copy(aiReasoningEffort = value) }
     }
 
     private fun isProviderCompatible(model: String, provider: String): Boolean {
@@ -308,6 +358,30 @@ class SettingsViewModel @Inject constructor(
     }
 }
 
+private fun SettingsUiState.toAiConnectionProfile() = AiConnectionProfile(
+    apiKey = aiApiKey,
+    baseUrl = aiBaseUrl,
+    projectId = aiProjectId,
+    location = aiLocation,
+    thinkingMode = aiThinkingMode,
+    reasoningEffort = aiReasoningEffort,
+)
+
+private fun SettingsUiState.withAiConnection(
+    provider: String,
+    model: String,
+    profile: AiConnectionProfile,
+) = copy(
+    aiProvider = provider,
+    aiModel = model,
+    aiApiKey = profile.apiKey,
+    aiBaseUrl = profile.baseUrl,
+    aiProjectId = profile.projectId,
+    aiLocation = profile.location,
+    aiThinkingMode = profile.thinkingMode,
+    aiReasoningEffort = profile.reasoningEffort,
+)
+
 data class SettingsUiState(
     val themeMode: Int = 0, // 0=system, 1=light, 2=dark
     val locale: String = "",
@@ -330,5 +404,6 @@ data class SettingsUiState(
     val aiContextIncludeOptions: Boolean = true,
     val aiContextIncludeAnswer: Boolean = true,
     val aiContextIncludeExplanation: Boolean = true,
-    val aiThinkingMode: String = "disabled"
+    val aiThinkingMode: String = "disabled",
+    val aiReasoningEffort: String = "",
 )

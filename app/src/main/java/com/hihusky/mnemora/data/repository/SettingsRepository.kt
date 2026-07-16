@@ -1,11 +1,14 @@
 package com.hihusky.mnemora.data.repository
 
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.hihusky.mnemora.data.model.AiConnectionProfile
+import com.hihusky.mnemora.data.model.AiConnectionProfiles
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -33,12 +36,14 @@ class SettingsRepository @Inject constructor(
         val AI_PROJECT_ID = stringPreferencesKey("ai_project_id")
         val AI_LOCATION = stringPreferencesKey("ai_location")
         val AI_API_KEY_CACHE = stringPreferencesKey("ai_api_key_cache")
+        val AI_CONNECTION_PROFILES = stringPreferencesKey("ai_connection_profiles")
         val AI_SYSTEM_PROMPT = stringPreferencesKey("ai_system_prompt")
         val AI_CONTEXT_INCLUDE_STEM = booleanPreferencesKey("ai_context_include_stem")
         val AI_CONTEXT_INCLUDE_OPTIONS = booleanPreferencesKey("ai_context_include_options")
         val AI_CONTEXT_INCLUDE_ANSWER = booleanPreferencesKey("ai_context_include_answer")
         val AI_CONTEXT_INCLUDE_EXPLANATION = booleanPreferencesKey("ai_context_include_explanation")
         val AI_THINKING_MODE = stringPreferencesKey("ai_thinking_mode")
+        val AI_REASONING_EFFORT = stringPreferencesKey("ai_reasoning_effort")
         val LAST_OPENED_BANK = stringPreferencesKey("last_opened_bank")
         val FIRST_LAUNCH_COMPLETED = booleanPreferencesKey("first_launch_completed")
     }
@@ -105,6 +110,66 @@ class SettingsRepository @Inject constructor(
     val aiApiKeyCache: Flow<String> = dataStore.data.map { it[AI_API_KEY_CACHE] ?: "{}" }
     suspend fun setAiApiKeyCache(value: String) = dataStore.edit { it[AI_API_KEY_CACHE] = value }
 
+    suspend fun initializeAiConnection(
+        provider: String,
+        model: String,
+        fallback: AiConnectionProfile,
+    ): AiConnectionProfile {
+        var activeProfile = fallback
+        dataStore.edit { preferences ->
+            val rawProfiles = preferences[AI_CONNECTION_PROFILES] ?: "{}"
+            activeProfile = AiConnectionProfiles.get(rawProfiles, provider, model) ?: fallback
+            preferences[AI_CONNECTION_PROFILES] =
+                AiConnectionProfiles.put(rawProfiles, provider, model, activeProfile)
+            preferences[AI_PROVIDER] = provider
+            preferences[AI_MODEL] = model
+            preferences.writeActiveAiConnection(activeProfile)
+        }
+        return activeProfile
+    }
+
+    suspend fun switchAiConnection(
+        previousProvider: String,
+        previousModel: String,
+        previousProfile: AiConnectionProfile,
+        provider: String,
+        model: String,
+        fallback: AiConnectionProfile = AiConnectionProfile(),
+    ): AiConnectionProfile {
+        var activeProfile = fallback
+        dataStore.edit { preferences ->
+            val rawProfiles = preferences[AI_CONNECTION_PROFILES] ?: "{}"
+            val profilesWithPrevious = AiConnectionProfiles.put(
+                rawProfiles,
+                previousProvider,
+                previousModel,
+                previousProfile,
+            )
+            activeProfile = AiConnectionProfiles.get(profilesWithPrevious, provider, model) ?: fallback
+            preferences[AI_CONNECTION_PROFILES] =
+                AiConnectionProfiles.put(profilesWithPrevious, provider, model, activeProfile)
+            preferences[AI_PROVIDER] = provider
+            preferences[AI_MODEL] = model
+            preferences.writeActiveAiConnection(activeProfile)
+        }
+        return activeProfile
+    }
+
+    suspend fun saveAiConnectionProfile(
+        provider: String,
+        model: String,
+        profile: AiConnectionProfile,
+    ) = dataStore.edit { preferences ->
+        val rawProfiles = preferences[AI_CONNECTION_PROFILES] ?: "{}"
+        preferences[AI_CONNECTION_PROFILES] =
+            AiConnectionProfiles.put(rawProfiles, provider, model, profile)
+        val activeProvider = preferences[AI_PROVIDER] ?: "gemini"
+        val activeModel = preferences[AI_MODEL] ?: "gemini-3.1-flash-lite-preview"
+        if (provider == activeProvider && model == activeModel) {
+            preferences.writeActiveAiConnection(profile)
+        }
+    }
+
     val aiSystemPrompt: Flow<String> = dataStore.data.map {
         it[AI_SYSTEM_PROMPT] ?: "You are a professional maritime education expert, skilled at explaining nautical exam questions. Please explain questions and answers in a concise and clear manner."
     }
@@ -125,6 +190,9 @@ class SettingsRepository @Inject constructor(
     val aiThinkingMode: Flow<String> = dataStore.data.map { it[AI_THINKING_MODE] ?: "disabled" }
     suspend fun setAiThinkingMode(value: String) = dataStore.edit { it[AI_THINKING_MODE] = value }
 
+    val aiReasoningEffort: Flow<String> = dataStore.data.map { it[AI_REASONING_EFFORT] ?: "" }
+    suspend fun setAiReasoningEffort(value: String) = dataStore.edit { it[AI_REASONING_EFFORT] = value }
+
     // Last opened bank
     val lastOpenedBank: Flow<String?> = dataStore.data.map { it[LAST_OPENED_BANK] }
     suspend fun setLastOpenedBank(value: String) = dataStore.edit { it[LAST_OPENED_BANK] = value }
@@ -133,4 +201,13 @@ class SettingsRepository @Inject constructor(
     val firstLaunchCompleted: Flow<Boolean> = dataStore.data.map { it[FIRST_LAUNCH_COMPLETED] ?: false }
     suspend fun setFirstLaunchCompleted(value: Boolean) = dataStore.edit { it[FIRST_LAUNCH_COMPLETED] = value }
 
+}
+
+private fun MutablePreferences.writeActiveAiConnection(profile: AiConnectionProfile) {
+    this[SettingsRepository.AI_API_KEY] = profile.apiKey
+    this[SettingsRepository.AI_BASE_URL] = profile.baseUrl
+    this[SettingsRepository.AI_PROJECT_ID] = profile.projectId
+    this[SettingsRepository.AI_LOCATION] = profile.location
+    this[SettingsRepository.AI_THINKING_MODE] = profile.thinkingMode
+    this[SettingsRepository.AI_REASONING_EFFORT] = profile.reasoningEffort
 }

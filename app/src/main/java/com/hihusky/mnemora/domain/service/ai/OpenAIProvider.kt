@@ -24,21 +24,8 @@ class OpenAIProvider : AiProvider {
         history: List<ChatMessage>,
         client: OkHttpClient
     ): Flow<String> = flow {
-        val host = cfg.resolveHost("https://api.openai.com/v1")
-        val url = "$host/chat/completions"
-
-        val messages = mutableListOf<Map<String, String>>()
-        messages.add(mapOf("role" to "system", "content" to "${cfg.systemPrompt}\n\nContext:\n$context"))
-        history.forEach {
-            messages.add(mapOf("role" to if (it.isUser) "user" else "assistant", "content" to it.text))
-        }
-
-        val body = mapOf<String, Any?>(
-            "model" to cfg.model,
-            "messages" to messages,
-            "stream" to true,
-            "temperature" to 0.7
-        )
+        val url = buildOpenAiUrl(cfg)
+        val body = buildRequestBody(cfg, context, history)
 
         val request = Request.Builder()
             .url(url)
@@ -69,5 +56,38 @@ class OpenAIProvider : AiProvider {
                 }
             }
         }
+    }
+
+    internal fun buildOpenAiUrl(cfg: AiConfig): String {
+        val host = cfg.resolveHost("https://api.openai.com/v1")
+        return "$host/chat/completions"
+    }
+
+    internal fun buildRequestBody(
+        cfg: AiConfig,
+        context: String,
+        history: List<ChatMessage>,
+    ): Map<String, Any?> {
+        val messages = mutableListOf<Map<String, String>>()
+        messages.add(mapOf("role" to "system", "content" to "${cfg.systemPrompt}\n\nContext:\n$context"))
+        history.forEach {
+            messages.add(mapOf("role" to if (it.isUser) "user" else "assistant", "content" to it.text))
+        }
+
+        val body = linkedMapOf<String, Any?>(
+            "model" to cfg.model,
+            "messages" to messages,
+            "stream" to true,
+        )
+        cfg.reasoningEffort
+            .trim()
+            .lowercase()
+            .takeIf { it in REASONING_EFFORTS }
+            ?.let { body["reasoning_effort"] = it }
+        return body
+    }
+
+    private companion object {
+        val REASONING_EFFORTS = setOf("minimal", "none", "low", "medium", "high", "xhigh", "max")
     }
 }

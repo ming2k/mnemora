@@ -2,6 +2,8 @@ package com.hihusky.mnemora.domain.service
 
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import com.hihusky.mnemora.data.model.AiConnectionProfile
+import com.hihusky.mnemora.data.model.AiConnectionProfiles
 import com.hihusky.mnemora.data.model.ChatMessage
 import com.hihusky.mnemora.data.repository.SettingsRepository
 import com.hihusky.mnemora.domain.service.ai.AnthropicProvider
@@ -39,7 +41,8 @@ data class AiConfig(
     val contextIncludeOptions: Boolean = true,
     val contextIncludeAnswer: Boolean = true,
     val contextIncludeExplanation: Boolean = false,
-    val thinkingMode: String = "disabled"
+    val thinkingMode: String = "disabled",
+    val reasoningEffort: String = "",
 ) {
     fun resolveHost(official: String): String {
         val custom = baseUrl.trim().trimEnd('/')
@@ -88,20 +91,38 @@ class AiService @Inject constructor(
             defaultProviderForModel(model)
         }
         val activeKey = this[SettingsRepository.AI_API_KEY] ?: ""
-        val effectiveKey = cachedKeyFor(provider).ifBlank { activeKey }
+        val cachedKey = cachedKeyFor(provider)
+        val legacyProfile = if (provider == savedProvider) {
+            AiConnectionProfile(
+                apiKey = cachedKey.ifBlank { activeKey },
+                baseUrl = this[SettingsRepository.AI_BASE_URL] ?: "",
+                projectId = this[SettingsRepository.AI_PROJECT_ID] ?: "",
+                location = this[SettingsRepository.AI_LOCATION] ?: "",
+                thinkingMode = this[SettingsRepository.AI_THINKING_MODE] ?: "disabled",
+                reasoningEffort = this[SettingsRepository.AI_REASONING_EFFORT] ?: "",
+            )
+        } else {
+            AiConnectionProfile(apiKey = cachedKey)
+        }
+        val activeProfile = AiConnectionProfiles.get(
+            this[SettingsRepository.AI_CONNECTION_PROFILES] ?: "{}",
+            provider,
+            model,
+        ) ?: legacyProfile
         return AiConfig(
-            apiKey = effectiveKey,
-            baseUrl = this[SettingsRepository.AI_BASE_URL] ?: "",
+            apiKey = activeProfile.apiKey,
+            baseUrl = activeProfile.baseUrl,
             provider = provider,
             model = model,
-            projectId = this[SettingsRepository.AI_PROJECT_ID] ?: "",
-            location = this[SettingsRepository.AI_LOCATION] ?: "",
+            projectId = activeProfile.projectId,
+            location = activeProfile.location,
             systemPrompt = this[SettingsRepository.AI_SYSTEM_PROMPT] ?: AiConfig().systemPrompt,
             contextIncludeStem = this[SettingsRepository.AI_CONTEXT_INCLUDE_STEM] ?: true,
             contextIncludeOptions = this[SettingsRepository.AI_CONTEXT_INCLUDE_OPTIONS] ?: true,
             contextIncludeAnswer = this[SettingsRepository.AI_CONTEXT_INCLUDE_ANSWER] ?: true,
             contextIncludeExplanation = this[SettingsRepository.AI_CONTEXT_INCLUDE_EXPLANATION] ?: true,
-            thinkingMode = this[SettingsRepository.AI_THINKING_MODE] ?: "disabled"
+            thinkingMode = activeProfile.thinkingMode,
+            reasoningEffort = activeProfile.reasoningEffort,
         )
     }
 
