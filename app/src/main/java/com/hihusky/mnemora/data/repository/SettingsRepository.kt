@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.hihusky.mnemora.data.model.AiConnectionProfile
 import com.hihusky.mnemora.data.model.AiConnectionProfiles
+import com.hihusky.mnemora.domain.service.AiProviderCatalog
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -89,7 +90,7 @@ class SettingsRepository @Inject constructor(
     suspend fun setTestQuestionCount(value: Int) = dataStore.edit { it[TEST_QUESTION_COUNT] = value }
 
     // AI Settings
-    val aiProvider: Flow<String> = dataStore.data.map { it[AI_PROVIDER] ?: "gemini" }
+    val aiProvider: Flow<String> = dataStore.data.map { it[AI_PROVIDER] ?: AiProviderCatalog.defaultProviderId }
     suspend fun setAiProvider(value: String) = dataStore.edit { it[AI_PROVIDER] = value }
 
     val aiApiKey: Flow<String> = dataStore.data.map { it[AI_API_KEY] ?: "" }
@@ -98,7 +99,7 @@ class SettingsRepository @Inject constructor(
     val aiBaseUrl: Flow<String> = dataStore.data.map { it[AI_BASE_URL] ?: "" }
     suspend fun setAiBaseUrl(value: String) = dataStore.edit { it[AI_BASE_URL] = value }
 
-    val aiModel: Flow<String> = dataStore.data.map { it[AI_MODEL] ?: "gemini-3.1-flash-lite-preview" }
+    val aiModel: Flow<String> = dataStore.data.map { it[AI_MODEL] ?: AiProviderCatalog.defaultModelId }
     suspend fun setAiModel(value: String) = dataStore.edit { it[AI_MODEL] = value }
 
     val aiProjectId: Flow<String> = dataStore.data.map { it[AI_PROJECT_ID] ?: "" }
@@ -163,8 +164,8 @@ class SettingsRepository @Inject constructor(
         val rawProfiles = preferences[AI_CONNECTION_PROFILES] ?: "{}"
         preferences[AI_CONNECTION_PROFILES] =
             AiConnectionProfiles.put(rawProfiles, provider, model, profile)
-        val activeProvider = preferences[AI_PROVIDER] ?: "gemini"
-        val activeModel = preferences[AI_MODEL] ?: "gemini-3.1-flash-lite-preview"
+        val activeProvider = preferences[AI_PROVIDER] ?: AiProviderCatalog.defaultProviderId
+        val activeModel = preferences[AI_MODEL] ?: AiProviderCatalog.defaultModelId
         if (provider == activeProvider && model == activeModel) {
             preferences.writeActiveAiConnection(profile)
         }

@@ -30,20 +30,20 @@ class AiServiceTest {
 
     private fun serviceWithConfig(
         apiKey: String = "test-api-key",
-        model: String = "gemini-2.5-flash",
-        provider: String = "gemini"
+        model: String = AiProviderCatalog.defaultModelId,
+        provider: String = AiProviderCatalog.defaultProviderId
     ): AiService = service().apply {
         updateConfig(AiConfig(apiKey = apiKey, model = model, provider = provider))
     }
 
     @Test
-    fun `default provider is gemini`() {
-        assertEquals("gemini", service().config.value.provider)
+    fun `default provider is antigravity sub2api`() {
+        assertEquals("antigravity-sub2api", service().config.value.provider)
     }
 
     @Test
-    fun `default model is gemini flash`() {
-        assertEquals("gemini-3.1-flash-lite-preview", service().config.value.model)
+    fun `default model is gemini flash tiered`() {
+        assertEquals("gemini-3.6-flash-tiered", service().config.value.model)
     }
 
     @Test
@@ -57,28 +57,29 @@ class AiServiceTest {
     }
 
     @Test
-    fun `loads persisted model and provider on startup`() = runBlocking {
+    fun `loads persisted provider and model on startup`() = runBlocking {
         val prefs = preferencesOf(
-            SettingsRepository.AI_MODEL to "claude-opus-4-8",
-            SettingsRepository.AI_PROVIDER to "anthropic",
+            SettingsRepository.AI_MODEL to "gemini-3.6-flash-tiered",
+            SettingsRepository.AI_PROVIDER to "antigravity-sub2api",
             SettingsRepository.AI_API_KEY to "sk-persisted"
         )
         val aiService = AiService(FakeDataStore(flowOf(prefs)))
 
         withTimeout(2_000) {
-            while (aiService.config.value.model != "claude-opus-4-8") delay(10)
+            while (aiService.config.value.apiKey != "sk-persisted") delay(10)
         }
 
-        assertEquals("claude-opus-4-8", aiService.config.value.model)
-        assertEquals("anthropic", aiService.config.value.provider)
+        assertEquals("gemini-3.6-flash-tiered", aiService.config.value.model)
+        assertEquals("antigravity-sub2api", aiService.config.value.provider)
         assertEquals("sk-persisted", aiService.config.value.apiKey)
     }
 
     @Test
-    fun `normalizes incompatible persisted provider to the model default`() = runBlocking {
-        // A Claude model saved with a stale gemini provider should resolve to anthropic.
+    fun `migrates legacy persisted provider to the default`() = runBlocking {
+        // A provider/model pair that is no longer in the catalog resolves to the
+        // default provider and its first model, dropping the stale connection.
         val prefs = preferencesOf(
-            SettingsRepository.AI_MODEL to "claude-opus-4-8",
+            SettingsRepository.AI_MODEL to "gemini-3.5-flash",
             SettingsRepository.AI_PROVIDER to "gemini",
             SettingsRepository.AI_API_KEY to "stale-gemini-key",
             SettingsRepository.AI_BASE_URL to "https://stale-gemini.example.com",
@@ -86,10 +87,11 @@ class AiServiceTest {
         val aiService = AiService(FakeDataStore(flowOf(prefs)))
 
         withTimeout(2_000) {
-            while (aiService.config.value.model != "claude-opus-4-8") delay(10)
+            while (aiService.config.value.provider != "antigravity-sub2api") delay(10)
         }
 
-        assertEquals("anthropic", aiService.config.value.provider)
+        assertEquals("antigravity-sub2api", aiService.config.value.provider)
+        assertEquals("gemini-3.6-flash-tiered", aiService.config.value.model)
         assertEquals("", aiService.config.value.apiKey)
         assertEquals("", aiService.config.value.baseUrl)
     }
@@ -98,29 +100,27 @@ class AiServiceTest {
     fun `loads connection values from active provider model profile`() = runBlocking {
         val profiles = AiConnectionProfiles.put(
             raw = "{}",
-            provider = "custom-openai",
-            model = "gpt-5.6",
+            provider = "antigravity-sub2api",
+            model = "gemini-3.6-flash-tiered",
             profile = AiConnectionProfile(
                 apiKey = "sk-scoped",
-                baseUrl = "https://relay.example.com/v1",
-                reasoningEffort = "high",
+                baseUrl = "https://relay.example.com",
             ),
         )
         val prefs = preferencesOf(
-            SettingsRepository.AI_MODEL to "gpt-5.6",
-            SettingsRepository.AI_PROVIDER to "custom-openai",
+            SettingsRepository.AI_MODEL to "gemini-3.6-flash-tiered",
+            SettingsRepository.AI_PROVIDER to "antigravity-sub2api",
             SettingsRepository.AI_API_KEY to "sk-stale",
-            SettingsRepository.AI_BASE_URL to "https://stale.example.com/v1",
+            SettingsRepository.AI_BASE_URL to "https://stale.example.com",
             SettingsRepository.AI_CONNECTION_PROFILES to profiles,
         )
         val aiService = AiService(FakeDataStore(flowOf(prefs)))
 
         withTimeout(2_000) {
-            while (aiService.config.value.model != "gpt-5.6") delay(10)
+            while (aiService.config.value.apiKey != "sk-scoped") delay(10)
         }
 
         assertEquals("sk-scoped", aiService.config.value.apiKey)
-        assertEquals("https://relay.example.com/v1", aiService.config.value.baseUrl)
-        assertEquals("high", aiService.config.value.reasoningEffort)
+        assertEquals("https://relay.example.com", aiService.config.value.baseUrl)
     }
 }

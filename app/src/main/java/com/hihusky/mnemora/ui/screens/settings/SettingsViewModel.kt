@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.hihusky.mnemora.data.model.AiConnectionProfile
 import com.hihusky.mnemora.data.repository.SettingsRepository
 import com.hihusky.mnemora.domain.service.AiConfig
+import com.hihusky.mnemora.domain.service.AiProviderCatalog
 import com.hihusky.mnemora.domain.service.AiService
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,11 +38,14 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val savedProvider = settingsRepository.aiProvider.first()
-            val model = settingsRepository.aiModel.first()
-            val provider = if (isProviderCompatible(model, savedProvider)) {
-                savedProvider
+            val savedModel = settingsRepository.aiModel.first()
+            // Provider is authoritative: migrate unknown/legacy providers to the
+            // default, then keep the saved model only if it belongs to that provider.
+            val provider = AiProviderCatalog.resolve(savedProvider).id
+            val model = if (AiProviderCatalog.modelsFor(provider).any { it.id == savedModel }) {
+                savedModel
             } else {
-                defaultProviderForModel(model)
+                AiProviderCatalog.defaultModelFor(provider)
             }
             val activeKey = settingsRepository.aiApiKey.first()
             val cachedKey = getCachedKey(provider)
@@ -238,17 +242,21 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch {
             aiConnectionMutex.withLock {
                 val previous = _uiState.value
-                if (value == previous.aiProvider || !isProviderCompatible(previous.aiModel, value)) {
+                if (value == previous.aiProvider) {
                     return@withLock
                 }
+                // Provider-first: switching provider resets the model to that
+                // provider's default. Per-(provider, model) profiles keep each
+                // connection isolated without any notion of a grouping company.
+                val newModel = AiProviderCatalog.defaultModelFor(value)
                 val activeProfile = settingsRepository.switchAiConnection(
                     previousProvider = previous.aiProvider,
                     previousModel = previous.aiModel,
                     previousProfile = previous.toAiConnectionProfile(),
                     provider = value,
-                    model = previous.aiModel,
+                    model = newModel,
                 )
-                val updated = previous.withAiConnection(value, previous.aiModel, activeProfile)
+                val updated = previous.withAiConnection(value, newModel, activeProfile)
                 _uiState.value = updated
                 syncAiConfig(updated)
             }
@@ -266,13 +274,12 @@ class SettingsViewModel @Inject constructor(
                 if (value == previous.aiModel) {
                     return@withLock
                 }
-                val provider = if (isProviderCompatible(value, previous.aiProvider)) {
-                    previous.aiProvider
-                } else {
-                    defaultProviderForModel(value)
-                }
+                // Models are always chosen from the current provider's list, so the
+                // provider never needs reconciling; only the (provider, model) profile
+                // is swapped.
+                val provider = previous.aiProvider
                 val activeProfile = settingsRepository.switchAiConnection(
-                    previousProvider = previous.aiProvider,
+                    previousProvider = provider,
                     previousModel = previous.aiModel,
                     previousProfile = previous.toAiConnectionProfile(),
                     provider = provider,
@@ -334,28 +341,6 @@ class SettingsViewModel @Inject constructor(
     fun setAiReasoningEffort(value: String) {
         updateAiConnection { it.copy(aiReasoningEffort = value) }
     }
-
-    private fun isProviderCompatible(model: String, provider: String): Boolean {
-        val lowerModel = model.lowercase()
-        return when {
-            lowerModel.startsWith("gpt") -> provider == "openai" || provider == "custom-openai"
-            lowerModel.startsWith("kimi") -> provider == "kimi"
-            lowerModel.startsWith("deepseek") -> provider == "deepseek"
-            lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
-            else -> provider == "gemini" || provider == "vertex-ai" || provider == "custom-gemini"
-        }
-    }
-
-    private fun defaultProviderForModel(model: String): String {
-        val lowerModel = model.lowercase()
-        return when {
-            lowerModel.startsWith("gpt") -> "openai"
-            lowerModel.startsWith("kimi") -> "kimi"
-            lowerModel.startsWith("deepseek") -> "deepseek"
-            lowerModel.startsWith("claude") -> "anthropic"
-            else -> "gemini"
-        }
-    }
 }
 
 private fun SettingsUiState.toAiConnectionProfile() = AiConnectionProfile(
@@ -393,9 +378,9 @@ data class SettingsUiState(
     val continuousFeedback: Boolean = true,
     val confettiEffect: Boolean = true,
     val testQuestionCount: Int = 50,
-    val aiProvider: String = "gemini",
+    val aiProvider: String = AiProviderCatalog.defaultProviderId,
     val aiApiKey: String = "",
-    val aiModel: String = "gemini-3.1-flash-lite-preview",
+    val aiModel: String = AiProviderCatalog.defaultModelId,
     val aiProjectId: String = "",
     val aiLocation: String = "",
     val aiBaseUrl: String = "",

@@ -32,8 +32,8 @@ import javax.inject.Singleton
 data class AiConfig(
     val apiKey: String = "",
     val baseUrl: String = "",
-    val provider: String = "gemini",
-    val model: String = "gemini-3.1-flash-lite-preview",
+    val provider: String = AiProviderCatalog.defaultProviderId,
+    val model: String = AiProviderCatalog.defaultModelId,
     val projectId: String = "",
     val location: String = "",
     val systemPrompt: String = "You are a helpful study assistant. Please explain questions and answers in a concise and clear manner.",
@@ -46,7 +46,9 @@ data class AiConfig(
 ) {
     fun resolveHost(official: String): String {
         val custom = baseUrl.trim().trimEnd('/')
-        return if (provider.lowercase().startsWith("custom") && custom.isNotEmpty()) custom else official
+        val usesCustom = provider.lowercase().startsWith("custom") ||
+            AiProviderCatalog.usesCustomHost(provider)
+        return if (usesCustom && custom.isNotEmpty()) custom else official
     }
 }
 
@@ -83,12 +85,15 @@ class AiService @Inject constructor(
     }
 
     private fun Preferences.toAiConfig(): AiConfig {
-        val model = this[SettingsRepository.AI_MODEL] ?: AiConfig().model
         val savedProvider = this[SettingsRepository.AI_PROVIDER] ?: AiConfig().provider
-        val provider = if (isProviderCompatible(model, savedProvider)) {
-            savedProvider
+        val savedModel = this[SettingsRepository.AI_MODEL] ?: AiConfig().model
+        // Provider is authoritative: migrate any unknown/legacy provider to the
+        // default, then keep the saved model only if it belongs to that provider.
+        val provider = AiProviderCatalog.resolve(savedProvider).id
+        val model = if (AiProviderCatalog.modelsFor(provider).any { it.id == savedModel }) {
+            savedModel
         } else {
-            defaultProviderForModel(model)
+            AiProviderCatalog.defaultModelFor(provider)
         }
         val activeKey = this[SettingsRepository.AI_API_KEY] ?: ""
         val cachedKey = cachedKeyFor(provider)
@@ -135,28 +140,6 @@ class AiService @Inject constructor(
         }
     }
 
-    private fun isProviderCompatible(model: String, provider: String): Boolean {
-        val lowerModel = model.lowercase()
-        return when {
-            lowerModel.startsWith("gpt") -> provider == "openai" || provider == "custom-openai"
-            lowerModel.startsWith("kimi") -> provider == "kimi"
-            lowerModel.startsWith("deepseek") -> provider == "deepseek"
-            lowerModel.startsWith("claude") -> provider == "anthropic" || provider == "custom"
-            else -> provider == "gemini" || provider == "vertex-ai" || provider == "custom-gemini"
-        }
-    }
-
-    private fun defaultProviderForModel(model: String): String {
-        val lowerModel = model.lowercase()
-        return when {
-            lowerModel.startsWith("gpt") -> "openai"
-            lowerModel.startsWith("kimi") -> "kimi"
-            lowerModel.startsWith("deepseek") -> "deepseek"
-            lowerModel.startsWith("claude") -> "anthropic"
-            else -> "gemini"
-        }
-    }
-
     fun explain(
         questionStem: String,
         options: Map<String, String>,
@@ -171,14 +154,13 @@ class AiService @Inject constructor(
         val context = buildQuestionContext(questionStem, options, correctAnswer, explanation, cfg)
         val effectiveHistory = buildEffectiveHistory(history, userQuestion)
 
-        val provider = when (cfg.provider.lowercase()) {
-            "gemini", "custom-gemini" -> GeminiProvider()
-            "vertex-ai" -> VertexAiProvider()
-            "kimi" -> KimiProvider()
-            "deepseek" -> DeepSeekProvider()
-            "openai", "custom-openai" -> OpenAIProvider()
-            "anthropic", "custom" -> AnthropicProvider()
-            else -> return flow { throw IllegalStateException("Unknown provider: ${cfg.provider}") }
+        val provider = when (AiProviderCatalog.protocolFor(cfg.provider)) {
+            AiProtocol.GEMINI -> GeminiProvider()
+            AiProtocol.OPENAI -> OpenAIProvider()
+            AiProtocol.ANTHROPIC -> AnthropicProvider()
+            AiProtocol.VERTEX -> VertexAiProvider()
+            AiProtocol.DEEPSEEK -> DeepSeekProvider()
+            AiProtocol.KIMI -> KimiProvider()
         }
 
         return provider.streamChat(cfg, context, effectiveHistory, client).flowOn(Dispatchers.IO)

@@ -20,7 +20,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
-import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Contrast
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LinearScale
@@ -75,6 +74,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.foundation.clickable
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.hihusky.mnemora.BuildConfig
+import com.hihusky.mnemora.domain.service.AiProviderCatalog
+import com.hihusky.mnemora.domain.service.AiProtocol
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
 
@@ -258,212 +259,73 @@ internal fun SettingsScreenContent(
             // ── AI Settings ──
             MnemoraSettingsSectionHeader(title = "AI Settings")
 
-            // Companies group their models and the providers that can serve those models.
-            data class AiCompany(
-                val id: String,
-                val display: String,
-                val models: List<Pair<String, String>>,
-                val providers: List<Pair<String, String>>
-            )
-
-            val aiCompanies = listOf(
-                AiCompany(
-                    id = "google",
-                    display = "Google",
-                    models = listOf(
-                        "Gemini 3.5 Flash" to "gemini-3.5-flash",
-                        "Gemini 3.1 Pro Preview" to "gemini-3.1-pro-preview",
-                        "Gemini 3.1 Pro Low" to "gemini-3.1-pro-low",
-                        "Gemini 3.1 Flash Lite Preview" to "gemini-3.1-flash-lite-preview",
-                        "Gemini 3.0 Pro Preview" to "gemini-3-pro-preview",
-                        "Gemini 3.0 Flash Preview" to "gemini-3-flash-preview",
-                        "Gemini 2.5 Pro" to "gemini-2.5-pro",
-                        "Gemini 2.5 Flash" to "gemini-2.5-flash"
-                    ),
-                    providers = listOf(
-                        "Google AI Studio" to "gemini",
-                        "GCP Vertex AI" to "vertex-ai",
-                        "Custom" to "custom-gemini"
-                    )
-                ),
-                AiCompany(
-                    id = "anthropic",
-                    display = "Anthropic",
-                    models = listOf(
-                        "Claude Fable 5" to "claude-fable-5",
-                        "Claude Opus 4.8" to "claude-opus-4-8",
-                        "Claude Opus 4.7" to "claude-opus-4-7",
-                        "Claude Sonnet 4.6" to "claude-sonnet-4-6",
-                        "Claude Haiku 4.5" to "claude-haiku-4-5"
-                    ),
-                    providers = listOf(
-                        "Anthropic API" to "anthropic",
-                        "Custom" to "custom"
-                    )
-                ),
-                AiCompany(
-                    id = "deepseek",
-                    display = "DeepSeek",
-                    models = listOf(
-                        "DeepSeek V4 Pro" to "deepseek-v4-pro",
-                        "DeepSeek V4 Flash" to "deepseek-v4-flash"
-                    ),
-                    providers = listOf(
-                        "DeepSeek API" to "deepseek"
-                    )
-                ),
-                AiCompany(
-                    id = "moonshot",
-                    display = "Moonshot",
-                    models = listOf(
-                        "Kimi K2.6" to "kimi-k2.6"
-                    ),
-                    providers = listOf(
-                        "Moonshot API" to "kimi"
-                    )
-                ),
-                AiCompany(
-                    id = "openai",
-                    display = "OpenAI",
-                    models = listOf(
-                        "GPT 5.6 Sol" to "gpt-5.6",
-                        "GPT 5.6 Terra" to "gpt-5.6-terra",
-                        "GPT 5.6 Luna" to "gpt-5.6-luna",
-                        "GPT 5.5" to "gpt-5.5",
-                        "GPT 5.4" to "gpt-5.4",
-                        "GPT 5.4 Mini" to "gpt-5.4-mini",
-                        "GPT 5.2 Pro" to "gpt-5.2-pro",
-                        "GPT 5.2" to "gpt-5.2",
-                        "GPT 5.3 Codex Spark" to "gpt-5.3-codex-spark"
-                    ),
-                    providers = listOf(
-                        "OpenAI API" to "openai",
-                        "Custom" to "custom-openai"
-                    )
-                )
-            )
-
-            // Resolve the active company from the currently-selected model.
-            val activeCompany = aiCompanies.firstOrNull { company ->
-                company.models.any { it.second == uiState.aiModel }
-            } ?: aiCompanies.first()
-            val companyIndex = aiCompanies.indexOf(activeCompany).coerceAtLeast(0)
-            val aiModels = activeCompany.models
-            val aiProviders = activeCompany.providers
-            val currentProviderDisplay = aiProviders.find { it.second == uiState.aiProvider }?.first
-                ?: aiProviders.first().first
+            // Providers own their models and connection shape, so configuration is
+            // provider-first: pick a provider, then one of its models. There is no
+            // grouping "company" layer — each (provider, model) pair keeps an
+            // isolated connection profile.
+            val aiProviders = AiProviderCatalog.providers
+            val activeProvider = AiProviderCatalog.resolve(uiState.aiProvider)
+            val providerIndex = aiProviders.indexOfFirst { it.id == activeProvider.id }.coerceAtLeast(0)
+            val aiModels = AiProviderCatalog.modelsFor(activeProvider.id)
+            val modelIndex = aiModels.indexOfFirst { it.id == uiState.aiModel }.coerceAtLeast(0)
+            val currentProtocol = activeProvider.protocol
 
             MnemoraSettingsGroup {
-                // Company
-                MnemoraSettingsDropdownRow(
-                    headline = "Company",
-                    supporting = activeCompany.display,
-                    icon = Icons.Default.Business,
-                    options = aiCompanies.map { it.display },
-                    selectedIndex = companyIndex,
-                    onSelect = { index ->
-                        val nextCompany = aiCompanies[index]
-                        if (nextCompany.id != activeCompany.id) {
-                            // Switch to the company's first model; setAiModel handles
-                            // provider compatibility automatically.
-                            onAiModelChange(nextCompany.models.first().second)
-                        }
-                    }
-                )
-
-                MnemoraSettingsDivider()
-
-                // Model
-                MnemoraSettingsDropdownRow(
-                    headline = "Model",
-                    supporting = aiModels.find { it.second == uiState.aiModel }?.first
-                        ?: uiState.aiModel,
-                    icon = Icons.Default.SmartButton,
-                    options = aiModels.map { it.first },
-                    selectedIndex = aiModels.indexOfFirst { it.second == uiState.aiModel }
-                        .coerceAtLeast(0),
-                    onSelect = { index ->
-                        onAiModelChange(aiModels[index].second)
-                    }
-                )
-
-                MnemoraSettingsDivider()
-
                 // Provider
                 MnemoraSettingsDropdownRow(
                     headline = "Provider",
-                    supporting = currentProviderDisplay,
+                    supporting = activeProvider.display,
                     icon = Icons.Default.Speed,
-                    options = aiProviders.map { it.first },
-                    selectedIndex = aiProviders.indexOfFirst { it.second == uiState.aiProvider }
-                        .coerceAtLeast(0),
+                    options = aiProviders.map { it.display },
+                    selectedIndex = providerIndex,
                     onSelect = { index ->
-                        onAiProviderSelect(aiProviders[index].second)
+                        onAiProviderSelect(aiProviders[index].id)
                     }
                 )
 
                 MnemoraSettingsDivider()
 
-                // Thinking Mode (only for Anthropic provider)
-                val isAnthropicProvider = uiState.aiProvider.lowercase() in listOf("anthropic", "custom")
-                if (isAnthropicProvider) {
-                    val thinkingOptions = listOf("Disabled" to "disabled", "Adaptive" to "adaptive", "Extended" to "enabled")
-                    val model = uiState.aiModel.lowercase()
-                    val availableOptions = when {
-                        model.contains("fable") || model.contains("opus-4-8") || model.contains("opus-4-7") ->
-                            thinkingOptions.filter { it.second != "enabled" }
-                        model.contains("haiku") ->
-                            thinkingOptions.filter { it.second != "adaptive" }
-                        else -> thinkingOptions
+                // Model (scoped to the selected provider)
+                MnemoraSettingsDropdownRow(
+                    headline = "Model",
+                    supporting = aiModels.find { it.id == uiState.aiModel }?.display
+                        ?: uiState.aiModel,
+                    icon = Icons.Default.SmartButton,
+                    options = aiModels.map { it.display },
+                    selectedIndex = modelIndex,
+                    onSelect = { index ->
+                        onAiModelChange(aiModels[index].id)
                     }
-                    val thinkingIndex = availableOptions.indexOfFirst { it.second == uiState.aiThinkingMode }
+                )
+
+                // Thinking Mode (only for Anthropic-protocol providers)
+                if (currentProtocol == AiProtocol.ANTHROPIC) {
+                    MnemoraSettingsDivider()
+                    val thinkingOptions = listOf("Disabled" to "disabled", "Adaptive" to "adaptive", "Extended" to "enabled")
+                    val thinkingIndex = thinkingOptions.indexOfFirst { it.second == uiState.aiThinkingMode }
                         .coerceAtLeast(0)
                     MnemoraSettingsDropdownRow(
                         headline = "Thinking Mode",
-                        supporting = availableOptions[thinkingIndex].first,
+                        supporting = thinkingOptions[thinkingIndex].first,
                         icon = Icons.Default.AutoFixHigh,
-                        options = availableOptions.map { it.first },
+                        options = thinkingOptions.map { it.first },
                         selectedIndex = thinkingIndex,
                         onSelect = { index ->
-                            onAiThinkingModeChange(availableOptions[index].second)
+                            onAiThinkingModeChange(thinkingOptions[index].second)
                         }
                     )
-
-                    MnemoraSettingsDivider()
                 }
 
-                val isOpenAiProvider = uiState.aiProvider.lowercase() in
-                    listOf("openai", "custom-openai")
-                if (isOpenAiProvider) {
-                    val defaultOption = listOf("Provider default" to "")
-                    val reasoningOptions = when {
-                        uiState.aiModel.lowercase().startsWith("gpt-5.6") -> defaultOption + listOf(
-                            "None" to "none",
-                            "Low" to "low",
-                            "Medium" to "medium",
-                            "High" to "high",
-                            "Extra high" to "xhigh",
-                            "Maximum" to "max",
-                        )
-                        uiState.aiModel.lowercase().contains("-pro") -> defaultOption + listOf(
-                            "Medium" to "medium",
-                            "High" to "high",
-                            "Extra high" to "xhigh",
-                        )
-                        uiState.aiModel.lowercase().contains("codex") -> defaultOption + listOf(
-                            "Low" to "low",
-                            "Medium" to "medium",
-                            "High" to "high",
-                            "Extra high" to "xhigh",
-                        )
-                        else -> defaultOption + listOf(
-                            "None" to "none",
-                            "Low" to "low",
-                            "Medium" to "medium",
-                            "High" to "high",
-                            "Extra high" to "xhigh",
-                        )
-                    }
+                // Reasoning Effort (only for OpenAI-protocol providers)
+                if (currentProtocol == AiProtocol.OPENAI) {
+                    MnemoraSettingsDivider()
+                    val reasoningOptions = listOf("Provider default" to "") + listOf(
+                        "None" to "none",
+                        "Low" to "low",
+                        "Medium" to "medium",
+                        "High" to "high",
+                        "Extra high" to "xhigh",
+                    )
                     val reasoningIndex = reasoningOptions
                         .indexOfFirst { it.second == uiState.aiReasoningEffort }
                         .coerceAtLeast(0)
@@ -477,9 +339,9 @@ internal fun SettingsScreenContent(
                             onAiReasoningEffortChange(reasoningOptions[index].second)
                         },
                     )
-
-                    MnemoraSettingsDivider()
                 }
+
+                MnemoraSettingsDivider()
 
                 // API Key
                 var apiKeyVisible by remember { mutableStateOf(false) }
@@ -514,16 +376,11 @@ internal fun SettingsScreenContent(
                     }
                 )
 
-                if (uiState.aiProvider.lowercase().startsWith("custom")) {
+                // Base URL (for providers without a fixed official endpoint)
+                if (activeProvider.usesCustomHost) {
                     MnemoraSettingsDivider()
 
-                    val customHint = when (uiState.aiProvider.lowercase()) {
-                        "custom-openai" -> "OpenAI-compatible endpoint. Enter the base URL ending with \"/v1\" (e.g. https://your-relay.com/v1). Requests are sent to {Base URL}/chat/completions."
-                        "custom" -> "Anthropic-compatible endpoint. Enter the host root without \"/v1\" (e.g. https://your-relay.com). Requests are sent to {Base URL}/v1/messages."
-                        "custom-gemini" -> "Gemini-compatible endpoint. Enter the host root without \"/v1beta\" (e.g. https://your-relay.com). Requests are sent to {Base URL}/v1beta/models/...:streamGenerateContent."
-                        else -> ""
-                    }
-                    if (customHint.isNotEmpty()) {
+                    if (activeProvider.baseUrlHint.isNotEmpty()) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -532,14 +389,13 @@ internal fun SettingsScreenContent(
                                 .padding(MnemoraSpacing.Medium)
                         ) {
                             Text(
-                                text = customHint,
+                                text = activeProvider.baseUrlHint,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
-                    // Base URL
                     val baseUrlFocus = remember { BringIntoViewRequester() }
                     OutlinedTextField(
                         value = uiState.aiBaseUrl,
@@ -560,10 +416,10 @@ internal fun SettingsScreenContent(
                     )
                 }
 
-                if (uiState.aiProvider.lowercase() == "vertex-ai") {
+                // Project ID / Location (Vertex AI only)
+                if (currentProtocol == AiProtocol.VERTEX) {
                     MnemoraSettingsDivider()
 
-                    // Project ID
                     val projectFocus = remember { BringIntoViewRequester() }
                     OutlinedTextField(
                         value = uiState.aiProjectId,
@@ -585,7 +441,6 @@ internal fun SettingsScreenContent(
 
                     MnemoraSettingsDivider()
 
-                    // Location
                     val locationFocus = remember { BringIntoViewRequester() }
                     OutlinedTextField(
                         value = uiState.aiLocation,
@@ -605,7 +460,6 @@ internal fun SettingsScreenContent(
                         colors = settingsTextFieldColors()
                     )
                 }
-
 
             }
 
@@ -752,19 +606,20 @@ private fun SettingsScreenPreviewDefault() {
 @Composable
 private fun SettingsScreenPreviewModified() {
     MnemoraTheme {
-        SettingsScreenContent(
-            uiState = SettingsUiState(
-                themeMode = 2,
-                autoAdvance = false,
-                showAnalysis = false,
-                soundEffects = false,
-                hapticFeedback = true,
-                continuousFeedback = false,
-                confettiEffect = false,
-                aiProvider = "kimi",
-                aiApiKey = "sk-test123",
-                aiModel = "kimi-k2.6"
-            ),
+            SettingsScreenContent(
+                uiState = SettingsUiState(
+                    themeMode = 2,
+                    autoAdvance = false,
+                    showAnalysis = false,
+                    soundEffects = false,
+                    hapticFeedback = true,
+                    continuousFeedback = false,
+                    confettiEffect = false,
+                    aiProvider = "antigravity-sub2api",
+                    aiApiKey = "sk-test123",
+                    aiModel = "gemini-3.6-flash-tiered",
+                    aiBaseUrl = "https://your-relay.com"
+                ),
             onThemeModeSelect = {},
             onLocaleSelect = {},
             onAutoAdvanceChange = {},

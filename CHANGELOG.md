@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.18] - 2026-07-23
+
+### Added
+- **Antigravity sub2api provider** — new provider backed by the sub2api-project relay for Antigravity. Speaks the Gemini-native protocol (`{Base URL}/v1beta/models/...:streamGenerateContent`), configured with a custom Base URL + API Key. Ships with `gemini-3.6-flash-tiered` (Gemini 3.6 Flash), `gemini-3.1-pro-low` (Gemini 3.1 Pro Low), and `gemini-3.1-pro-high` (Gemini 3.1 Pro High).
+
+### Changed
+- **Provider-first AI configuration** — Settings now selects a Provider first, then one of that provider's models. The grouping "Company" layer is removed entirely; each `(provider, model)` pair keeps its own isolated connection profile.
+- **Single-source provider catalog** — introduced `AiProviderCatalog` as the source of truth for providers, models, protocol, and custom-host behavior. `AiService` routes requests by protocol, and `AiConfig.resolveHost()` honors the catalog (plus the legacy `custom-*` prefix) when deciding whether to use a custom Base URL.
+- **Default provider/model** — new installs and legacy/unknown persisted settings now resolve to Antigravity sub2api / Gemini 3.6 Flash instead of the old Google AI Studio / Gemini Flash Lite default.
+
 ## [0.0.17] - 2026-07-03
 
 ### Added

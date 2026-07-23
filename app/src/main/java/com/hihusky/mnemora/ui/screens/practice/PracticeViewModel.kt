@@ -11,6 +11,7 @@ import com.hihusky.mnemora.data.model.Question
 import com.hihusky.mnemora.data.model.QuestionStatus
 import com.hihusky.mnemora.data.model.UserAnswer
 import com.hihusky.mnemora.data.repository.SettingsRepository
+import com.hihusky.mnemora.domain.service.AiProviderCatalog
 import com.hihusky.mnemora.domain.service.AiService
 import com.hihusky.mnemora.domain.service.FeedbackService
 import com.hihusky.mnemora.domain.usecase.practice.AiChatUseCase
@@ -161,7 +162,12 @@ class PracticeViewModel @Inject constructor(
         }
         viewModelScope.launch {
             aiService.config.collect { config ->
-                _uiState.update { it.copy(aiModel = config.model, aiProvider = config.provider) }
+                _uiState.update {
+                    it.copy(
+                        aiModel = AiProviderCatalog.modelDisplayFor(config.provider, config.model),
+                        aiProvider = AiProviderCatalog.displayFor(config.provider),
+                    )
+                }
             }
         }
     }
