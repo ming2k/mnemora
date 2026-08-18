@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.19] - 2026-08-18
+
 ### Added
 - **Gemini 3.7 Flash model** — added `gemini-3.7-flash-tiered` (Gemini 3.7 Flash) to the Antigravity sub2api provider and set it as the default model.
 
@@ -277,7 +279,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.17...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.19...HEAD
+[0.0.19]: https://github.com/ming2k/mnemora/compare/v0.0.18...v0.0.19
+[0.0.18]: https://github.com/ming2k/mnemora/compare/v0.0.17...v0.0.18
 [0.0.17]: https://github.com/ming2k/mnemora/compare/v0.0.16...v0.0.17
 [0.0.16]: https://github.com/ming2k/mnemora/compare/v0.0.15...v0.0.16
 [0.0.15]: https://github.com/ming2k/mnemora/compare/v0.0.14...v0.0.15
