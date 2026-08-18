@@ -111,8 +111,10 @@ fun AiChatSheet(
     // messages actually exist, because history is loaded asynchronously and a LazyList cannot
     // restore an index against an empty list.
     var placed by remember { mutableStateOf(false) }
-    // Whether to keep the list pinned to the latest message as content arrives.
-    var autoScroll by remember { mutableStateOf(true) }
+    // Whether to keep the list pinned to the latest message as content arrives. This is off by
+    // default so a streaming reply never yanks the viewport away from what the user is reading;
+    // it switches on only when the user sends a message, or when they scroll back to the bottom.
+    var autoScroll by remember { mutableStateOf(false) }
 
     // Whether the list is parked at the end. Derived purely from the list layout
     // (never from a captured message list) so it stays correct as the streaming reply
@@ -127,14 +129,13 @@ fun AiChatSheet(
         }
     }
 
-    // Restore the saved scroll position exactly once, as soon as the messages exist. We then
-    // keep following the bottom only if the restored position actually landed at the end — so a
-    // conversation reopened mid-history stays put, while one left at the latest message keeps
-    // streaming. This is authoritative even though history arrives asynchronously.
+    // Restore the saved scroll position exactly once, as soon as the messages exist. We do not
+    // engage auto-follow here: reopening should land exactly where the user left it without
+    // interrupting them, regardless of whether that spot is at the bottom. This is authoritative
+    // even though history arrives asynchronously.
     LaunchedEffect(visibleMessages.isEmpty()) {
         if (placed || visibleMessages.isEmpty()) return@LaunchedEffect
         val target = initialScrollIndex.coerceIn(0, visibleMessages.lastIndex)
-        autoScroll = target >= visibleMessages.lastIndex
         placed = true
         listState.scrollToItem(target, initialScrollOffset)
     }
@@ -152,10 +153,13 @@ fun AiChatSheet(
         }
     }
 
-    // Sending a message (or a reply starting to stream) should bring the user back
-    // to the bottom even if they had a restored position higher up.
-    LaunchedEffect(isLoading) {
-        if (isLoading) autoScroll = true
+    // The only thing that forces a follow is the user sending a message — they want to see their
+    // own message land and the reply that streams after it. A reply streaming on its own never
+    // moves the viewport, so reading earlier content is never interrupted. Scrolling away from
+    // the bottom then stops following again (handled by the drag latch above).
+    val sendMessage: (String) -> Unit = { text ->
+        autoScroll = true
+        onSendMessage(text)
     }
 
     // Pin to the bottom as content arrives. Keyed on both the message count and the
@@ -235,7 +239,7 @@ fun AiChatSheet(
                     item {
                         EmptyAssistantState(
                             enabled = !isLoading,
-                            onSendMessage = onSendMessage
+                            onSendMessage = sendMessage
                         )
                     }
                 }
@@ -256,7 +260,7 @@ fun AiChatSheet(
 
             AiChatInputBar(
                 isLoading = isLoading,
-                onSendMessage = onSendMessage,
+                onSendMessage = sendMessage,
                 onCancelMessage = onCancelMessage
             )
         }

@@ -43,7 +43,7 @@ class AiServiceTest {
 
     @Test
     fun `default model is gemini flash tiered`() {
-        assertEquals("gemini-3.6-flash-tiered", service().config.value.model)
+        assertEquals("gemini-3.7-flash-tiered", service().config.value.model)
     }
 
     @Test
@@ -59,7 +59,7 @@ class AiServiceTest {
     @Test
     fun `loads persisted provider and model on startup`() = runBlocking {
         val prefs = preferencesOf(
-            SettingsRepository.AI_MODEL to "gemini-3.6-flash-tiered",
+            SettingsRepository.AI_MODEL to "gemini-3.7-flash-tiered",
             SettingsRepository.AI_PROVIDER to "antigravity-sub2api",
             SettingsRepository.AI_API_KEY to "sk-persisted"
         )
@@ -69,7 +69,7 @@ class AiServiceTest {
             while (aiService.config.value.apiKey != "sk-persisted") delay(10)
         }
 
-        assertEquals("gemini-3.6-flash-tiered", aiService.config.value.model)
+        assertEquals("gemini-3.7-flash-tiered", aiService.config.value.model)
         assertEquals("antigravity-sub2api", aiService.config.value.provider)
         assertEquals("sk-persisted", aiService.config.value.apiKey)
     }
@@ -91,7 +91,7 @@ class AiServiceTest {
         }
 
         assertEquals("antigravity-sub2api", aiService.config.value.provider)
-        assertEquals("gemini-3.6-flash-tiered", aiService.config.value.model)
+        assertEquals("gemini-3.7-flash-tiered", aiService.config.value.model)
         assertEquals("", aiService.config.value.apiKey)
         assertEquals("", aiService.config.value.baseUrl)
     }
@@ -101,14 +101,14 @@ class AiServiceTest {
         val profiles = AiConnectionProfiles.put(
             raw = "{}",
             provider = "antigravity-sub2api",
-            model = "gemini-3.6-flash-tiered",
+            model = "gemini-3.7-flash-tiered",
             profile = AiConnectionProfile(
                 apiKey = "sk-scoped",
                 baseUrl = "https://relay.example.com",
             ),
         )
         val prefs = preferencesOf(
-            SettingsRepository.AI_MODEL to "gemini-3.6-flash-tiered",
+            SettingsRepository.AI_MODEL to "gemini-3.7-flash-tiered",
             SettingsRepository.AI_PROVIDER to "antigravity-sub2api",
             SettingsRepository.AI_API_KEY to "sk-stale",
             SettingsRepository.AI_BASE_URL to "https://stale.example.com",

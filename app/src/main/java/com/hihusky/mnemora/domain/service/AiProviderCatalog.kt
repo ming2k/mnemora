@@ -41,6 +41,10 @@ object AiProviderCatalog {
             display = "Antigravity sub2api",
             models = listOf(
                 AiModelDef(
+                    id = "gemini-3.7-flash-tiered",
+                    display = "Gemini 3.7 Flash",
+                ),
+                AiModelDef(
                     id = "gemini-3.6-flash-tiered",
                     display = "Gemini 3.6 Flash",
                 ),

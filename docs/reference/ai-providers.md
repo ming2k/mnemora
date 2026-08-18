@@ -87,6 +87,10 @@ See [Configure a Custom AI Provider](../how-to/configure-custom-ai-provider.md) 
 
 | Model | API ID |
 |:------|:-------|
+| Gemini 3.7 Flash | `gemini-3.7-flash-tiered` |
+| Gemini 3.6 Flash | `gemini-3.6-flash-tiered` |
+| Gemini 3.1 Pro Low | `gemini-3.1-pro-low` |
+| Gemini 3.1 Pro High | `gemini-3.1-pro-high` |
 | Gemini 3.1 Pro Preview | `gemini-3.1-pro-preview` |
 | Gemini 3.1 Flash Lite Preview | `gemini-3.1-flash-lite-preview` |
 

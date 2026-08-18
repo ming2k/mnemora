@@ -617,7 +617,7 @@ private fun SettingsScreenPreviewModified() {
                     confettiEffect = false,
                     aiProvider = "antigravity-sub2api",
                     aiApiKey = "sk-test123",
-                    aiModel = "gemini-3.6-flash-tiered",
+                    aiModel = "gemini-3.7-flash-tiered",
                     aiBaseUrl = "https://your-relay.com"
                 ),
             onThemeModeSelect = {},

@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Gemini 3.7 Flash model** — added `gemini-3.7-flash-tiered` (Gemini 3.7 Flash) to the Antigravity sub2api provider and set it as the default model.
+
+### Changed
+- **AI chat auto-scroll behavior** — auto-scroll is disabled by default during streaming and only activates when the user sends a message or is already scrolled to the bottom, preventing viewport jumps while reading earlier messages.
+
 ## [0.0.18] - 2026-07-23
 
 ### Added
