@@ -83,6 +83,27 @@ import org.intellij.markdown.flavours.gfm.GFMTokenTypes.CELL
 import java.io.File
 
 // ------------------------------------------------------------------
+// High-performance LRU Caches for parsed Markdown AST and Styled Spans.
+// Eliminates main-thread re-parsing and layout lag during scroll.
+// ------------------------------------------------------------------
+private class SimpleLruCache<K, V>(private val maxSize: Int) {
+    private val map = object : LinkedHashMap<K, V>(maxSize, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean {
+            return size > maxSize
+        }
+    }
+
+    @Synchronized
+    fun get(key: K): V? = map[key]
+
+    @Synchronized
+    fun put(key: K, value: V): V? = map.put(key, value)
+}
+
+private val renderBlocksCache = SimpleLruCache<String, List<RenderBlock>>(300)
+private val inlineMarkdownCache = SimpleLruCache<String, AnnotatedString>(1000)
+
+// ------------------------------------------------------------------
 // Render units produced by the paragraph-aware parser.
 // One paragraph (\n\n-separated) maps to one or more RenderBlocks.
 // ------------------------------------------------------------------
@@ -134,7 +155,13 @@ fun MarkdownText(
         return
     }
 
-    val blocks = remember(content) { parseRenderBlocks(content) }
+    val blocks = remember(content) {
+        renderBlocksCache.get(content) ?: run {
+            val parsed = parseRenderBlocks(content)
+            renderBlocksCache.put(content, parsed)
+            parsed
+        }
+    }
 
     Column(
         modifier = modifier,
@@ -190,34 +217,34 @@ private fun InlineFlowParagraph(
         fontSize = textStyle.fontSize,
         fontFamily = textStyle.fontFamily
     )
-    // Each input line is its own FlowRow — single \n inside the paragraph
-    // forces a visible line break, while the FlowRow still wraps a single
-    // line's content when it overflows the screen width.
     Column(modifier = Modifier.fillMaxWidth()) {
         lines.forEach { line ->
-            FlowRow(modifier = Modifier.fillMaxWidth()) {
-                line.forEach { part ->
-                    when (part) {
-                        is InlinePart.Text -> {
-                            val fullText = part.text
-                            val effectiveStyle = if (part.isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
-                            val hasMarks = remember(fullText) {
-                                collectInlineMarks(fullText).isNotEmpty()
-                            }
-                            if (hasMarks) {
-                                val annotated = remember(fullText) {
-                                    buildInlineMarkdown(fullText, effectiveStyle)
-                                }
-                                Text(
-                                    text = annotated,
-                                    style = textStyle,
-                                    color = contentColor,
-                                    modifier = Modifier.align(Alignment.CenterVertically)
-                                )
-                            } else {
-                                splitIntoPhrases(fullText).forEach { phrase ->
-                                    val annotated = remember(phrase) {
-                                        buildInlineMarkdown(phrase, effectiveStyle)
+            val hasMath = line.any { it is InlinePart.Math }
+            if (!hasMath) {
+                // Fast-path: single pure-text line without any LaTeX formulas.
+                // Renders in a single Text composable for native CJK line breaking and maximum performance.
+                val lineText = line.filterIsInstance<InlinePart.Text>().joinToString("") { it.text }
+                val isBold = line.filterIsInstance<InlinePart.Text>().any { it.isBold }
+                val effectiveStyle = if (isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
+                val annotated = remember(lineText, effectiveStyle) {
+                    buildInlineMarkdown(lineText, effectiveStyle)
+                }
+                Text(
+                    text = annotated,
+                    style = textStyle,
+                    color = contentColor,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                // Line contains inline LaTeX: render in FlowRow with text segments and math chips.
+                FlowRow(modifier = Modifier.fillMaxWidth()) {
+                    line.forEach { part ->
+                        when (part) {
+                            is InlinePart.Text -> {
+                                if (part.text.isNotEmpty()) {
+                                    val effectiveStyle = if (part.isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
+                                    val annotated = remember(part.text, effectiveStyle) {
+                                        buildInlineMarkdown(part.text, effectiveStyle)
                                     }
                                     Text(
                                         text = annotated,
@@ -227,61 +254,22 @@ private fun InlineFlowParagraph(
                                     )
                                 }
                             }
-                        }
 
-                        is InlinePart.Math -> {
-                            Latex(
-                                latex = part.formula,
-                                modifier = Modifier
-                                    .wrapContentSize()
-                                    .align(Alignment.CenterVertically),
-                                config = latexInlineConfig(textStyle, contentColor)
-                            )
+                            is InlinePart.Math -> {
+                                Latex(
+                                    latex = part.formula,
+                                    modifier = Modifier
+                                        .wrapContentSize()
+                                        .align(Alignment.CenterVertically),
+                                    config = latexInlineConfig(textStyle, contentColor)
+                                )
+                            }
                         }
                     }
                 }
             }
         }
     }
-}
-
-private fun splitIntoPhrases(text: String): List<String> {
-    if (text.isEmpty()) return emptyList()
-    // Each CJK character (incl. full-width punctuation) becomes its own
-    // FlowRow item, so a long Chinese run can wrap at any character — and
-    // an inline formula can sit on the same row as whatever fits beside it
-    // instead of pushing the trailing text onto a new row. Latin runs stay
-    // grouped per word (split on whitespace) so words don't break mid-word.
-    val result = mutableListOf<String>()
-    val buf = StringBuilder()
-    for (ch in text) {
-        when {
-            isCjk(ch) -> {
-                if (buf.isNotEmpty()) {
-                    result.add(buf.toString())
-                    buf.clear()
-                }
-                result.add(ch.toString())
-            }
-            ch.isWhitespace() -> {
-                buf.append(ch)
-                result.add(buf.toString())
-                buf.clear()
-            }
-            else -> buf.append(ch)
-        }
-    }
-    if (buf.isNotEmpty()) result.add(buf.toString())
-    return result
-}
-
-private fun isCjk(ch: Char): Boolean {
-    val code = ch.code
-    return code in 0x4E00..0x9FFF ||   // CJK Unified Ideographs
-        code in 0x3400..0x4DBF ||      // CJK Extension A
-        code in 0xF900..0xFAFF ||      // CJK Compatibility Ideographs
-        code in 0x3000..0x303F ||      // CJK Symbols and Punctuation
-        code in 0xFF00..0xFFEF         // Halfwidth/Fullwidth (incl 全角标点)
 }
 
 @Composable
@@ -607,92 +595,102 @@ private fun MarkdownBlock(
     textStyle: TextStyle,
     contentColor: Color
 ) {
-    val colors = DefaultMarkdownColors(
-        text = contentColor,
-        codeBackground = MaterialTheme.colorScheme.surfaceContainerLowest,
-        inlineCodeBackground = MaterialTheme.colorScheme.surfaceContainerLowest,
-        dividerColor = MaterialTheme.colorScheme.outline,
-        tableBackground = Color.Transparent
-    )
+    val surfaceContainerLowest = MaterialTheme.colorScheme.surfaceContainerLowest
+    val outline = MaterialTheme.colorScheme.outline
+    val monoBodyMedium = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
+
+    val colors = remember(contentColor, surfaceContainerLowest, outline) {
+        DefaultMarkdownColors(
+            text = contentColor,
+            codeBackground = surfaceContainerLowest,
+            inlineCodeBackground = surfaceContainerLowest,
+            dividerColor = outline,
+            tableBackground = Color.Transparent
+        )
+    }
     val baseSize = textStyle.fontSize.takeOrElse { 16.sp }
-    val typography = DefaultMarkdownTypography(
-        h1 = textStyle.copy(fontSize = baseSize * 1.25f, fontWeight = FontWeight.Bold),
-        h2 = textStyle.copy(fontSize = baseSize * 1.15f, fontWeight = FontWeight.Bold),
-        h3 = textStyle.copy(fontSize = baseSize * 1.05f, fontWeight = FontWeight.Bold),
-        h4 = textStyle.copy(fontWeight = FontWeight.Bold),
-        h5 = textStyle.copy(fontSize = baseSize * 0.9f, fontWeight = FontWeight.Bold),
-        h6 = textStyle.copy(fontSize = baseSize * 0.85f, fontWeight = FontWeight.Bold),
-        text = textStyle,
-        code = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-        inlineCode = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-        quote = textStyle,
-        paragraph = textStyle,
-        ordered = textStyle,
-        bullet = textStyle,
-        list = textStyle,
-        textLink = TextLinkStyles(
-            style = SpanStyle(color = contentColor)
-        ),
-        table = textStyle
-    )
+    val typography = remember(textStyle, contentColor, baseSize, monoBodyMedium) {
+        DefaultMarkdownTypography(
+            h1 = textStyle.copy(fontSize = baseSize * 1.25f, fontWeight = FontWeight.Bold),
+            h2 = textStyle.copy(fontSize = baseSize * 1.15f, fontWeight = FontWeight.Bold),
+            h3 = textStyle.copy(fontSize = baseSize * 1.05f, fontWeight = FontWeight.Bold),
+            h4 = textStyle.copy(fontWeight = FontWeight.Bold),
+            h5 = textStyle.copy(fontSize = baseSize * 0.9f, fontWeight = FontWeight.Bold),
+            h6 = textStyle.copy(fontSize = baseSize * 0.85f, fontWeight = FontWeight.Bold),
+            text = textStyle,
+            code = monoBodyMedium,
+            inlineCode = monoBodyMedium,
+            quote = textStyle,
+            paragraph = textStyle,
+            ordered = textStyle,
+            bullet = textStyle,
+            list = textStyle,
+            textLink = TextLinkStyles(
+                style = SpanStyle(color = contentColor)
+            ),
+            table = textStyle
+        )
+    }
     val markdownState = rememberMarkdownState(text, retainState = true)
-    val components = markdownComponents(
-        paragraph = { model ->
-            val paragraphText = model.node.getUnescapedTextInNode(model.content)
-            if ('$' in paragraphText) {
-                val lines = paragraphText.split('\n')
-                    .map { parseInlinePartsForLine(it) }
-                    .filter { it.isNotEmpty() }
-                if (lines.isNotEmpty()) {
-                    InlineFlowParagraph(
-                        lines = lines,
-                        textStyle = model.typography.paragraph,
-                        contentColor = contentColor
+    val components = remember(colors, typography) {
+        markdownComponents(
+            paragraph = { model ->
+                val paragraphText = model.node.getUnescapedTextInNode(model.content)
+                if ('$' in paragraphText) {
+                    val lines = paragraphText.split('\n')
+                        .map { parseInlinePartsForLine(it) }
+                        .filter { it.isNotEmpty() }
+                    if (lines.isNotEmpty()) {
+                        InlineFlowParagraph(
+                            lines = lines,
+                            textStyle = model.typography.paragraph,
+                            contentColor = contentColor
+                        )
+                    }
+                } else {
+                    MarkdownParagraph(
+                        content = model.content,
+                        node = model.node,
+                        style = model.typography.paragraph
                     )
                 }
-            } else {
-                MarkdownParagraph(
+            },
+            table = { model ->
+                CustomMarkdownTable(
                     content = model.content,
                     node = model.node,
-                    style = model.typography.paragraph
+                    style = model.typography.table
+                )
+            },
+            codeFence = { model ->
+                MarkdownCodeFence(
+                    content = model.content,
+                    node = model.node,
+                    style = model.typography.code,
+                    block = { code, language, style ->
+                        ModernCodeBlock(code = code, language = language, style = style)
+                    }
+                )
+            },
+            codeBlock = { model ->
+                MarkdownCodeBlock(
+                    content = model.content,
+                    node = model.node,
+                    style = model.typography.code,
+                    block = { code, language, style ->
+                        ModernCodeBlock(code = code, language = language, style = style)
+                    }
+                )
+            },
+            blockQuote = { model ->
+                ModernBlockQuote(
+                    content = model.content,
+                    node = model.node,
+                    style = model.typography.quote
                 )
             }
-        },
-        table = { model ->
-            CustomMarkdownTable(
-                content = model.content,
-                node = model.node,
-                style = model.typography.table
-            )
-        },
-        codeFence = { model ->
-            MarkdownCodeFence(
-                content = model.content,
-                node = model.node,
-                style = model.typography.code,
-                block = { code, language, style ->
-                    ModernCodeBlock(code = code, language = language, style = style)
-                }
-            )
-        },
-        codeBlock = { model ->
-            MarkdownCodeBlock(
-                content = model.content,
-                node = model.node,
-                style = model.typography.code,
-                block = { code, language, style ->
-                    ModernCodeBlock(code = code, language = language, style = style)
-                }
-            )
-        },
-        blockQuote = { model ->
-            ModernBlockQuote(
-                content = model.content,
-                node = model.node,
-                style = model.typography.quote
-            )
-        }
-    )
+        )
+    }
     Markdown(
         markdownState = markdownState,
         colors = colors,
@@ -1060,25 +1058,32 @@ private fun buildInlineMarkdown(
     text: String,
     baseStyle: SpanStyle
 ): AnnotatedString {
-    val marks = collectInlineMarks(text)
-    if (marks.isEmpty()) return AnnotatedString(text, baseStyle)
+    val cacheKey = "${text.hashCode()}_${baseStyle.fontWeight?.weight ?: 0}_${baseStyle.fontSize.value}"
+    inlineMarkdownCache.get(cacheKey)?.let { return it }
 
-    return buildAnnotatedString {
-        var cursor = 0
-        for (m in marks) {
-            if (m.start < cursor) continue
-            if (cursor < m.start) {
-                withStyle(baseStyle) { append(text, cursor, m.start) }
+    val marks = collectInlineMarks(text)
+    val result = if (marks.isEmpty()) {
+        AnnotatedString(text, baseStyle)
+    } else {
+        buildAnnotatedString {
+            var cursor = 0
+            for (m in marks) {
+                if (m.start < cursor) continue
+                if (cursor < m.start) {
+                    withStyle(baseStyle) { append(text, cursor, m.start) }
+                }
+                withStyle(m.style(baseStyle)) {
+                    append(text, m.innerStart, m.innerEnd)
+                }
+                cursor = m.end
             }
-            withStyle(m.style(baseStyle)) {
-                append(text, m.innerStart, m.innerEnd)
+            if (cursor < text.length) {
+                withStyle(baseStyle) { append(text, cursor, text.length) }
             }
-            cursor = m.end
-        }
-        if (cursor < text.length) {
-            withStyle(baseStyle) { append(text, cursor, text.length) }
         }
     }
+    inlineMarkdownCache.put(cacheKey, result)
+    return result
 }
 
 // ------------------------------------------------------------------

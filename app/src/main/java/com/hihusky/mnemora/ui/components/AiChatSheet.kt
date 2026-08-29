@@ -108,12 +108,25 @@ fun AiChatSheet(
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
     val coroutineScope = rememberCoroutineScope()
-    val listState = rememberLazyListState()
     val visibleMessages = history + listOfNotNull(
         streamingResponse.takeIf { it.isNotBlank() }?.let {
             // Use timestamp=0L so this item has a stable key across recompositions
             ChatMessage(text = it, isUser = false, timestamp = 0L)
         }
+    )
+    val initialTargetIndex = remember(currentSessionId) {
+        if (initialScrollIndex > 0 || initialScrollOffset > 0) {
+            initialScrollIndex.coerceIn(0, visibleMessages.lastIndex.coerceAtLeast(0))
+        } else {
+            visibleMessages.lastIndex.coerceAtLeast(0)
+        }
+    }
+    val initialTargetOffset = remember(currentSessionId) {
+        if (initialScrollIndex > 0 || initialScrollOffset > 0) initialScrollOffset else 0
+    }
+    val listState = rememberLazyListState(
+        initialFirstVisibleItemIndex = initialTargetIndex,
+        initialFirstVisibleItemScrollOffset = initialTargetOffset
     )
     var showDeleteConfirm by remember { mutableStateOf(false) }
 
@@ -122,7 +135,9 @@ fun AiChatSheet(
     var lastHandledSessionId by remember { mutableStateOf<Int?>(null) }
 
     // Follow latch: determines whether incoming streaming tokens or new messages should keep the list pinned to bottom.
-    var autoScroll by remember { mutableStateOf(false) }
+    var autoScroll by remember(currentSessionId) {
+        mutableStateOf(initialScrollIndex == 0 && initialScrollOffset == 0)
+    }
 
     // Derived state for bottom detection: layout-driven, robust against sub-pixel rounding.
     val isAtBottom by remember {
