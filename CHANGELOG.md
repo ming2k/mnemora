@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.22] - 2026-08-29
+
+### Fixed
+- **Bottom sheet scroll jitter** — replaced `Modifier.weight(1f, fill = false)` with `Modifier.weight(1f)` to prevent dynamic sheet remeasurement and anchor height oscillations during list scroll.
+- **Chat scroll position restoration** — implemented a `-1` sentinel for bottom pinning versus explicit item indices, ensuring re-opening the sheet reliably preserves the exact message position without unwanted jumps.
+- **Removed `BoxWithConstraints` in chat bubbles** — streamlined `UserMessage` composable to eliminate redundant layout subcompositions during fast scrolling.
+
 ## [0.0.21] - 2026-08-29
 
 ### Performance Improvements
@@ -298,7 +305,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.21...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.22...HEAD
+[0.0.22]: https://github.com/ming2k/mnemora/compare/v0.0.21...v0.0.22
 [0.0.21]: https://github.com/ming2k/mnemora/compare/v0.0.20...v0.0.21
 [0.0.20]: https://github.com/ming2k/mnemora/compare/v0.0.19...v0.0.20
 [0.0.19]: https://github.com/ming2k/mnemora/compare/v0.0.18...v0.0.19
