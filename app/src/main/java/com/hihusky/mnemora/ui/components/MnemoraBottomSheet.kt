@@ -21,10 +21,30 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import com.hihusky.mnemora.ui.theme.MnemoraSize
+
+/**
+ * Pure visual affordance pill for bottom sheets.
+ * Explicitly strips accessibility click/tooltip semantics and ripple indications
+ * so that it serves solely as a visual cue without accidental tap highlights or popups.
+ */
+@Composable
+fun MnemoraDragHandle(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .padding(top = 8.dp, bottom = 6.dp)
+            .size(width = 32.dp, height = 4.dp)
+            .background(
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(2.dp)
+            )
+            .clearAndSetSemantics { }
+    )
+}
 
 /**
  * The shared height ceiling for every drawer. A drawer is free to be shorter (wrapping its
@@ -66,15 +86,7 @@ fun MnemoraBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         dragHandle = {
-            Box(
-                modifier = Modifier
-                    .padding(top = 6.dp, bottom = 4.dp)
-                    .size(width = 32.dp, height = 4.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                        shape = RoundedCornerShape(2.dp)
-                    )
-            )
+            MnemoraDragHandle()
         }
     ) {
         // Every drawer shares one height policy (wrap content, capped) and one gesture policy

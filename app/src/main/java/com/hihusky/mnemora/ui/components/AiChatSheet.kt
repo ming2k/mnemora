@@ -1,9 +1,15 @@
 package com.hihusky.mnemora.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.DragInteraction
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -11,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
@@ -33,6 +40,7 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -41,7 +49,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.ui.graphics.Color
@@ -49,7 +56,6 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -57,6 +63,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -74,6 +81,7 @@ import com.hihusky.mnemora.ui.theme.MnemoraSize
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /** Slack (in px) when deciding the list is parked at the bottom, to absorb layout rounding. */
 private const val AT_BOTTOM_TOLERANCE_PX = 4
@@ -99,6 +107,7 @@ fun AiChatSheet(
     onSaveScrollPosition: (Int, Int) -> Unit = { _, _ -> },
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 ) {
+    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
     val visibleMessages = history + listOfNotNull(
         streamingResponse.takeIf { it.isNotBlank() }?.let {
@@ -107,68 +116,85 @@ fun AiChatSheet(
         }
     )
     var showDeleteConfirm by remember { mutableStateOf(false) }
-    // Whether we have positioned the list yet. Restoring a saved position has to wait until the
-    // messages actually exist, because history is loaded asynchronously and a LazyList cannot
-    // restore an index against an empty list.
+
+    // Placed tracks whether initial scroll position for the current session has been applied.
     var placed by remember { mutableStateOf(false) }
-    // Whether to keep the list pinned to the latest message as content arrives. This is off by
-    // default so a streaming reply never yanks the viewport away from what the user is reading;
-    // it switches on only when the user sends a message, or when they scroll back to the bottom.
+    var lastHandledSessionId by remember { mutableStateOf<Int?>(null) }
+
+    // Follow latch: determines whether incoming streaming tokens or new messages should keep the list pinned to bottom.
     var autoScroll by remember { mutableStateOf(false) }
 
-    // Whether the list is parked at the end. Derived purely from the list layout
-    // (never from a captured message list) so it stays correct as the streaming reply
-    // grows. A few-px tolerance keeps sub-pixel layout rounding from reading as
-    // "not at bottom".
+    // Derived state for bottom detection: layout-driven, robust against sub-pixel rounding.
     val isAtBottom by remember {
         derivedStateOf {
             val info = listState.layoutInfo
             val lastItem = info.visibleItemsInfo.lastOrNull() ?: return@derivedStateOf true
-            lastItem.index >= info.totalItemsCount - 1 &&
-                lastItem.offset + lastItem.size <= info.viewportEndOffset + AT_BOTTOM_TOLERANCE_PX
+            val isLastItem = lastItem.index >= info.totalItemsCount - 1
+            val isBottomAligned = lastItem.offset + lastItem.size <= info.viewportEndOffset + AT_BOTTOM_TOLERANCE_PX
+            isLastItem && isBottomAligned
         }
     }
 
-    // Restore the saved scroll position exactly once, as soon as the messages exist. We do not
-    // engage auto-follow here: reopening should land exactly where the user left it without
-    // interrupting them, regardless of whether that spot is at the bottom. This is authoritative
-    // even though history arrives asynchronously.
-    LaunchedEffect(visibleMessages.isEmpty()) {
-        if (placed || visibleMessages.isEmpty()) return@LaunchedEffect
-        val target = initialScrollIndex.coerceIn(0, visibleMessages.lastIndex)
-        placed = true
-        listState.scrollToItem(target, initialScrollOffset)
+    // Reset placement initialization when switching sessions
+    LaunchedEffect(currentSessionId) {
+        if (currentSessionId != lastHandledSessionId) {
+            placed = false
+            lastHandledSessionId = currentSessionId
+        }
     }
 
-    // The follow latch is driven only by genuine user drags. Once the finger lifts and
-    // any fling settles we adopt wherever the user landed. Programmatic scroll-to-bottom
-    // carries no DragInteraction, so it can never flip the latch — that decoupling is
-    // what removes the streaming/auto-scroll fight (the "bounce") at the bottom.
+    // Restore saved scroll position (or default to bottom for chat) as soon as messages are available
+    LaunchedEffect(currentSessionId, visibleMessages.isEmpty()) {
+        if (placed || visibleMessages.isEmpty()) return@LaunchedEffect
+        if (initialScrollIndex > 0 || initialScrollOffset > 0) {
+            val target = initialScrollIndex.coerceIn(0, visibleMessages.lastIndex)
+            listState.scrollToItem(target, initialScrollOffset)
+            autoScroll = isAtBottom
+        } else {
+            // Default for chat sessions: land directly at the latest message
+            listState.scrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
+            autoScroll = true
+        }
+        placed = true
+    }
+
+    // Gesture interaction latch:
+    // As soon as the user touches/drags the list, IMMEDIATELY disable autoScroll so streaming tokens NEVER fight their finger.
+    // When drag/fling completes, re-evaluate if the user parked at the bottom.
     LaunchedEffect(listState) {
         listState.interactionSource.interactions.collect { interaction ->
-            if (interaction is DragInteraction.Stop || interaction is DragInteraction.Cancel) {
-                snapshotFlow { listState.isScrollInProgress }.first { inProgress -> !inProgress }
-                autoScroll = isAtBottom
+            when (interaction) {
+                is DragInteraction.Start, is PressInteraction.Press -> {
+                    autoScroll = false
+                }
+                is DragInteraction.Stop, is DragInteraction.Cancel, is PressInteraction.Release, is PressInteraction.Cancel -> {
+                    snapshotFlow { listState.isScrollInProgress }.first { inProgress -> !inProgress }
+                    autoScroll = isAtBottom
+                }
             }
         }
     }
 
-    // The only thing that forces a follow is the user sending a message — they want to see their
-    // own message land and the reply that streams after it. A reply streaming on its own never
-    // moves the viewport, so reading earlier content is never interrupted. Scrolling away from
-    // the bottom then stops following again (handled by the drag latch above).
+    // Sending a message explicitly demands following the new conversation flow
     val sendMessage: (String) -> Unit = { text ->
         autoScroll = true
         onSendMessage(text)
     }
 
-    // Pin to the bottom as content arrives. Keyed on both the message count and the
-    // length of the last message so streaming (which only grows one item) still
-    // follows. A large scroll offset lands on the *end* of the last item, avoiding
-    // the backward jump that animating to the item's top would cause.
+    // Stream & new message auto-scroll:
+    // Follows the bottom as tokens arrive ONLY when autoScroll is active and user is not actively dragging/scrolling.
     val lastMessageLength = visibleMessages.lastOrNull()?.text?.length ?: 0
     LaunchedEffect(visibleMessages.size, lastMessageLength) {
-        if (placed && autoScroll && visibleMessages.isNotEmpty()) {
+        if (placed && autoScroll && !listState.isScrollInProgress && visibleMessages.isNotEmpty()) {
+            listState.scrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
+        }
+    }
+
+    // IME / Keyboard Inset adjustments:
+    // When keyboard shows/hides, keep the viewport anchored to the latest message if autoScroll was engaged.
+    val imeInsets = WindowInsets.ime
+    LaunchedEffect(imeInsets) {
+        if (placed && autoScroll && !listState.isScrollInProgress && visibleMessages.isNotEmpty()) {
             listState.scrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
         }
     }
@@ -221,39 +247,91 @@ fun AiChatSheet(
                 color = MaterialTheme.colorScheme.outlineVariant
             )
 
-            LazyColumn(
-                state = listState,
+            Box(
                 modifier = Modifier
                     .weight(1f, fill = false)
                     .heightIn(min = MnemoraSize.ChatListMinHeight)
-                    .fillMaxWidth(),
-                contentPadding = PaddingValues(
-                    start = MnemoraSpacing.Large,
-                    top = MnemoraSpacing.Medium,
-                    end = MnemoraSpacing.Large,
-                    bottom = MnemoraSpacing.Large
-                ),
-                verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+                    .fillMaxWidth()
             ) {
-                if (visibleMessages.isEmpty() && !isLoading) {
-                    item {
-                        EmptyAssistantState(
-                            enabled = !isLoading,
-                            onSendMessage = sendMessage
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentPadding = PaddingValues(
+                        start = MnemoraSpacing.Large,
+                        top = MnemoraSpacing.Medium,
+                        end = MnemoraSpacing.Large,
+                        bottom = MnemoraSpacing.Large
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+                ) {
+                    if (visibleMessages.isEmpty() && !isLoading) {
+                        item(key = "empty_state") {
+                            EmptyAssistantState(
+                                enabled = !isLoading,
+                                onSendMessage = sendMessage
+                            )
+                        }
+                    }
+
+                    itemsIndexed(
+                        items = visibleMessages,
+                        key = { index, message ->
+                            if (message.timestamp == 0L) "streaming_$index" else "${message.timestamp}_${message.isUser}_$index"
+                        }
+                    ) { _, message ->
+                        ChatMessageBlock(
+                            message = message,
+                            isStreaming = streamingResponse.isNotBlank() && message.timestamp == 0L
                         )
+                    }
+
+                    if (isLoading && streamingResponse.isBlank()) {
+                        item(key = "thinking_indicator") {
+                            ThinkingRow()
+                        }
                     }
                 }
 
-                items(visibleMessages, key = { it.timestamp }) { message ->
-                    ChatMessageBlock(
-                        message = message,
-                        isStreaming = streamingResponse.isNotBlank() && message.timestamp == 0L
-                    )
-                }
-
-                if (isLoading && streamingResponse.isBlank()) {
-                    item {
-                        ThinkingRow()
+                // Floating "Scroll to Bottom" button when user scrolls up
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = placed && !isAtBottom && visibleMessages.isNotEmpty(),
+                    enter = fadeIn() + slideInVertically { it / 2 },
+                    exit = fadeOut() + slideOutVertically { it / 2 },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = MnemoraSpacing.Large, bottom = MnemoraSpacing.Small)
+                ) {
+                    Surface(
+                        onClick = {
+                            coroutineScope.launch {
+                                autoScroll = true
+                                listState.animateScrollToItem(visibleMessages.lastIndex, Int.MAX_VALUE)
+                            }
+                        },
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+                        shadowElevation = 2.dp,
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Default.KeyboardArrowDown,
+                                contentDescription = "Scroll to bottom",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            if (streamingResponse.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 4.dp, end = 4.dp)
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary)
+                                )
+                            }
+                        }
                     }
                 }
             }

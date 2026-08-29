@@ -355,23 +355,25 @@ Use `Icons.AutoMirrored.Filled.KeyboardArrowRight` (`>` chevron) for disclosure 
 
 ### Drag handle
 
-Always replace the default M3 drag handle with a compact custom pill:
+Always replace the default M3 drag handle with the reusable `MnemoraDragHandle` pill:
 
 ```kotlin
-dragHandle = {
+@Composable
+fun MnemoraDragHandle(modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
-            .padding(top = 6.dp, bottom = 4.dp)
+        modifier = modifier
+            .padding(top = 8.dp, bottom = 6.dp)
             .size(width = 32.dp, height = 4.dp)
             .background(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
                 shape = RoundedCornerShape(2.dp)
             )
+            .clearAndSetSemantics { }
     )
 }
 ```
 
-Total handle height: 14dp (vs the 48dp M3 default). Do not use the M3 default `BottomSheetDefaults.DragHandle` — it wastes vertical space.
+Total handle height: 18dp (vs the 48dp M3 default). Uses `.clearAndSetSemantics { }` to guarantee it remains a pure visual affordance without touch ripple, clickable highlights, or accessibility tooltip popups. Do not use the M3 default `BottomSheetDefaults.DragHandle`.
 
 ### Mode selection — no bottom sheet on home screen
 
