@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.21] - 2026-08-29
+
+### Performance Improvements
+- **Optimized Markdown and LaTeX rendering** — eliminated the per-character composable node explosion in `InlineFlowParagraph`, using native text layout for pure-text segments.
+- **Dual LRU caching** — added in-memory LRU caches for parsed `RenderBlock` AST trees and styled `AnnotatedString` spans, completely removing repeated regex parsing during list scrolling.
+- **Chat history prefetch** — proactively preloads question chat history when navigating questions, eliminating the 100ms+ DB delay and enabling instant, smooth bottom sheet expansion.
+- **Initial scroll anchoring** — `LazyListState` starts directly at the target message index, preventing layout jumping during entrance animations.
+
 ## [0.0.20] - 2026-08-29
 
 ### Added
@@ -290,7 +298,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.20...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.21...HEAD
+[0.0.21]: https://github.com/ming2k/mnemora/compare/v0.0.20...v0.0.21
 [0.0.20]: https://github.com/ming2k/mnemora/compare/v0.0.19...v0.0.20
 [0.0.19]: https://github.com/ming2k/mnemora/compare/v0.0.18...v0.0.19
 [0.0.18]: https://github.com/ming2k/mnemora/compare/v0.0.17...v0.0.18
