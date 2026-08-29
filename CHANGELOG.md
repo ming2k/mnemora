@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.20] - 2026-08-29
+
+### Added
+- **AI chat jump-to-bottom button** — floating button appears when scrolled up from the bottom, with a live streaming indicator dot and smooth animation to return to the latest message.
+- **`MnemoraDragHandle` component** — dedicated, reusable visual affordance pill for bottom sheets with `.clearAndSetSemantics { }` to eliminate touch highlights, ripples, and accessibility tooltip popups.
+
+### Fixed
+- **AI chat streaming scroll conflicts** — user drag/touch immediately disengages auto-scroll follow to prevent streaming text from ripping viewport away during manual scrolling or reading.
+- **Chat list key stability** — composite stable keys prevent item destruction and visual flicker when transitioning from live streaming to saved message history.
+- **IME soft keyboard insets** — viewport stays pinned to latest message when keyboard appears/disappears if parked at the bottom.
+
 ## [0.0.19] - 2026-08-18
 
 ### Added
@@ -279,7 +290,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Local Room database with DataStore preferences.
 - Hilt dependency injection and Jetpack Compose UI.
 
-[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.19...HEAD
+[Unreleased]: https://github.com/ming2k/mnemora/compare/v0.0.20...HEAD
+[0.0.20]: https://github.com/ming2k/mnemora/compare/v0.0.19...v0.0.20
 [0.0.19]: https://github.com/ming2k/mnemora/compare/v0.0.18...v0.0.19
 [0.0.18]: https://github.com/ming2k/mnemora/compare/v0.0.17...v0.0.18
 [0.0.17]: https://github.com/ming2k/mnemora/compare/v0.0.16...v0.0.17
