@@ -346,7 +346,7 @@ class PracticeViewModel @Inject constructor(
                 sessions = emptyList(),
                 currentId = null,
                 history = emptyList(),
-                scrollIndex = 0,
+                scrollIndex = -1,
                 scrollOffset = 0
             )
         }
@@ -356,13 +356,16 @@ class PracticeViewModel @Inject constructor(
             val currentId = current?.id
             val history = currentId?.let { aiChatUseCase.getChatHistory(it) } ?: emptyList()
             if (_uiState.value.currentQuestion?.id != questionId) return@launch
+            val initialIndex = current?.let {
+                if (it.lastScrollIndex == 0 && it.lastScrollOffset == 0) -1 else it.lastScrollIndex
+            } ?: -1
             _uiState.update {
                 it.chatUpdate(
                     questionId = questionId,
                     sessions = sessions,
                     currentId = currentId,
                     history = history,
-                    scrollIndex = current?.lastScrollIndex ?: 0,
+                    scrollIndex = initialIndex,
                     scrollOffset = current?.lastScrollOffset ?: 0
                 )
             }
@@ -378,7 +381,7 @@ class PracticeViewModel @Inject constructor(
                     sessions = listOf(session) + state.chat.sessions,
                     currentId = session.id,
                     history = emptyList(),
-                    scrollIndex = 0,
+                    scrollIndex = -1,
                     scrollOffset = 0
                 )
             }
@@ -389,12 +392,15 @@ class PracticeViewModel @Inject constructor(
         viewModelScope.launch {
             val history = aiChatUseCase.getChatHistory(sessionId)
             val targetSession = _uiState.value.chat.sessions.find { it.id == sessionId }
+            val initialIndex = targetSession?.let {
+                if (it.lastScrollIndex == 0 && it.lastScrollOffset == 0) -1 else it.lastScrollIndex
+            } ?: -1
             _uiState.update { state ->
                 state.chatUpdate(
                     sessions = state.chat.sessions,
                     currentId = sessionId,
                     history = history,
-                    scrollIndex = targetSession?.lastScrollIndex ?: 0,
+                    scrollIndex = initialIndex,
                     scrollOffset = targetSession?.lastScrollOffset ?: 0
                 )
             }
@@ -402,7 +408,17 @@ class PracticeViewModel @Inject constructor(
     }
 
     fun chatSaveScrollPosition(index: Int, offset: Int) {
-        _uiState.update { state -> state.chatUpdate(scrollIndex = index, scrollOffset = offset) }
+        _uiState.update { state ->
+            val updatedSessions = state.chat.sessions.map {
+                if (it.id == state.chat.currentSessionId) it.copy(lastScrollIndex = index, lastScrollOffset = offset)
+                else it
+            }
+            state.chatUpdate(
+                sessions = updatedSessions,
+                scrollIndex = index,
+                scrollOffset = offset
+            )
+        }
         val sessionId = _uiState.value.chat.currentSessionId ?: return
         viewModelScope.launch {
             aiChatUseCase.saveScrollPosition(sessionId, index, offset)
@@ -536,7 +552,7 @@ data class AiChatUiState(
     val history: List<ChatMessage> = emptyList(),
     val loadingSessionIds: Set<Int> = emptySet(),
     val streamingResponses: Map<Int, String> = emptyMap(),
-    val scrollIndex: Int = 0,
+    val scrollIndex: Int = -1,
     val scrollOffset: Int = 0
 ) {
     val isLoading: Boolean get() = currentSessionId?.let { it in loadingSessionIds } ?: false

@@ -189,7 +189,9 @@ internal fun PracticeScreenContent(
     // Prefetch chat history whenever the question settles or when the chat opens,
     // ensuring the bottom sheet slides up smoothly with zero DB latency and no layout thrashing.
     LaunchedEffect(uiState.currentQuestion?.id, showAiChat) {
-        if (uiState.currentQuestion != null) onLoadChatHistory()
+        if (uiState.currentQuestion != null && (showAiChat || uiState.chat.questionId != uiState.currentQuestion?.id)) {
+            onLoadChatHistory()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {

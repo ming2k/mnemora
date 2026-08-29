@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -102,7 +103,7 @@ fun AiChatSheet(
     onDeleteSession: () -> Unit = {},
     modelLabel: String = "",
     providerLabel: String = "",
-    initialScrollIndex: Int = 0,
+    initialScrollIndex: Int = -1,
     initialScrollOffset: Int = 0,
     onSaveScrollPosition: (Int, Int) -> Unit = { _, _ -> },
     sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -115,14 +116,14 @@ fun AiChatSheet(
         }
     )
     val initialTargetIndex = remember(currentSessionId) {
-        if (initialScrollIndex > 0 || initialScrollOffset > 0) {
+        if (initialScrollIndex >= 0) {
             initialScrollIndex.coerceIn(0, visibleMessages.lastIndex.coerceAtLeast(0))
         } else {
             visibleMessages.lastIndex.coerceAtLeast(0)
         }
     }
     val initialTargetOffset = remember(currentSessionId) {
-        if (initialScrollIndex > 0 || initialScrollOffset > 0) initialScrollOffset else 0
+        if (initialScrollIndex >= 0) initialScrollOffset else 0
     }
     val listState = rememberLazyListState(
         initialFirstVisibleItemIndex = initialTargetIndex,
@@ -136,7 +137,7 @@ fun AiChatSheet(
 
     // Follow latch: determines whether incoming streaming tokens or new messages should keep the list pinned to bottom.
     var autoScroll by remember(currentSessionId) {
-        mutableStateOf(initialScrollIndex == 0 && initialScrollOffset == 0)
+        mutableStateOf(initialScrollIndex < 0)
     }
 
     // Derived state for bottom detection: layout-driven, robust against sub-pixel rounding.
@@ -161,7 +162,7 @@ fun AiChatSheet(
     // Restore saved scroll position (or default to bottom for chat) as soon as messages are available
     LaunchedEffect(currentSessionId, visibleMessages.isEmpty()) {
         if (placed || visibleMessages.isEmpty()) return@LaunchedEffect
-        if (initialScrollIndex > 0 || initialScrollOffset > 0) {
+        if (initialScrollIndex >= 0) {
             val target = initialScrollIndex.coerceIn(0, visibleMessages.lastIndex)
             listState.scrollToItem(target, initialScrollOffset)
             autoScroll = isAtBottom
@@ -217,10 +218,10 @@ fun AiChatSheet(
     val currentOnSaveScrollPosition by rememberUpdatedState(onSaveScrollPosition)
     DisposableEffect(Unit) {
         onDispose {
-            currentOnSaveScrollPosition(
-                listState.firstVisibleItemIndex,
-                listState.firstVisibleItemScrollOffset
-            )
+            val atBottom = isAtBottom
+            val saveIndex = if (atBottom) -1 else listState.firstVisibleItemIndex
+            val saveOffset = if (atBottom) 0 else listState.firstVisibleItemScrollOffset
+            currentOnSaveScrollPosition(saveIndex, saveOffset)
         }
     }
 
@@ -264,7 +265,7 @@ fun AiChatSheet(
 
             Box(
                 modifier = Modifier
-                    .weight(1f, fill = false)
+                    .weight(1f)
                     .heightIn(min = MnemoraSize.ChatListMinHeight)
                     .fillMaxWidth()
             ) {
@@ -550,35 +551,32 @@ private fun ChatMessageBlock(message: ChatMessage, isStreaming: Boolean = false)
 
 @Composable
 private fun UserMessage(text: String) {
-    BoxWithConstraints(
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.End
     ) {
-        val maxBubbleWidth = maxWidth * 0.82f
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End
+        Surface(
+            shape = RoundedCornerShape(
+                topStart = 18.dp,
+                topEnd = 18.dp,
+                bottomStart = 18.dp,
+                bottomEnd = 6.dp
+            ),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
+            modifier = Modifier
+                .fillMaxWidth(0.85f)
+                .wrapContentWidth(Alignment.End)
         ) {
-            Surface(
-                shape = RoundedCornerShape(
-                    topStart = 18.dp,
-                    topEnd = 18.dp,
-                    bottomStart = 18.dp,
-                    bottomEnd = 6.dp
-                ),
-                color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outlineVariant),
-                modifier = Modifier.widthIn(max = maxBubbleWidth)
-            ) {
-                Text(
-                    text = text,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.padding(
-                        horizontal = MnemoraSpacing.Medium,
-                        vertical = MnemoraSpacing.Small
-                    )
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(
+                    horizontal = MnemoraSpacing.Medium,
+                    vertical = MnemoraSpacing.Small
                 )
-            }
+            )
         }
     }
 }
