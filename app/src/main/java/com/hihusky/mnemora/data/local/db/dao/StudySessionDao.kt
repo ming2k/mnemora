@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface StudySessionDao {
     @Query("SELECT * FROM study_sessions WHERE bookId = :bookId AND mode = :mode AND isActive = 1 LIMIT 1")
-    suspend fun getActiveSession(bookId: Int, mode: String): StudySessionEntity?
+    suspend fun getActiveSession(
+        bookId: Int,
+        mode: String,
+    ): StudySessionEntity?
 
     @Query("SELECT * FROM study_sessions WHERE bookId = :bookId AND isActive = 1 ORDER BY lastActiveTime DESC LIMIT 1")
     suspend fun getMostRecentActiveSession(bookId: Int): StudySessionEntity?
@@ -35,12 +38,16 @@ interface StudySessionDao {
     suspend fun update(session: StudySessionEntity)
 
     @Query("UPDATE study_sessions SET isActive = 0 WHERE bookId = :bookId AND mode = :mode AND isActive = 1")
-    suspend fun deactivateSessions(bookId: Int, mode: String)
+    suspend fun deactivateSessions(
+        bookId: Int,
+        mode: String,
+    )
 
     @Query("UPDATE study_sessions SET isActive = 0 WHERE id = :sessionId")
     suspend fun deactivateSession(sessionId: Long)
 
-    @Query("""
+    @Query(
+        """
         UPDATE study_sessions 
         SET currentIndex = :currentIndex, 
             lastActiveTime = :lastActiveTime, 
@@ -48,14 +55,15 @@ interface StudySessionDao {
             isCompleted = :isCompleted,
             isActive = :isActive
         WHERE id = :sessionId
-    """)
+    """,
+    )
     suspend fun updateProgress(
         sessionId: Long,
         currentIndex: Int,
         lastActiveTime: Long,
         totalQuestions: Int,
         isCompleted: Boolean,
-        isActive: Boolean
+        isActive: Boolean,
     )
 
     @Query("DELETE FROM study_sessions WHERE id = :sessionId")

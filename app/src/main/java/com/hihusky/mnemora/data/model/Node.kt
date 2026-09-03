@@ -8,7 +8,7 @@ data class Node(
     val questionCount: Int = 0,
     val sortOrder: Int = 0,
     val depth: Int = 0,
-    val children: List<Node> = emptyList()
+    val children: List<Node> = emptyList(),
 ) {
     val displayTitle: String get() = title
 }

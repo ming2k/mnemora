@@ -5,5 +5,5 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class QuestionChoice(
     val key: String,
-    val content: String
+    val content: String,
 )

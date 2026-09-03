@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
  * Release no-op. The debug variant in `src/debug/` provides the real implementation.
  */
 @Composable
+@Suppress("FunctionName")
 fun DebugSettingsSection(onNavigateToMarkdownTest: () -> Unit) {
     // Nothing in release builds.
 }

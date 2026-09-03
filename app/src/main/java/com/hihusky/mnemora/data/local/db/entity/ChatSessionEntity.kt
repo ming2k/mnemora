@@ -13,10 +13,10 @@ import androidx.room.PrimaryKey
             entity = QuestionEntity::class,
             parentColumns = ["id"],
             childColumns = ["questionId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["questionId"])]
+    indices = [Index(value = ["questionId"])],
 )
 data class ChatSessionEntity(
     @PrimaryKey(autoGenerate = true)
@@ -27,5 +27,7 @@ data class ChatSessionEntity(
     @ColumnInfo(defaultValue = "0")
     val lastScrollIndex: Int = 0,
     @ColumnInfo(defaultValue = "0")
-    val lastScrollOffset: Int = 0
+    val lastScrollOffset: Int = 0,
+    @ColumnInfo(defaultValue = "1")
+    val lastScrollAtBottom: Boolean = true,
 )

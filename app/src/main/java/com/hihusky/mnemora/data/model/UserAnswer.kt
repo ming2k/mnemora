@@ -7,5 +7,5 @@ data class UserAnswer(
     val selected: String? = null,
     val isCorrect: Boolean? = null,
     val isMarked: Boolean = false,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
 )

@@ -22,30 +22,31 @@ fun MnemoraBookAvatar(
     displayName: String,
     iconName: String?,
     modifier: Modifier = Modifier,
-    size: Dp = MnemoraSize.AvatarLarge
+    size: Dp = MnemoraSize.AvatarLarge,
 ) {
     val color = bookColor(bookId)
     val iconVector = resolveBookIcon(iconName)
 
     Box(
-        modifier = modifier
-            .size(size)
-            .clip(MaterialTheme.shapes.medium)
-            .background(color.identityContainer()),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .size(size)
+                .clip(MaterialTheme.shapes.medium)
+                .background(color.identityContainer()),
+        contentAlignment = Alignment.Center,
     ) {
         if (iconVector != null) {
             Icon(
                 imageVector = iconVector,
                 contentDescription = null,
                 modifier = Modifier.size(MnemoraSize.IconMedium),
-                tint = color
+                tint = color,
             )
         } else {
             Text(
                 text = displayName.firstOrNull()?.uppercase() ?: "?",
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                color = color
+                color = color,
             )
         }
     }

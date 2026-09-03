@@ -34,7 +34,11 @@ interface UserAnswerDao {
     suspend fun clearAnswer(questionId: Int)
 
     @Query("UPDATE user_answers SET isMarked = :isMarked, timestamp = :timestamp WHERE questionId = :questionId")
-    suspend fun setMark(questionId: Int, isMarked: Int, timestamp: Long)
+    suspend fun setMark(
+        questionId: Int,
+        isMarked: Int,
+        timestamp: Long,
+    )
 
     @Query("DELETE FROM user_answers WHERE bookId = :bookId")
     suspend fun deleteByBookId(bookId: Int)

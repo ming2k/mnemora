@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -26,19 +25,16 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.outlined.FolderOpen
-import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import com.hihusky.mnemora.ui.components.MnemoraBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -58,7 +54,9 @@ import com.hihusky.mnemora.data.model.Collection
 import com.hihusky.mnemora.data.model.CollectionKind
 import com.hihusky.mnemora.data.model.Node
 import com.hihusky.mnemora.data.model.SrsStats
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import com.hihusky.mnemora.ui.components.MnemoraBookAvatar
+import com.hihusky.mnemora.ui.components.MnemoraBottomSheet
 import com.hihusky.mnemora.ui.components.MnemoraCard
 import com.hihusky.mnemora.ui.components.MnemoraSettingsDivider
 import com.hihusky.mnemora.ui.components.MnemoraSettingsGroup
@@ -79,7 +77,7 @@ fun BookDetailScreen(
     onNavigateToPractice: (Int, String?, String?) -> Unit,
     onNavigateToCollection: (Int) -> Unit,
     onResumeSession: (Int, String, Long?) -> Unit,
-    viewModel: BookDetailViewModel = hiltViewModel()
+    viewModel: BookDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -91,7 +89,7 @@ fun BookDetailScreen(
         onResumeSession = onResumeSession,
         onCreateCollection = { name, desc -> viewModel.createCollection(name, desc) },
         onDeleteBook = { viewModel.deleteBook(onBack) },
-        onClearRecords = { viewModel.clearRecords() }
+        onClearRecords = { viewModel.clearRecords() },
     )
 }
 
@@ -120,7 +118,7 @@ internal fun BookDetailScreenContent(
                         text = book?.displayName ?: "Book",
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleMedium,
                     )
                 },
                 navigationIcon = {
@@ -134,28 +132,28 @@ internal fun BookDetailScreenContent(
                             Icon(
                                 Icons.Default.Add,
                                 contentDescription = "New collection",
-                                tint = MaterialTheme.colorScheme.onSurface
+                                tint = MaterialTheme.colorScheme.onSurface,
                             )
                         }
                         IconButton(onClick = { showClearRecordsDialog = true }) {
                             Icon(
                                 Icons.Default.DeleteForever,
                                 contentDescription = "Clear all records",
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error,
                             )
                         }
                         IconButton(onClick = { showDeleteDialog = true }) {
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Delete package",
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error,
                             )
                         }
                     }
-                }
+                },
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
@@ -168,7 +166,7 @@ internal fun BookDetailScreenContent(
                 book != null -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(bottom = MnemoraSpacing.XLarge)
+                        contentPadding = PaddingValues(bottom = MnemoraSpacing.XLarge),
                     ) {
                         item {
                             BookSummaryCard(uiState, modifier = Modifier.padding(MnemoraSpacing.Large))
@@ -182,7 +180,7 @@ internal fun BookDetailScreenContent(
                                     tint = MaterialTheme.colorScheme.error,
                                     label = "Wrong answers",
                                     count = uiState.wrongCount,
-                                    onClick = { onNavigateToPractice(book.id, null, "wrong") }
+                                    onClick = { onNavigateToPractice(book.id, null, "wrong") },
                                 )
                                 MnemoraSettingsDivider()
                                 ReviewRow(
@@ -190,7 +188,7 @@ internal fun BookDetailScreenContent(
                                     tint = WarningColor,
                                     label = "Marked",
                                     count = uiState.markedCount,
-                                    onClick = { onNavigateToPractice(book.id, null, "marked") }
+                                    onClick = { onNavigateToPractice(book.id, null, "marked") },
                                 )
                             }
                         }
@@ -203,7 +201,7 @@ internal fun BookDetailScreenContent(
                                         if (index > 0) MnemoraSettingsDivider()
                                         CollectionRow(
                                             collection = collection,
-                                            onClick = { onNavigateToCollection(collection.id) }
+                                            onClick = { onNavigateToCollection(collection.id) },
                                         )
                                     }
                                 }
@@ -222,9 +220,9 @@ internal fun BookDetailScreenContent(
                                                 onResumeSession(
                                                     session.bookId,
                                                     session.mode,
-                                                    if (session.isActive || session.isCompleted) session.id else null
+                                                    if (session.isActive || session.isCompleted) session.id else null,
                                                 )
-                                            }
+                                            },
                                         )
                                     }
                                 }
@@ -239,7 +237,7 @@ internal fun BookDetailScreenContent(
                                         if (index > 0) MnemoraSettingsDivider()
                                         NodeRow(
                                             node = node,
-                                            onClick = { onNavigateToPractice(book.id, node.id, null) }
+                                            onClick = { onNavigateToPractice(book.id, node.id, null) },
                                         )
                                     }
                                 }
@@ -255,14 +253,16 @@ internal fun BookDetailScreenContent(
         MnemoraAlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = "Delete package?",
-            message = "\"${book.displayName}\" and all of its questions, collections, records, progress, and AI chats will be permanently removed.",
+            message =
+                "\"${book.displayName}\" and all of its questions, collections, records, progress, " +
+                    "and AI chats will be permanently removed.",
             confirmText = "Delete",
             onConfirm = {
                 showDeleteDialog = false
                 onDeleteBook()
             },
             dismissText = "Cancel",
-            isDestructive = true
+            isDestructive = true,
         )
     }
 
@@ -270,14 +270,16 @@ internal fun BookDetailScreenContent(
         MnemoraAlertDialog(
             onDismissRequest = { showClearRecordsDialog = false },
             title = "Clear all records?",
-            message = "All practice answers, study sessions, and AI chat history for \"${book.displayName}\" will be permanently removed. Questions and collections will be kept.",
+            message =
+                "All practice answers, study sessions, and AI chat history for \"${book.displayName}\" " +
+                    "will be permanently removed. Questions and collections will be kept.",
             confirmText = "Clear",
             onConfirm = {
                 showClearRecordsDialog = false
                 onClearRecords()
             },
             dismissText = "Cancel",
-            isDestructive = true
+            isDestructive = true,
         )
     }
 
@@ -287,43 +289,49 @@ internal fun BookDetailScreenContent(
             onCreate = { name, desc ->
                 onCreateCollection(name, desc)
                 showCreateSheet = false
-            }
+            },
         )
     }
 }
 
 @Composable
-private fun SessionRow(session: StudySessionEntity, onClick: () -> Unit) {
-    val progress = if (session.totalQuestions > 0) {
-        "${session.currentIndex.coerceAtMost(session.totalQuestions)}/${session.totalQuestions}"
-    } else {
-        "0/0"
-    }
-    val status = when {
-        session.isActive -> "In progress"
-        session.isCompleted -> "Completed"
-        else -> "Closed"
-    }
+private fun SessionRow(
+    session: StudySessionEntity,
+    onClick: () -> Unit,
+) {
+    val progress =
+        if (session.totalQuestions > 0) {
+            "${session.currentIndex.coerceAtMost(session.totalQuestions)}/${session.totalQuestions}"
+        } else {
+            "0/0"
+        }
+    val status =
+        when {
+            session.isActive -> "In progress"
+            session.isCompleted -> "Completed"
+            else -> "Closed"
+        }
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
     ) {
         Surface(
             modifier = Modifier.size(32.dp),
             shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.primary.identityContainer()
+            color = MaterialTheme.colorScheme.primary.identityContainer(),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Default.PlayArrow,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
@@ -332,40 +340,42 @@ private fun SessionRow(session: StudySessionEntity, onClick: () -> Unit) {
                 session.mode,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             Text(
                 "${formatSessionTime(session.lastActiveTime)} · $status",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Text(
             progress,
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
 
-private fun formatSessionTime(timestamp: Long): String {
-    return SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(timestamp))
-}
+private fun formatSessionTime(timestamp: Long): String =
+    SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(Date(timestamp))
 
 @Composable
-private fun BookSummaryCard(uiState: BookDetailUiState, modifier: Modifier = Modifier) {
+private fun BookSummaryCard(
+    uiState: BookDetailUiState,
+    modifier: Modifier = Modifier,
+) {
     val book = uiState.book ?: return
 
     MnemoraCard(
         modifier = modifier.fillMaxWidth(),
         containerColor = MaterialTheme.colorScheme.surface,
-        contentPadding = PaddingValues(MnemoraSpacing.XLarge)
+        contentPadding = PaddingValues(MnemoraSpacing.XLarge),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MnemoraBookAvatar(
                 bookId = book.id,
                 displayName = book.displayName,
-                iconName = book.icon
+                iconName = book.icon,
             )
             Spacer(Modifier.width(MnemoraSpacing.Large))
             Column {
@@ -374,7 +384,7 @@ private fun BookSummaryCard(uiState: BookDetailUiState, modifier: Modifier = Mod
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (!book.description.isNullOrBlank()) {
                     Spacer(Modifier.height(2.dp))
@@ -383,7 +393,7 @@ private fun BookSummaryCard(uiState: BookDetailUiState, modifier: Modifier = Mod
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -393,7 +403,7 @@ private fun BookSummaryCard(uiState: BookDetailUiState, modifier: Modifier = Mod
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
+            horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             StatCell("Total", book.totalQuestions.toString())
             StatCell("Answered", uiState.answeredCount.toString())
@@ -403,18 +413,21 @@ private fun BookSummaryCard(uiState: BookDetailUiState, modifier: Modifier = Mod
 }
 
 @Composable
-private fun StatCell(label: String, value: String) {
+private fun StatCell(
+    label: String,
+    value: String,
+) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             value,
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
+            color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
             label,
             style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -425,30 +438,31 @@ private fun ReviewRow(
     tint: androidx.compose.ui.graphics.Color,
     label: String,
     count: Int,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val enabled = count > 0
     val contentAlpha = if (enabled) 1f else 0.4f
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(enabled = enabled, onClick = onClick)
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
     ) {
         Surface(
             modifier = Modifier.size(32.dp),
             shape = MaterialTheme.shapes.small,
-            color = tint.identityContainer()
+            color = tint.identityContainer(),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     icon,
                     contentDescription = null,
                     tint = tint.copy(alpha = contentAlpha),
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
@@ -458,35 +472,43 @@ private fun ReviewRow(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = contentAlpha),
             modifier = Modifier.weight(1f),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         Text(
             count.toString(),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha)
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = contentAlpha),
         )
     }
 }
 
 @Composable
-private fun CollectionRow(collection: Collection, onClick: () -> Unit) {
+private fun CollectionRow(
+    collection: Collection,
+    onClick: () -> Unit,
+) {
     val isSmart = collection.isSmart
-    val accentColor = if (isSmart) MaterialTheme.colorScheme.tertiary
-    else MaterialTheme.colorScheme.secondary
+    val accentColor =
+        if (isSmart) {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.secondary
+        }
     val icon = if (isSmart) Icons.Default.AutoAwesome else Icons.Outlined.FolderOpen
 
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
     ) {
         Surface(
             modifier = Modifier.size(32.dp),
             shape = MaterialTheme.shapes.small,
-            color = accentColor.identityContainer()
+            color = accentColor.identityContainer(),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
@@ -497,7 +519,7 @@ private fun CollectionRow(collection: Collection, onClick: () -> Unit) {
             style = MaterialTheme.typography.bodyLarge,
             modifier = Modifier.weight(1f),
             maxLines = 1,
-            overflow = TextOverflow.Ellipsis
+            overflow = TextOverflow.Ellipsis,
         )
         if (!collection.description.isNullOrBlank()) {
             Text(
@@ -505,33 +527,37 @@ private fun CollectionRow(collection: Collection, onClick: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
 }
 
 @Composable
-private fun NodeRow(node: Node, onClick: () -> Unit) {
+private fun NodeRow(
+    node: Node,
+    onClick: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
     ) {
         Surface(
             modifier = Modifier.size(32.dp),
             shape = MaterialTheme.shapes.small,
-            color = MaterialTheme.colorScheme.surfaceContainerHighest
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.AutoMirrored.Filled.MenuBook,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp),
                 )
             }
         }
@@ -540,20 +566,20 @@ private fun NodeRow(node: Node, onClick: () -> Unit) {
                 node.displayTitle,
                 style = MaterialTheme.typography.bodyLarge,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
             if (node.children.isNotEmpty()) {
                 Text(
                     "${node.children.size} sub-nodes",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
         Text(
             node.questionCount.toString(),
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
 }
@@ -562,22 +588,23 @@ private fun NodeRow(node: Node, onClick: () -> Unit) {
 @Composable
 private fun CreateCollectionSheet(
     onDismiss: () -> Unit,
-    onCreate: (String, String) -> Unit
+    onCreate: (String, String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
     MnemoraBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .padding(horizontal = MnemoraSpacing.XLarge)
-                .padding(bottom = MnemoraSpacing.XXLarge),
-            verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+            modifier =
+                Modifier
+                    .padding(horizontal = MnemoraSpacing.XLarge)
+                    .padding(bottom = MnemoraSpacing.XXLarge),
+            verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
         ) {
             Text(
                 "New Collection",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
 
             Spacer(Modifier.height(MnemoraSpacing.XSmall))
@@ -588,7 +615,7 @@ private fun CreateCollectionSheet(
                 label = { Text("Name") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.medium,
             )
 
             OutlinedTextField(
@@ -597,7 +624,7 @@ private fun CreateCollectionSheet(
                 label = { Text("Purpose (optional)") },
                 maxLines = 3,
                 modifier = Modifier.fillMaxWidth(),
-                shape = MaterialTheme.shapes.medium
+                shape = MaterialTheme.shapes.medium,
             )
 
             Spacer(Modifier.height(MnemoraSpacing.Small))
@@ -605,7 +632,7 @@ private fun CreateCollectionSheet(
             Button(
                 onClick = { if (name.isNotBlank()) onCreate(name.trim(), description.trim()) },
                 enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Create")
             }
@@ -625,7 +652,7 @@ private fun BookDetailScreenPreviewLoading() {
             onResumeSession = { _, _, _ -> },
             onCreateCollection = { _, _ -> },
             onDeleteBook = {},
-            onClearRecords = {}
+            onClearRecords = {},
         )
     }
 }
@@ -635,38 +662,65 @@ private fun BookDetailScreenPreviewLoading() {
 private fun BookDetailScreenPreviewLoaded() {
     MnemoraTheme {
         BookDetailScreenContent(
-            uiState = BookDetailUiState(
-                book = Book(
-                    id = 1, filename = "test.json", name = "Navigation Rules",
-                    description = "International and Inland Rules of the Road",
-                    totalQuestions = 120, totalNodes = 12, sortOrder = 0
+            uiState =
+                BookDetailUiState(
+                    book =
+                        Book(
+                            id = 1,
+                            filename = "test.json",
+                            name = "Navigation Rules",
+                            description = "International and Inland Rules of the Road",
+                            totalQuestions = 120,
+                            totalNodes = 12,
+                            sortOrder = 0,
+                        ),
+                    nodes =
+                        listOf(
+                            Node(
+                                id = "n1",
+                                bookId = 1,
+                                title = "Part A — General",
+                                questionCount = 10,
+                                children =
+                                    listOf(
+                                        Node(id = "n1_0", bookId = 1, title = "Rule 1", questionCount = 5, depth = 1),
+                                    ),
+                            ),
+                            Node(id = "n2", bookId = 1, title = "Part B — Steering", questionCount = 15),
+                        ),
+                    collections =
+                        listOf(
+                            Collection(
+                                id = 1,
+                                bookId = 1,
+                                kind = CollectionKind.Custom,
+                                behavior = com.hihusky.mnemora.data.model.CollectionBehavior.Manual,
+                                name = "Exam Prep",
+                                description = "For Thursday",
+                                createdAt = 0L,
+                            ),
+                            Collection(
+                                id = 2,
+                                bookId = 1,
+                                kind = CollectionKind.Smart,
+                                behavior = com.hihusky.mnemora.data.model.CollectionBehavior.SmartFilter,
+                                name = "Wrong Answers",
+                                createdAt = 0L,
+                            ),
+                        ),
+                    srsStats = SrsStats(total = 50, dueToday = 8, newCards = 5, learning = 12, review = 3),
+                    answeredCount = 86,
+                    correctCount = 70,
+                    wrongCount = 16,
+                    markedCount = 9,
                 ),
-                nodes = listOf(
-                    Node(id = "n1", bookId = 1, title = "Part A — General", questionCount = 10,
-                        children = listOf(Node(id = "n1_0", bookId = 1, title = "Rule 1", questionCount = 5, depth = 1))),
-                    Node(id = "n2", bookId = 1, title = "Part B — Steering", questionCount = 15)
-                ),
-                collections = listOf(
-                    Collection(id = 1, bookId = 1, kind = CollectionKind.Custom,
-                        behavior = com.hihusky.mnemora.data.model.CollectionBehavior.Manual,
-                        name = "Exam Prep", description = "For Thursday", createdAt = 0L),
-                    Collection(id = 2, bookId = 1, kind = CollectionKind.Smart,
-                        behavior = com.hihusky.mnemora.data.model.CollectionBehavior.SmartFilter,
-                        name = "Wrong Answers", createdAt = 0L)
-                ),
-                srsStats = SrsStats(total = 50, dueToday = 8, newCards = 5, learning = 12, review = 3),
-                answeredCount = 86,
-                correctCount = 70,
-                wrongCount = 16,
-                markedCount = 9
-            ),
             onBack = {},
             onNavigateToPractice = { _, _, _ -> },
             onNavigateToCollection = {},
             onResumeSession = { _, _, _ -> },
             onCreateCollection = { _, _ -> },
             onDeleteBook = {},
-            onClearRecords = {}
+            onClearRecords = {},
         )
     }
 }

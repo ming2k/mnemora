@@ -38,9 +38,10 @@ fun MnemoraCollapsibleTopAppBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     scrollFraction: Float = 0f,
-    colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors(
-        containerColor = MaterialTheme.colorScheme.background
-    )
+    colors: TopAppBarColors =
+        TopAppBarDefaults.topAppBarColors(
+            containerColor = MaterialTheme.colorScheme.background,
+        ),
 ) {
     val coercedFraction = scrollFraction.coerceIn(0f, 1f)
 
@@ -53,39 +54,42 @@ fun MnemoraCollapsibleTopAppBar(
     val collapsedTitleSize = 18.sp
     val currentTitleSize = lerp(expandedTitleSize, collapsedTitleSize, coercedFraction)
 
-    val contentAlignment = if (coercedFraction > 0.5f) {
-        Alignment.Center
-    } else {
-        Alignment.CenterStart
-    }
+    val contentAlignment =
+        if (coercedFraction > 0.5f) {
+            Alignment.Center
+        } else {
+            Alignment.CenterStart
+        }
 
     Column(modifier = modifier.fillMaxWidth()) {
         // All overlays share one Box so total height = currentHeight, not 3x
         Box(modifier = Modifier.fillMaxWidth().height(currentHeight)) {
             // Title layer
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = MnemoraSpacing.Large),
-                contentAlignment = contentAlignment
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = MnemoraSpacing.Large),
+                contentAlignment = contentAlignment,
             ) {
                 Text(
                     text = title,
                     fontSize = currentTitleSize,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+                    color = MaterialTheme.colorScheme.onBackground,
                 )
             }
 
             // Actions layer (top-right)
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(end = MnemoraSpacing.Small),
-                contentAlignment = Alignment.CenterEnd
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(end = MnemoraSpacing.Small),
+                contentAlignment = Alignment.CenterEnd,
             ) {
                 androidx.compose.foundation.layout.Row(
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     actions()
                 }
@@ -93,10 +97,11 @@ fun MnemoraCollapsibleTopAppBar(
 
             // Navigation icon layer (top-left)
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(start = MnemoraSpacing.XSmall),
-                contentAlignment = Alignment.CenterStart
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(start = MnemoraSpacing.XSmall),
+                contentAlignment = Alignment.CenterStart,
             ) {
                 navigationIcon()
             }
@@ -105,7 +110,7 @@ fun MnemoraCollapsibleTopAppBar(
         // Divider to separate top bar from content (always visible)
         HorizontalDivider(
             thickness = 0.5.dp,
-            color = MaterialTheme.colorScheme.outlineVariant
+            color = MaterialTheme.colorScheme.outlineVariant,
         )
     }
 }

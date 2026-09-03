@@ -28,8 +28,21 @@ interface ChatSessionDao {
     @Query("DELETE FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId)")
     suspend fun deleteByBookId(bookId: Int)
 
-    @Query("UPDATE ai_chat_sessions SET lastScrollIndex = :index, lastScrollOffset = :offset WHERE id = :sessionId")
-    suspend fun updateScrollPosition(sessionId: Int, index: Int, offset: Int)
+    @Query(
+        """
+        UPDATE ai_chat_sessions
+        SET lastScrollIndex = :index,
+            lastScrollOffset = :offset,
+            lastScrollAtBottom = :isAtBottom
+        WHERE id = :sessionId
+        """,
+    )
+    suspend fun updateScrollPosition(
+        sessionId: Int,
+        index: Int,
+        offset: Int,
+        isAtBottom: Boolean,
+    )
 }
 
 @Dao
@@ -37,12 +50,23 @@ interface ChatHistoryDao {
     @Query("SELECT * FROM ai_chat_history WHERE sessionId = :sessionId ORDER BY timestamp ASC")
     suspend fun getBySessionId(sessionId: Int): List<ChatHistoryEntity>
 
+    @Query("SELECT * FROM ai_chat_history WHERE id = :id")
+    suspend fun getById(id: Int): ChatHistoryEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(message: ChatHistoryEntity): Long
+
+    @Update
+    suspend fun update(message: ChatHistoryEntity)
+
+    @Query("DELETE FROM ai_chat_history WHERE id = :id")
+    suspend fun deleteById(id: Int)
 
     @Query("DELETE FROM ai_chat_history WHERE sessionId = :sessionId")
     suspend fun deleteBySessionId(sessionId: Int)
 
-    @Query("DELETE FROM ai_chat_history WHERE sessionId IN (SELECT id FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId))")
+    @Query(
+        "DELETE FROM ai_chat_history WHERE sessionId IN (SELECT id FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId))",
+    )
     suspend fun deleteByBookId(bookId: Int)
 }

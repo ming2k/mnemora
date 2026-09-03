@@ -1,15 +1,16 @@
+import io.gitlab.arturbosch.detekt.Detekt
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import java.util.Properties
 
 plugins {
-    id("com.android.application")
-    id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
-    id("com.google.dagger.hilt.android")
-    id("com.google.devtools.ksp")
-    id("androidx.room") version "2.8.4"
-    id("org.jlleitschuh.gradle.ktlint")
-    id("io.gitlab.arturbosch.detekt")
+    alias(libs.plugins.android.application)
+    alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
+    alias(libs.plugins.ktlint)
+    alias(libs.plugins.detekt)
 }
 
 kotlin {
@@ -19,15 +20,21 @@ kotlin {
 }
 
 room {
-    schemaDirectory("$projectDir/schemas")
+    schemaDirectory(
+        layout.projectDirectory
+            .dir("schemas")
+            .asFile.path,
+    )
 }
+
+val generatedRoomSchemas = layout.buildDirectory.dir("generated/room_schemas")
 
 tasks.register<Copy>("syncRoomSchemas") {
     description = "Copies Room schema JSON files into generated assets so Room can verify data integrity at runtime."
     group = "room"
-    from("$projectDir/schemas")
+    from(layout.projectDirectory.dir("schemas"))
     include("**/*.json")
-    into("$buildDir/generated/room_schemas/room_schemas")
+    into(generatedRoomSchemas.map { it.dir("room_schemas") })
 }
 
 tasks.configureEach {
@@ -59,12 +66,12 @@ android {
     namespace = "com.hihusky.mnemora"
     compileSdk = 37
 
-    sourceSets["main"].assets.srcDir("$buildDir/generated/room_schemas")
+    sourceSets["main"].assets.directories.add(generatedRoomSchemas.get().asFile.path)
 
     defaultConfig {
         applicationId = "com.hihusky.mnemora"
         minSdk = 24
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 22
         versionName = "0.0.22"
 
@@ -119,78 +126,106 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    lint {
+        abortOnError = true
+        warningsAsErrors = true
+        checkDependencies = true
+        baseline = rootProject.file("lint-baseline.xml")
+    }
 }
 
 dependencies {
     // Core
-    implementation("androidx.core:core-ktx:1.18.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.10.0")
-    implementation("androidx.activity:activity-compose:1.13.0")
-    implementation("androidx.appcompat:appcompat:1.7.1")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.activity.compose)
+    implementation(libs.androidx.appcompat)
 
     // Compose BOM
-    val composeBom = platform("androidx.compose:compose-bom:2025.12.00")
+    val composeBom = platform(libs.compose.bom)
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
     // Compose UI
-    implementation("androidx.compose.ui:ui")
-    implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
-    implementation("androidx.compose.material3:material3")
-    implementation("androidx.compose.material:material-icons-extended")
+    implementation(libs.compose.ui)
+    implementation(libs.compose.ui.graphics)
+    implementation(libs.compose.ui.tooling.preview)
+    implementation(libs.compose.material3)
+    implementation(libs.compose.material.icons.extended)
 
     // Navigation
-    implementation("androidx.navigation:navigation-compose:2.9.8")
-    implementation("androidx.hilt:hilt-navigation-compose:1.3.0")
+    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.hilt.navigation.compose)
 
     // ViewModel
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.10.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.10.0")
+    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.compose)
 
     // Hilt
-    implementation("com.google.dagger:hilt-android:2.59.2")
-    ksp("com.google.dagger:hilt-compiler:2.59.2")
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.compiler)
 
     // Room
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
+    implementation(libs.androidx.room.runtime)
+    implementation(libs.androidx.room.ktx)
+    ksp(libs.androidx.room.compiler)
 
     // DataStore
-    implementation("androidx.datastore:datastore-preferences:1.2.1")
+    implementation(libs.androidx.datastore.preferences)
 
     // JSON
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation(libs.kotlinx.serialization.json)
 
     // HTTP
-    implementation("com.squareup.okhttp3:okhttp:5.3.2")
-    implementation("com.squareup.okhttp3:logging-interceptor:5.3.2")
+    implementation(platform(libs.okhttp.bom))
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.logging)
 
     // Image loading
-    implementation("io.coil-kt:coil-compose:2.7.0")
-    implementation("io.coil-kt:coil-svg:2.7.0")
-    implementation("io.coil-kt:coil-gif:2.7.0")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.svg)
+    implementation(libs.coil.gif)
+    implementation(libs.coil.network.okhttp)
 
     // Markdown (Compose)
-    implementation("com.mikepenz:multiplatform-markdown-renderer:0.40.2")
-    implementation("com.mikepenz:multiplatform-markdown-renderer-m3:0.40.2")
-    implementation("com.mikepenz:multiplatform-markdown-renderer-coil2:0.40.2")
+    implementation(libs.markdown.renderer)
+    implementation(libs.markdown.renderer.m3)
+    implementation(libs.markdown.renderer.coil3)
 
     // LaTeX formula rendering for Compose
-    implementation("io.github.huarangmeng:latex-renderer:1.3.9")
-    implementation("io.github.huarangmeng:latex-parser:1.3.9")
+    implementation(libs.latex.renderer)
+    implementation(libs.latex.parser)
 
     // Testing
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("io.mockk:mockk:1.14.9")
-    testImplementation("org.robolectric:robolectric:4.16.1")
-    testImplementation("androidx.test:core:1.7.0")
-    testImplementation("androidx.test.ext:junit:1.3.0")
-    testImplementation("androidx.room:room-testing:2.8.4")
+    testImplementation(libs.junit4)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.mockk)
+    testImplementation(libs.robolectric)
+    testImplementation(libs.androidx.test.core)
+    testImplementation(libs.androidx.test.ext.junit)
+    testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.mockwebserver3)
+}
+
+ktlint {
+    version.set(libs.versions.ktlintEngine)
+    android.set(true)
+    outputToConsole.set(true)
+    ignoreFailures.set(false)
+    filter {
+        exclude("**/build/**")
+        exclude("**/generated/**")
+    }
 }
 
 detekt {
+    buildUponDefaultConfig = true
+    parallel = true
+    basePath = rootProject.projectDir.absolutePath
     config.from(rootProject.file("detekt.yml"))
+    baseline = rootProject.file("detekt-baseline.xml")
+}
+
+tasks.withType<Detekt>().configureEach {
+    jvmTarget = "17"
 }

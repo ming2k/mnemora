@@ -12,20 +12,20 @@ import androidx.room.PrimaryKey
             entity = CollectionEntity::class,
             parentColumns = ["id"],
             childColumns = ["collectionId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = QuestionEntity::class,
             parentColumns = ["id"],
             childColumns = ["questionId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["collectionId"]),
         Index(value = ["questionId"]),
-        Index(value = ["collectionId", "questionId"], unique = true)
-    ]
+        Index(value = ["collectionId", "questionId"], unique = true),
+    ],
 )
 data class CollectionItemEntity(
     @PrimaryKey(autoGenerate = true)
@@ -33,5 +33,5 @@ data class CollectionItemEntity(
     val collectionId: Int,
     val questionId: Int,
     val position: Int = 0,
-    val addedAt: Long = System.currentTimeMillis()
+    val addedAt: Long = System.currentTimeMillis(),
 )

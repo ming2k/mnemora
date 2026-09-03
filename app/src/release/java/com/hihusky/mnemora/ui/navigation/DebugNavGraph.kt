@@ -9,7 +9,10 @@ import androidx.navigation.NavHostController
 object DebugNavGraph {
     const val MARKDOWN_TEST = "markdown_test"
 
-    fun addDebugRoutes(builder: NavGraphBuilder, navController: NavHostController) {
+    fun addDebugRoutes(
+        builder: NavGraphBuilder,
+        navController: NavHostController,
+    ) {
         // Nothing in release builds.
     }
 }

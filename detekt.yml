@@ -1,5 +1,5 @@
 build:
-  maxIssues: 999
+  maxIssues: 0
 
 style:
   MagicNumber:
@@ -23,8 +23,6 @@ style:
       - '500'
       - '1000'
       - '10000'
-      - '2800'
-      - '86400000'
     ignoreEnums: true
     ignorePropertyDeclaration: true
     ignoreCompanionObjectPropertyDeclaration: true
@@ -33,7 +31,7 @@ style:
     ignoreConstantDeclaration: true
   MaxLineLength:
     active: true
-    maxLineLength: 140
+    maxLineLength: 120
     excludePackageStatements: true
     excludeImportStatements: true
   WildcardImport:

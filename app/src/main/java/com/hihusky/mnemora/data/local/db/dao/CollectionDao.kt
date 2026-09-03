@@ -13,7 +13,7 @@ import com.hihusky.mnemora.data.local.db.entity.QuestionEntity
 
 data class CollectionWithCount(
     @Embedded val collection: CollectionEntity,
-    @ColumnInfo(name = "itemCount") val itemCount: Int
+    @ColumnInfo(name = "itemCount") val itemCount: Int,
 )
 
 @Dao
@@ -24,30 +24,37 @@ interface CollectionDao {
     @Query("SELECT * FROM collections WHERE bookId = :bookId ORDER BY sortOrder ASC, id ASC")
     suspend fun getByBookId(bookId: Int): List<CollectionEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT c.*, COUNT(ci.id) AS itemCount
         FROM collections c
         LEFT JOIN collection_items ci ON ci.collectionId = c.id
         GROUP BY c.id
         ORDER BY c.sortOrder ASC, c.id ASC
-    """)
+    """,
+    )
     suspend fun getAllWithCount(): List<CollectionWithCount>
 
-    @Query("""
+    @Query(
+        """
         SELECT c.*, COUNT(ci.id) AS itemCount
         FROM collections c
         LEFT JOIN collection_items ci ON ci.collectionId = c.id
         WHERE c.bookId = :bookId
         GROUP BY c.id
         ORDER BY c.sortOrder ASC, c.id ASC
-    """)
+    """,
+    )
     suspend fun getByBookIdWithCount(bookId: Int): List<CollectionWithCount>
 
     @Query("SELECT * FROM collections WHERE kind = :kind ORDER BY sortOrder ASC, id ASC")
     suspend fun getByKind(kind: String): List<CollectionEntity>
 
     @Query("SELECT * FROM collections WHERE bookId = :bookId AND kind = :kind ORDER BY sortOrder ASC, id ASC")
-    suspend fun getByBookIdAndKind(bookId: Int, kind: String): List<CollectionEntity>
+    suspend fun getByBookIdAndKind(
+        bookId: Int,
+        kind: String,
+    ): List<CollectionEntity>
 
     @Query("SELECT * FROM collections WHERE behavior = :behavior ORDER BY sortOrder ASC, id ASC")
     suspend fun getByBehavior(behavior: String): List<CollectionEntity>
@@ -70,23 +77,33 @@ interface CollectionItemDao {
     @Query("SELECT * FROM collection_items WHERE collectionId = :collectionId ORDER BY position ASC, addedAt ASC")
     suspend fun getByCollectionId(collectionId: Int): List<CollectionItemEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT q.* FROM questions q
         INNER JOIN collection_items ci ON ci.questionId = q.id
         WHERE ci.collectionId = :collectionId
         ORDER BY ci.position ASC, ci.addedAt ASC
-    """)
+    """,
+    )
     suspend fun getQuestionsByCollectionId(collectionId: Int): List<QuestionEntity>
 
-    @Query("""
+    @Query(
+        """
         SELECT ci.collectionId FROM collection_items ci
         INNER JOIN collections c ON c.id = ci.collectionId
         WHERE c.bookId = :bookId AND ci.questionId = :questionId
-    """)
-    suspend fun getCollectionIdsByQuestion(bookId: Int, questionId: Int): List<Int>
+    """,
+    )
+    suspend fun getCollectionIdsByQuestion(
+        bookId: Int,
+        questionId: Int,
+    ): List<Int>
 
     @Query("SELECT * FROM collection_items WHERE collectionId = :collectionId AND questionId = :questionId")
-    suspend fun getByCollectionAndQuestion(collectionId: Int, questionId: Int): CollectionItemEntity?
+    suspend fun getByCollectionAndQuestion(
+        collectionId: Int,
+        questionId: Int,
+    ): CollectionItemEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: CollectionItemEntity): Long
@@ -95,6 +112,8 @@ interface CollectionItemDao {
     suspend fun deleteByCollectionId(collectionId: Int)
 
     @Query("DELETE FROM collection_items WHERE collectionId = :collectionId AND questionId = :questionId")
-    suspend fun deleteByCollectionAndQuestion(collectionId: Int, questionId: Int)
-
+    suspend fun deleteByCollectionAndQuestion(
+        collectionId: Int,
+        questionId: Int,
+    )
 }

@@ -12,13 +12,13 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["bookId"]),
-        Index(value = ["parentId"])
-    ]
+        Index(value = ["parentId"]),
+    ],
 )
 data class NodeEntity(
     @PrimaryKey
@@ -28,5 +28,5 @@ data class NodeEntity(
     val title: String? = null,
     val questionCount: Int = 0,
     val sortOrder: Int = 0,
-    val depth: Int = 0
+    val depth: Int = 0,
 )

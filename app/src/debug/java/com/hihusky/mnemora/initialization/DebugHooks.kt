@@ -24,12 +24,13 @@ import kotlinx.coroutines.launch
  * in `src/release/` instead, guaranteeing zero impact on production builds.
  */
 object DebugHooks {
-
     @EntryPoint
     @InstallIn(SingletonComponent::class)
     interface Provider {
         fun bookRepository(): BookRepository
+
         fun studySessionRepository(): StudySessionRepository
+
         fun packageService(): PackageService
     }
 
@@ -44,15 +45,16 @@ object DebugHooks {
 
                 var books = bookRepo.getBooks()
                 if (books.isEmpty()) {
-                    val builtInPackages = listOf(
-                        "demo-comprehensive.zip",
-                        "demo-multiple-choice.zip",
-                        "demo-true-false.zip",
-                        "demo-fill-blank.zip",
-                        "demo-cloze.zip",
-                        "demo-flashcard.zip",
-                        "demo-passage.zip"
-                    )
+                    val builtInPackages =
+                        listOf(
+                            "demo-comprehensive.zip",
+                            "demo-multiple-choice.zip",
+                            "demo-true-false.zip",
+                            "demo-fill-blank.zip",
+                            "demo-cloze.zip",
+                            "demo-flashcard.zip",
+                            "demo-passage.zip",
+                        )
                     // Library sorting is recency-first, so import in reverse to keep
                     // the defined display order after first-run seeding.
                     builtInPackages.asReversed().forEach { assetName ->
@@ -61,9 +63,11 @@ object DebugHooks {
                             is ImportResult.Success -> {
                                 Log.d("DebugHooks", "Imported built-in package: $assetName")
                             }
+
                             is ImportResult.Error -> {
                                 Log.e("DebugHooks", "Failed to import $assetName: ${result.errorMessage}")
                             }
+
                             ImportResult.Cancelled -> {
                                 Log.w("DebugHooks", "Import cancelled for $assetName")
                             }
@@ -89,8 +93,8 @@ object DebugHooks {
                         currentIndex = 3,
                         totalQuestions = 10,
                         isCompleted = false,
-                        isActive = true
-                    )
+                        isActive = true,
+                    ),
                 )
 
                 // Completed Test session — shows up in Records
@@ -103,8 +107,8 @@ object DebugHooks {
                         currentIndex = 10,
                         totalQuestions = 10,
                         isCompleted = true,
-                        isActive = false
-                    )
+                        isActive = false,
+                    ),
                 )
 
                 // Active Review session
@@ -117,8 +121,8 @@ object DebugHooks {
                         currentIndex = 1,
                         totalQuestions = 5,
                         isCompleted = false,
-                        isActive = true
-                    )
+                        isActive = true,
+                    ),
                 )
             } catch (_: Exception) {
                 // Best-effort seeding; never crash the app for debug data.

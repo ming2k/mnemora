@@ -37,32 +37,36 @@ import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 @Composable
 fun MnemoraSettingsSectionHeader(
     title: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Text(
         text = title.uppercase(),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = MnemoraAlpha.Strong),
-        modifier = modifier.padding(
-            start = MnemoraSpacing.Large,
-            top = MnemoraSpacing.XLarge,
-            bottom = MnemoraSpacing.Small
-        )
+        modifier =
+            modifier.padding(
+                start = MnemoraSpacing.Large,
+                top = MnemoraSpacing.XLarge,
+                bottom = MnemoraSpacing.Small,
+            ),
     )
 }
 
 @Composable
 fun MnemoraSettingsGroup(
     modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     MnemoraCard(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = MnemoraSpacing.Large),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = MnemoraSpacing.Large),
         containerColor = MaterialTheme.colorScheme.surface,
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp),
-        content = content
+        contentPadding =
+            androidx.compose.foundation.layout
+                .PaddingValues(0.dp),
+        content = content,
     )
 }
 
@@ -71,7 +75,7 @@ fun MnemoraSettingsDivider() {
     HorizontalDivider(
         thickness = 0.5.dp,
         color = MaterialTheme.colorScheme.outlineVariant,
-        modifier = Modifier.padding(start = MnemoraSpacing.Large)
+        modifier = Modifier.padding(start = MnemoraSpacing.Large),
     )
 }
 
@@ -82,7 +86,7 @@ fun MnemoraSettingsSwitchRow(
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     supporting: String? = null,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
 ) {
     MnemoraSettingsRow(
         headline = headline,
@@ -93,15 +97,16 @@ fun MnemoraSettingsSwitchRow(
             Switch(
                 checked = checked,
                 onCheckedChange = onCheckedChange,
-                colors = SwitchDefaults.colors(
-                    checkedThumbColor = MaterialTheme.colorScheme.onTertiary,
-                    checkedTrackColor = MaterialTheme.colorScheme.tertiary,
-                    uncheckedThumbColor = MaterialTheme.colorScheme.outline,
-                    uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
-                    uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                )
+                colors =
+                    SwitchDefaults.colors(
+                        checkedThumbColor = MaterialTheme.colorScheme.onTertiary,
+                        checkedTrackColor = MaterialTheme.colorScheme.tertiary,
+                        uncheckedThumbColor = MaterialTheme.colorScheme.outline,
+                        uncheckedTrackColor = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        uncheckedBorderColor = MaterialTheme.colorScheme.outlineVariant,
+                    ),
             )
-        }
+        },
     )
 }
 
@@ -113,7 +118,7 @@ fun MnemoraSettingsDropdownRow(
     selectedIndex: Int,
     onSelect: (Int) -> Unit,
     modifier: Modifier = Modifier,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
 ) {
     var expanded by remember { mutableStateOf(false) }
 
@@ -127,19 +132,19 @@ fun MnemoraSettingsDropdownRow(
                 Box {
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.XSmall),
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
                             text = supporting,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
                         )
                         Icon(
                             imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
 
@@ -149,7 +154,7 @@ fun MnemoraSettingsDropdownRow(
                         containerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         shape = MaterialTheme.shapes.medium,
                         shadowElevation = MnemoraElevation.Resting,
-                        modifier = Modifier.widthIn(min = 180.dp)
+                        modifier = Modifier.widthIn(min = 180.dp),
                     ) {
                         options.forEachIndexed { index, option ->
                             DropdownMenuItem(
@@ -158,20 +163,23 @@ fun MnemoraSettingsDropdownRow(
                                     onSelect(index)
                                     expanded = false
                                 },
-                                leadingIcon = if (index == selectedIndex) {
-                                    {
-                                        Icon(
-                                            imageVector = Icons.Default.Check,
-                                            contentDescription = null,
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                    }
-                                } else null
+                                leadingIcon =
+                                    if (index == selectedIndex) {
+                                        {
+                                            Icon(
+                                                imageVector = Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = MaterialTheme.colorScheme.primary,
+                                            )
+                                        }
+                                    } else {
+                                        null
+                                    },
                             )
                         }
                     }
                 }
-            }
+            },
         )
     }
 }
@@ -182,33 +190,34 @@ fun MnemoraSettingsRow(
     supporting: String?,
     icon: ImageVector?,
     modifier: Modifier = Modifier,
-    trailing: @Composable () -> Unit
+    trailing: @Composable () -> Unit,
 ) {
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
         horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = headline,
                 style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface
+                color = MaterialTheme.colorScheme.onSurface,
             )
             if (supporting != null) {
                 Text(
                     text = supporting,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

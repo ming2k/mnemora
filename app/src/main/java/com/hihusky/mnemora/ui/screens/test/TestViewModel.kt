@@ -20,141 +20,148 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class TestViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val questionRepository: QuestionRepository,
-    private val studySessionRepository: StudySessionRepository,
-    private val settingsRepository: SettingsRepository
-) : ViewModel() {
+class TestViewModel
+    @Inject
+    constructor(
+        savedStateHandle: SavedStateHandle,
+        private val questionRepository: QuestionRepository,
+        private val studySessionRepository: StudySessionRepository,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModel() {
+        private val bookId: Int = checkNotNull(savedStateHandle["bookId"])
 
-    private val bookId: Int = checkNotNull(savedStateHandle["bookId"])
+        private val _uiState = MutableStateFlow(TestUiState())
+        val uiState: StateFlow<TestUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow(TestUiState())
-    val uiState: StateFlow<TestUiState> = _uiState.asStateFlow()
+        private var timerJob: kotlinx.coroutines.Job? = null
+        private var currentSessionId: Long = -1L
 
-    private var timerJob: kotlinx.coroutines.Job? = null
-    private var currentSessionId: Long = -1L
+        init {
+            loadTest()
+        }
 
-    init {
-        loadTest()
-    }
+        private fun loadTest() {
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true) }
+                try {
+                    val allQuestions =
+                        questionRepository
+                            .getQuestions(bookId)
+                            .filter { it.isAnswerable }
+                            .shuffled()
+                    val count =
+                        settingsRepository.testQuestionCount
+                            .first()
+                            .coerceAtMost(allQuestions.size)
+                            .coerceAtLeast(1)
+                    val questions = allQuestions.take(count)
 
-    private fun loadTest() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val allQuestions = questionRepository.getQuestions(bookId)
-                    .filter { it.isAnswerable }
-                    .shuffled()
-                val count = settingsRepository.testQuestionCount.first()
-                    .coerceAtMost(allQuestions.size)
-                    .coerceAtLeast(1)
-                val questions = allQuestions.take(count)
+                    currentSessionId =
+                        studySessionRepository.saveSession(
+                            StudySessionEntity(
+                                bookId = bookId,
+                                mode = "Test",
+                                startTime = System.currentTimeMillis(),
+                                lastActiveTime = System.currentTimeMillis(),
+                                currentIndex = 0,
+                                totalQuestions = questions.size,
+                            ),
+                        )
+                    val startIndex = 0
 
-                currentSessionId = studySessionRepository.saveSession(
-                    StudySessionEntity(
-                        bookId = bookId,
-                        mode = "Test",
-                        startTime = System.currentTimeMillis(),
-                        lastActiveTime = System.currentTimeMillis(),
-                        currentIndex = 0,
-                        totalQuestions = questions.size
-                    )
-                )
-                val startIndex = 0
+                    _uiState.update {
+                        it.copy(
+                            questions = questions,
+                            currentIndex = startIndex,
+                            isLoading = false,
+                            isRunning = true,
+                        )
+                    }
+                    startTimer()
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(error = e.message, isLoading = false) }
+                }
+            }
+        }
 
-                _uiState.update {
-                    it.copy(
-                        questions = questions,
-                        currentIndex = startIndex,
-                        isLoading = false,
-                        isRunning = true
+        private fun saveSessionProgress(index: Int) {
+            viewModelScope.launch {
+                if (currentSessionId > 0) {
+                    val state = _uiState.value
+                    studySessionRepository.updateSessionProgress(
+                        sessionId = currentSessionId,
+                        currentIndex = index,
+                        totalQuestions = state.questions.size,
                     )
                 }
-                startTimer()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
             }
         }
-    }
 
-    private fun saveSessionProgress(index: Int) {
-        viewModelScope.launch {
-            if (currentSessionId > 0) {
-                val state = _uiState.value
-                studySessionRepository.updateSessionProgress(
-                    sessionId = currentSessionId,
-                    currentIndex = index,
-                    totalQuestions = state.questions.size
+        private fun startTimer() {
+            timerJob?.cancel()
+            timerJob =
+                viewModelScope.launch {
+                    while (_uiState.value.isRunning) {
+                        delay(1000)
+                        _uiState.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
+                    }
+                }
+        }
+
+        fun answerQuestion(option: String) {
+            val state = _uiState.value
+            val question = state.currentQuestion ?: return
+            val isCorrect = option.uppercase() == question.answer.uppercase()
+            val answer = UserAnswer(selected = option, isCorrect = isCorrect)
+
+            _uiState.update {
+                it.copy(
+                    userAnswers = it.userAnswers.toMutableMap().apply { put(question.id, answer) },
                 )
             }
         }
-    }
 
-    private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (_uiState.value.isRunning) {
-                delay(1000)
-                _uiState.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
-            }
+        fun goToQuestion(index: Int) {
+            if (index < 0 || index >= _uiState.value.questions.size) return
+            _uiState.update { it.copy(currentIndex = index) }
+            saveSessionProgress(index)
         }
-    }
 
-    fun answerQuestion(option: String) {
-        val state = _uiState.value
-        val question = state.currentQuestion ?: return
-        val isCorrect = option.uppercase() == question.answer.uppercase()
-        val answer = UserAnswer(selected = option, isCorrect = isCorrect)
-
-        _uiState.update {
-            it.copy(
-                userAnswers = it.userAnswers.toMutableMap().apply { put(question.id, answer) }
-            )
+        fun nextQuestion() {
+            goToQuestion(_uiState.value.currentIndex + 1)
         }
-    }
 
-    fun goToQuestion(index: Int) {
-        if (index < 0 || index >= _uiState.value.questions.size) return
-        _uiState.update { it.copy(currentIndex = index) }
-        saveSessionProgress(index)
-    }
-
-    fun nextQuestion() {
-        goToQuestion(_uiState.value.currentIndex + 1)
-    }
-
-    fun previousQuestion() {
-        goToQuestion(_uiState.value.currentIndex - 1)
-    }
-
-    fun finishTest() {
-        timerJob?.cancel()
-        _uiState.update { it.copy(isRunning = false, showResults = true) }
-        viewModelScope.launch {
-            if (currentSessionId > 0) {
-                studySessionRepository.updateSessionProgress(
-                    sessionId = currentSessionId,
-                    currentIndex = _uiState.value.currentIndex,
-                    totalQuestions = _uiState.value.questions.size,
-                    isCompleted = true,
-                    isActive = false
-                )
-            }
+        fun previousQuestion() {
+            goToQuestion(_uiState.value.currentIndex - 1)
         }
-    }
 
-    fun resetTest() {
-        timerJob?.cancel()
-        if (currentSessionId > 0) {
+        fun finishTest() {
+            timerJob?.cancel()
+            _uiState.update { it.copy(isRunning = false, showResults = true) }
             viewModelScope.launch {
-                studySessionRepository.deactivateSession(currentSessionId)
+                if (currentSessionId > 0) {
+                    studySessionRepository.updateSessionProgress(
+                        sessionId = currentSessionId,
+                        currentIndex = _uiState.value.currentIndex,
+                        totalQuestions = _uiState.value.questions.size,
+                        isCompleted = true,
+                        isActive = false,
+                    )
+                }
             }
         }
-        _uiState.update { TestUiState() }
-        loadTest()
+
+        fun resetTest() {
+            timerJob?.cancel()
+            if (currentSessionId > 0) {
+                viewModelScope.launch {
+                    studySessionRepository.deactivateSession(currentSessionId)
+                }
+            }
+            _uiState.update { TestUiState() }
+            loadTest()
+        }
     }
-}
 
 data class TestUiState(
     val questions: List<Question> = emptyList(),
@@ -164,7 +171,7 @@ data class TestUiState(
     val isLoading: Boolean = false,
     val isRunning: Boolean = false,
     val showResults: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 ) {
     val currentQuestion: Question? get() = questions.getOrNull(currentIndex)
     val totalQuestions: Int get() = questions.size

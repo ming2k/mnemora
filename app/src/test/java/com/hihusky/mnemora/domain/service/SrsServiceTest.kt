@@ -8,19 +8,19 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SrsServiceTest {
-
     private val now = 1700000000000L
-    private val defaultState = SrsState(
-        questionId = 1,
-        bookId = 1,
-        intervalDays = 0,
-        easeFactor = 2.5,
-        repetitions = 0,
-        lapses = 0,
-        dueDate = null,
-        lastReviewed = null,
-        reviewState = SrsReviewState.New
-    )
+    private val defaultState =
+        SrsState(
+            questionId = 1,
+            bookId = 1,
+            intervalDays = 0,
+            easeFactor = 2.5,
+            repetitions = 0,
+            lapses = 0,
+            dueDate = null,
+            lastReviewed = null,
+            reviewState = SrsReviewState.New,
+        )
 
     @Test
     fun `Again resets interval and increases lapses`() {
@@ -50,7 +50,7 @@ class SrsServiceTest {
         assertEquals(1, result.intervalDays)
         assertEquals(1, result.repetitions)
         assertEquals(SrsReviewState.Review, result.reviewState)
-        assertEquals(now + 86400000L, result.dueDate)
+        assertEquals(now + SrsService.DAY_MS, result.dueDate)
     }
 
     @Test
@@ -145,9 +145,15 @@ class SrsServiceTest {
     }
 
     @Test
-    fun `intervalLabel for Again shows short time`() {
+    fun `intervalLabel for Again reflects the sub-day relearning step`() {
         val state = defaultState.copy(repetitions = 3, intervalDays = 10)
         val label = SrsService.intervalLabel(state, SrsRating.Again)
+        assertEquals("< 1 day", label)
+    }
+
+    @Test
+    fun `intervalLabel for first Good shows one day`() {
+        val label = SrsService.intervalLabel(defaultState, SrsRating.Good)
         assertEquals("1 day", label)
     }
 }

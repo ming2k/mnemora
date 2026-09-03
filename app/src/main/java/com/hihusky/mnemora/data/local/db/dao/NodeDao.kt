@@ -21,7 +21,10 @@ interface NodeDao {
     suspend fun getRootsByBookId(bookId: Int): List<NodeEntity>
 
     @Query("SELECT * FROM nodes WHERE bookId = :bookId AND parentId = :parentId ORDER BY sortOrder ASC, id ASC")
-    suspend fun getChildren(bookId: Int, parentId: String): List<NodeEntity>
+    suspend fun getChildren(
+        bookId: Int,
+        parentId: String,
+    ): List<NodeEntity>
 
     @Query("SELECT * FROM nodes WHERE id = :id")
     suspend fun getById(id: String): NodeEntity?

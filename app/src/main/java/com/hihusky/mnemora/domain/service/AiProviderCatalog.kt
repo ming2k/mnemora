@@ -34,42 +34,48 @@ data class AiProviderDef(
  * notion of a grouping "company".
  */
 object AiProviderCatalog {
-
-    val providers: List<AiProviderDef> = listOf(
-        AiProviderDef(
-            id = "antigravity-sub2api",
-            display = "Antigravity sub2api",
-            models = listOf(
-                AiModelDef(
-                    id = "gemini-3.7-flash-tiered",
-                    display = "Gemini 3.7 Flash",
-                ),
-                AiModelDef(
-                    id = "gemini-3.6-flash-tiered",
-                    display = "Gemini 3.6 Flash",
-                ),
-                AiModelDef(
-                    id = "gemini-3.1-pro-low",
-                    display = "Gemini 3.1 Pro Low",
-                ),
-                AiModelDef(
-                    id = "gemini-3.1-pro-high",
-                    display = "Gemini 3.1 Pro High",
-                ),
+    val providers: List<AiProviderDef> =
+        listOf(
+            AiProviderDef(
+                id = "antigravity-sub2api",
+                display = "Antigravity sub2api",
+                models =
+                    listOf(
+                        AiModelDef(
+                            id = "gemini-3.7-flash-tiered",
+                            display = "Gemini 3.7 Flash",
+                        ),
+                        AiModelDef(
+                            id = "gemini-3.6-flash-tiered",
+                            display = "Gemini 3.6 Flash",
+                        ),
+                        AiModelDef(
+                            id = "gemini-3.1-pro-low",
+                            display = "Gemini 3.1 Pro Low",
+                        ),
+                        AiModelDef(
+                            id = "gemini-3.1-pro-high",
+                            display = "Gemini 3.1 Pro High",
+                        ),
+                    ),
+                protocol = AiProtocol.GEMINI,
+                usesCustomHost = true,
+                baseUrlHint =
+                    "Gemini-compatible endpoint built by the sub2api project for Antigravity. " +
+                        "Enter the host root without \"/v1beta\" (e.g. https://your-relay.com). " +
+                        "Requests are sent to {Base URL}/v1beta/models/...:streamGenerateContent.",
             ),
-            protocol = AiProtocol.GEMINI,
-            usesCustomHost = true,
-            baseUrlHint = "Gemini-compatible endpoint built by the sub2api project for Antigravity. " +
-                "Enter the host root without \"/v1beta\" (e.g. https://your-relay.com). " +
-                "Requests are sent to {Base URL}/v1beta/models/...:streamGenerateContent.",
-        ),
-    )
+        )
 
     val defaultProviderId: String get() = providers.first().id
-    val defaultModelId: String get() = providers.first().models.first().id
+    val defaultModelId: String get() =
+        providers
+            .first()
+            .models
+            .first()
+            .id
 
-    fun byId(providerId: String): AiProviderDef? =
-        providers.firstOrNull { it.id == providerId }
+    fun byId(providerId: String): AiProviderDef? = providers.firstOrNull { it.id == providerId }
 
     /**
      * Resolves a (possibly legacy or unknown) persisted provider id to a valid
@@ -90,6 +96,8 @@ object AiProviderCatalog {
 
     fun displayFor(providerId: String): String = resolve(providerId).display
 
-    fun modelDisplayFor(providerId: String, modelId: String): String =
-        modelsFor(providerId).firstOrNull { it.id == modelId }?.display ?: modelId
+    fun modelDisplayFor(
+        providerId: String,
+        modelId: String,
+    ): String = modelsFor(providerId).firstOrNull { it.id == modelId }?.display ?: modelId
 }

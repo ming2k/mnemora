@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,19 +27,12 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.UploadFile
-import androidx.compose.ui.res.painterResource
-import com.hihusky.mnemora.R
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.ui.window.Dialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.CircularProgressIndicator
-import com.hihusky.mnemora.ui.components.topappbar.MnemoraCollapsibleTopAppBar
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.Icon
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -47,37 +41,37 @@ import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.lerp
+import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.hihusky.mnemora.R
 import com.hihusky.mnemora.data.local.db.entity.StudySessionEntity
 import com.hihusky.mnemora.data.model.Book
 import com.hihusky.mnemora.ui.components.MnemoraBookAvatar
 import com.hihusky.mnemora.ui.components.MnemoraCard
 import com.hihusky.mnemora.ui.components.MnemoraEmptyState
-import com.hihusky.mnemora.ui.theme.MnemoraTheme
+import com.hihusky.mnemora.ui.components.topappbar.MnemoraCollapsibleTopAppBar
 import com.hihusky.mnemora.ui.theme.MnemoraSize
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
+import com.hihusky.mnemora.ui.theme.MnemoraTheme
 import kotlinx.coroutines.launch
-import java.util.Calendar
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,24 +80,24 @@ fun HomeScreen(
     onNavigateToTest: (Int, Long?) -> Unit,
     onNavigateToPreview: (Int) -> Unit,
     onNavigateToBookDetail: (Int) -> Unit,
-
-    viewModel: HomeViewModel = hiltViewModel()
+    viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val importLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        if (uri != null) viewModel.importPackage(uri)
-    }
+    val importLauncher =
+        rememberLauncherForActivityResult(
+            ActivityResultContracts.GetContent(),
+        ) { uri ->
+            if (uri != null) viewModel.importPackage(uri)
+        }
 
     LaunchedEffect(uiState.importSuccess) {
         uiState.importSuccess?.let { name ->
             snackbarHostState.showSnackbar(
                 message = "Imported \"$name\"",
-                duration = SnackbarDuration.Short
+                duration = SnackbarDuration.Short,
             )
             viewModel.dismissImportSuccess()
         }
@@ -112,7 +106,7 @@ fun HomeScreen(
         uiState.importError?.let { error ->
             snackbarHostState.showSnackbar(
                 message = "Import failed: $error",
-                duration = SnackbarDuration.Long
+                duration = SnackbarDuration.Long,
             )
             viewModel.dismissImportError()
         }
@@ -125,10 +119,9 @@ fun HomeScreen(
         onNavigateToTest = onNavigateToTest,
         onNavigateToPreview = onNavigateToPreview,
         onNavigateToBookDetail = onNavigateToBookDetail,
-
         onImport = { importLauncher.launch("*/*") },
         onRetry = { viewModel.loadBooks() },
-        onSearchQueryChange = viewModel::onSearchQueryChange
+        onSearchQueryChange = viewModel::onSearchQueryChange,
     )
 }
 
@@ -141,10 +134,9 @@ internal fun HomeScreenContent(
     onNavigateToTest: (Int, Long?) -> Unit,
     onNavigateToPreview: (Int) -> Unit,
     onNavigateToBookDetail: (Int) -> Unit,
-
     onImport: () -> Unit,
     onRetry: () -> Unit,
-    onSearchQueryChange: (String) -> Unit
+    onSearchQueryChange: (String) -> Unit,
 ) {
     var isSearchActive by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -170,7 +162,7 @@ internal fun HomeScreenContent(
                         isSearchActive = false
                         onSearchQueryChange("")
                     },
-                    scrollFraction = scrollFraction
+                    scrollFraction = scrollFraction,
                 )
             } else {
                 MnemoraCollapsibleTopAppBar(
@@ -181,27 +173,27 @@ internal fun HomeScreenContent(
                         IconButton(onClick = { isSearchActive = true }) {
                             Icon(
                                 imageVector = Icons.Default.Search,
-                                contentDescription = "Search"
+                                contentDescription = "Search",
                             )
                         }
                         IconButton(onClick = onImport) {
                             Icon(
                                 imageVector = Icons.Default.UploadFile,
-                                contentDescription = "Import package"
+                                contentDescription = "Import package",
                             )
                         }
-                    }
+                    },
                 )
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
                 uiState.isLoading && uiState.books.isEmpty() -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
@@ -210,7 +202,7 @@ internal fun HomeScreenContent(
                 uiState.error != null && uiState.books.isEmpty() -> {
                     EmptyErrorState(
                         message = uiState.error,
-                        onRetry = onRetry
+                        onRetry = onRetry,
                     )
                 }
 
@@ -226,11 +218,11 @@ internal fun HomeScreenContent(
                     LazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(vertical = 8.dp),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         items(
                             items = uiState.books,
-                            key = { it.id }
+                            key = { it.id },
                         ) { book ->
                             BookCard(
                                 book = book,
@@ -238,7 +230,7 @@ internal fun HomeScreenContent(
                                 onPractice = { onNavigateToPractice(book.id, null) },
                                 onTest = { onNavigateToTest(book.id, null) },
                                 onPreview = { onNavigateToPreview(book.id) },
-                                onDetail = { onNavigateToBookDetail(book.id) }
+                                onDetail = { onNavigateToBookDetail(book.id) },
                             )
                         }
                     }
@@ -253,26 +245,28 @@ internal fun HomeScreenContent(
         Dialog(onDismissRequest = { }) {
             androidx.compose.material3.Surface(
                 modifier = Modifier.width(270.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
+                shape =
+                    androidx.compose.foundation.shape
+                        .RoundedCornerShape(14.dp),
                 color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                shadowElevation = 8.dp
+                shadowElevation = 8.dp,
             ) {
                 Column(
                     modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
                         "Importing",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     if (importProgress != null) {
                         LinearProgressIndicator(
                             progress = { importProgress.coerceIn(0f, 1f) },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
                         )
                     } else {
                         LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
@@ -282,13 +276,12 @@ internal fun HomeScreenContent(
                         importStatus,
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                     )
                 }
             }
         }
     }
-
 }
 
 @Composable
@@ -297,7 +290,7 @@ private fun LibrarySearchTopBar(
     onQueryChange: (String) -> Unit,
     onClose: () -> Unit,
     scrollFraction: Float,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val fraction = scrollFraction.coerceIn(0f, 1f)
     val topBarHeight = lerp(MnemoraSize.TopBarExpanded, MnemoraSize.TopBarCollapsed, fraction)
@@ -306,38 +299,43 @@ private fun LibrarySearchTopBar(
 
     Column(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(topBarHeight)
-                .padding(horizontal = MnemoraSpacing.XSmall),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(topBarHeight)
+                    .padding(horizontal = MnemoraSpacing.XSmall),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.XSmall)
+            horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.XSmall),
         ) {
             IconButton(
                 onClick = onClose,
-                modifier = Modifier.size(40.dp)
+                modifier = Modifier.size(40.dp),
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Close search"
+                    contentDescription = "Close search",
                 )
             }
 
             Row(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(searchFieldHeight)
-                    .background(MaterialTheme.colorScheme.surfaceContainerLow, fieldShape)
-                    .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, fieldShape)
-                    .padding(start = MnemoraSpacing.Medium, end = if (query.isEmpty()) MnemoraSpacing.Medium else 2.dp),
-                verticalAlignment = Alignment.CenterVertically
+                modifier =
+                    Modifier
+                        .weight(1f)
+                        .height(searchFieldHeight)
+                        .background(MaterialTheme.colorScheme.surfaceContainerLow, fieldShape)
+                        .border(0.5.dp, MaterialTheme.colorScheme.outlineVariant, fieldShape)
+                        .padding(
+                            start = MnemoraSpacing.Medium,
+                            end = if (query.isEmpty()) MnemoraSpacing.Medium else 2.dp,
+                        ),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box(modifier = Modifier.weight(1f)) {
                     if (query.isEmpty()) {
                         Text(
                             text = "Search books...",
                             style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     BasicTextField(
@@ -345,23 +343,24 @@ private fun LibrarySearchTopBar(
                         onValueChange = onQueryChange,
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(
-                            color = MaterialTheme.colorScheme.onSurface
-                        ),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary)
+                        textStyle =
+                            MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                            ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                     )
                 }
 
                 if (query.isNotEmpty()) {
                     IconButton(
                         onClick = { onQueryChange("") },
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(32.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear",
                             modifier = Modifier.size(MnemoraSize.IconSmall),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                 }
@@ -377,8 +376,9 @@ private fun SearchEmptyState(query: String) {
         icon = Icons.Default.Search,
         title = "No results for \"$query\"",
         message = "Try a different search term",
-        modifier = Modifier
-            .fillMaxSize()
+        modifier =
+            Modifier
+                .fillMaxSize(),
     )
 }
 
@@ -388,12 +388,13 @@ private fun EmptyState(onImport: () -> Unit) {
         icon = Icons.AutoMirrored.Outlined.MenuBook,
         title = "No books yet",
         message = "Import a study package to get started",
-        modifier = Modifier
-            .fillMaxSize()
+        modifier =
+            Modifier
+                .fillMaxSize(),
     ) {
         androidx.compose.material3.FilledTonalButton(
             onClick = onImport,
-            shape = MaterialTheme.shapes.large
+            shape = MaterialTheme.shapes.large,
         ) {
             Icon(Icons.Default.UploadFile, contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
@@ -403,15 +404,19 @@ private fun EmptyState(onImport: () -> Unit) {
 }
 
 @Composable
-private fun EmptyErrorState(message: String, onRetry: () -> Unit) {
+private fun EmptyErrorState(
+    message: String,
+    onRetry: () -> Unit,
+) {
     MnemoraEmptyState(
         icon = Icons.AutoMirrored.Outlined.HelpOutline,
         title = message,
         message = null,
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        isError = true
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+        isError = true,
     ) {
         androidx.compose.material3.FilledTonalButton(onClick = onRetry) {
             Text("Retry")
@@ -426,18 +431,19 @@ private fun BookCard(
     onPractice: () -> Unit,
     onTest: () -> Unit,
     onPreview: () -> Unit,
-    onDetail: () -> Unit
+    onDetail: () -> Unit,
 ) {
     MnemoraCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MnemoraBookAvatar(
                 bookId = book.id,
                 displayName = book.displayName,
-                iconName = book.icon
+                iconName = book.icon,
             )
             Spacer(modifier = Modifier.width(MnemoraSpacing.Large))
             Column(modifier = Modifier.weight(1f)) {
@@ -445,19 +451,19 @@ private fun BookCard(
                     text = book.displayName,
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "${book.totalQuestions} questions",
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = onDetail) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = "Open package",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }
@@ -467,21 +473,23 @@ private fun BookCard(
         // Primary action: Practice or Resume
         androidx.compose.material3.FilledTonalButton(
             onClick = onPractice,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxWidth(),
         ) {
             Icon(
                 painter = painterResource(R.drawable.ic_practice),
                 contentDescription = null,
-                modifier = Modifier.size(MnemoraSize.IconSmall)
+                modifier = Modifier.size(MnemoraSize.IconSmall),
             )
             Spacer(modifier = Modifier.width(MnemoraSpacing.Small))
             if (practiceSession != null && practiceSession.totalQuestions > 0) {
                 Text("Resume")
                 Spacer(modifier = Modifier.weight(1f))
                 Text(
-                    text = "${practiceSession.currentIndex.coerceAtMost(practiceSession.totalQuestions)}/${practiceSession.totalQuestions}",
+                    text = "${practiceSession.currentIndex.coerceAtMost(
+                        practiceSession.totalQuestions,
+                    )}/${practiceSession.totalQuestions}",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             } else {
                 Text("Practice")
@@ -493,28 +501,28 @@ private fun BookCard(
         // Secondary actions: Test + Preview
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small)
+            horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small),
         ) {
             androidx.compose.material3.OutlinedButton(
                 onClick = onTest,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_test),
                     contentDescription = null,
-                    modifier = Modifier.size(MnemoraSize.IconSmall)
+                    modifier = Modifier.size(MnemoraSize.IconSmall),
                 )
                 Spacer(modifier = Modifier.width(MnemoraSpacing.XSmall))
                 Text("Test")
             }
             androidx.compose.material3.OutlinedButton(
                 onClick = onPreview,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.weight(1f),
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_preview),
                     contentDescription = null,
-                    modifier = Modifier.size(MnemoraSize.IconSmall)
+                    modifier = Modifier.size(MnemoraSize.IconSmall),
                 )
                 Spacer(modifier = Modifier.width(MnemoraSpacing.XSmall))
                 Text("Preview")
@@ -522,8 +530,6 @@ private fun BookCard(
         }
     }
 }
-
-
 
 // ────────────────────────────────────────────────────────────
 // Previews
@@ -536,14 +542,12 @@ private fun HomeScreenLoadingPreview() {
         HomeScreenContent(
             uiState = HomeUiState(isLoading = true),
             onNavigateToPractice = { _, _ -> },
-
             onNavigateToTest = { _, _ -> },
             onNavigateToPreview = {},
             onNavigateToBookDetail = {},
-
             onImport = {},
             onRetry = {},
-            onSearchQueryChange = {}
+            onSearchQueryChange = {},
         )
     }
 }
@@ -555,14 +559,12 @@ private fun HomeScreenEmptyPreview() {
         HomeScreenContent(
             uiState = HomeUiState(),
             onNavigateToPractice = { _, _ -> },
-
             onNavigateToTest = { _, _ -> },
             onNavigateToPreview = {},
             onNavigateToBookDetail = {},
-
             onImport = {},
             onRetry = {},
-            onSearchQueryChange = {}
+            onSearchQueryChange = {},
         )
     }
 }
@@ -572,33 +574,33 @@ private fun HomeScreenEmptyPreview() {
 private fun HomeScreenWithBooksPreview() {
     MnemoraTheme {
         HomeScreenContent(
-            uiState = HomeUiState(
-                books = listOf(
-                    Book(
-                        id = 1,
-                        filename = "sample.zip",
-                        name = "Sample Book",
-                        totalQuestions = 120,
-                        totalNodes = 12
-                    ),
-                    Book(
-                        id = 2,
-                        filename = "test.zip",
-                        name = "Another Subject",
-                        totalQuestions = 85,
-                        totalNodes = 8
-                    )
-                )
-            ),
+            uiState =
+                HomeUiState(
+                    books =
+                        listOf(
+                            Book(
+                                id = 1,
+                                filename = "sample.zip",
+                                name = "Sample Book",
+                                totalQuestions = 120,
+                                totalNodes = 12,
+                            ),
+                            Book(
+                                id = 2,
+                                filename = "test.zip",
+                                name = "Another Subject",
+                                totalQuestions = 85,
+                                totalNodes = 8,
+                            ),
+                        ),
+                ),
             onNavigateToPractice = { _, _ -> },
-
             onNavigateToTest = { _, _ -> },
             onNavigateToPreview = {},
             onNavigateToBookDetail = {},
-
             onImport = {},
             onRetry = {},
-            onSearchQueryChange = {}
+            onSearchQueryChange = {},
         )
     }
 }

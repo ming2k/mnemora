@@ -26,31 +26,32 @@ fun MnemoraEmptyState(
     message: String?,
     modifier: Modifier = Modifier,
     isError: Boolean = false,
-    action: (@Composable ColumnScope.() -> Unit)? = null
+    action: (@Composable ColumnScope.() -> Unit)? = null,
 ) {
-    val color = if (isError) {
-        MaterialTheme.colorScheme.error
-    } else {
-        MaterialTheme.colorScheme.onSurfaceVariant
-    }
+    val color =
+        if (isError) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.onSurfaceVariant
+        }
 
     Column(
         modifier = modifier.padding(MnemoraSpacing.XXLarge),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
             modifier = Modifier.size(MnemoraSize.EmptyStateIcon),
-            tint = color.copy(alpha = if (isError) MnemoraAlpha.Strong else MnemoraAlpha.Disabled)
+            tint = color.copy(alpha = if (isError) MnemoraAlpha.Strong else MnemoraAlpha.Disabled),
         )
         Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
         Text(
             text = title,
             style = MaterialTheme.typography.headlineSmall,
             color = color,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
         )
         if (message != null) {
             Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
@@ -58,7 +59,7 @@ fun MnemoraEmptyState(
                 text = message,
                 style = MaterialTheme.typography.bodyMedium,
                 color = color.copy(alpha = MnemoraAlpha.Muted),
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
             )
         }
         if (action != null) {

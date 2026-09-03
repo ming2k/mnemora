@@ -1,0 +1,81 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>CyclomaticComplexMethod:AiService.kt$AiService$private fun Preferences.toAiConfig(): AiConfig</ID>
+    <ID>CyclomaticComplexMethod:BookDetailScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun BookDetailScreenContent( uiState: BookDetailUiState, onBack: () -&gt; Unit, onNavigateToPractice: (Int, String?, String?) -&gt; Unit, onNavigateToCollection: (Int) -&gt; Unit, onResumeSession: (Int, String, Long?) -&gt; Unit, onCreateCollection: (String, String) -&gt; Unit, onDeleteBook: () -&gt; Unit, onClearRecords: () -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:BookIcon.kt$fun resolveBookIcon(name: String?): ImageVector?</ID>
+    <ID>CyclomaticComplexMethod:BookImporter.kt$BookImporter$suspend fun importData( data: Map&lt;String, Any?&gt;, packageId: String, onProgress: ((Float) -&gt; Unit)? = null, ): String?</ID>
+    <ID>CyclomaticComplexMethod:HomeScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class) @Composable internal fun HomeScreenContent( uiState: HomeUiState, snackbarHostState: SnackbarHostState = remember { SnackbarHostState() }, onNavigateToPractice: (Int, String?) -&gt; Unit, onNavigateToTest: (Int, Long?) -&gt; Unit, onNavigateToPreview: (Int) -&gt; Unit, onNavigateToBookDetail: (Int) -&gt; Unit, onImport: () -&gt; Unit, onRetry: () -&gt; Unit, onSearchQueryChange: (String) -&gt; Unit, )</ID>
+    <ID>CyclomaticComplexMethod:LoadPracticeSessionUseCase.kt$LoadPracticeSessionUseCase$suspend operator fun invoke( navBookId: Int, collectionId: Int, filter: String, initialNodeId: String, mode: String, ): PracticeSessionData</ID>
+    <ID>CyclomaticComplexMethod:PackageService.kt$PackageService$suspend fun importPackage( uri: Uri, onProgress: (String, Float?) -&gt; Unit, ): ImportResult</ID>
+    <ID>CyclomaticComplexMethod:PracticeScreen.kt$@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class) @Composable internal fun PracticeScreenContent( uiState: PracticeUiState, chat: AiChatUiState, onBack: () -&gt; Unit, onToggleMark: () -&gt; Unit, onResetCurrentQuestion: () -&gt; Unit, onAnswerQuestion: (String) -&gt; Unit, onGoToQuestion: (Int) -&gt; Unit, onSelectNode: (String) -&gt; Unit, onLoadChatHistory: () -&gt; Unit, onLoadCollectionData: () -&gt; Unit, onToggleQuestionInCollection: (Int) -&gt; Unit, onCreateCollection: (String) -&gt; Unit, onDeleteCollection: (Int) -&gt; Unit, onSwitchChatSession: (Int) -&gt; Unit, onCreateChatSession: (String) -&gt; Unit, onDeleteChatSession: () -&gt; Unit, onSendAiMessage: (String) -&gt; Unit, onCancelAiMessage: () -&gt; Unit, onContinueAiMessage: (ChatMessage) -&gt; Unit = {}, onRegenerateAiMessage: (ChatMessage) -&gt; Unit = {}, onSaveChatScrollPosition: (Int, ChatScrollPosition) -&gt; Unit, onConfettiFinished: () -&gt; Unit, getQuestionStatus: (Int) -&gt; QuestionStatus, imageBasePath: String?, )</ID>
+    <ID>CyclomaticComplexMethod:QuestionContent.kt$@Composable private fun ChoiceItem( choice: QuestionChoice, isSelected: Boolean, showAnswer: Boolean, isCorrectChoice: Boolean, onClick: () -&gt; Unit, enabled: Boolean, modifier: Modifier = Modifier, imageBasePath: String? = null, textStyle: androidx.compose.ui.text.TextStyle, )</ID>
+    <ID>CyclomaticComplexMethod:SettingsScreen.kt$@OptIn(ExperimentalMaterial3Api::class) @Composable internal fun SettingsScreenContent( uiState: SettingsUiState, onThemeModeSelect: (Int) -&gt; Unit, onLocaleSelect: (String) -&gt; Unit, onAutoAdvanceChange: (Boolean) -&gt; Unit, onShowAnalysisChange: (Boolean) -&gt; Unit, onShowPracticeProgressChange: (Boolean) -&gt; Unit, onSoundEffectsChange: (Boolean) -&gt; Unit, onHapticFeedbackChange: (Boolean) -&gt; Unit, onContinuousFeedbackChange: (Boolean) -&gt; Unit, onConfettiEffectChange: (Boolean) -&gt; Unit, onAiProviderSelect: (String) -&gt; Unit, onAiApiKeyChange: (String) -&gt; Unit, onAiProjectIdChange: (String) -&gt; Unit, onAiLocationChange: (String) -&gt; Unit, onAiBaseUrlChange: (String) -&gt; Unit, onAiModelChange: (String) -&gt; Unit, onAiContextIncludeStemChange: (Boolean) -&gt; Unit, onAiContextIncludeOptionsChange: (Boolean) -&gt; Unit, onAiContextIncludeAnswerChange: (Boolean) -&gt; Unit, onAiContextIncludeExplanationChange: (Boolean) -&gt; Unit, onAiThinkingModeChange: (String) -&gt; Unit, onAiReasoningEffortChange: (String) -&gt; Unit, onAiSystemPromptChange: (String) -&gt; Unit, onNavigateToMarkdownTest: () -&gt; Unit = {}, )</ID>
+    <ID>MagicNumber:AiChatSheet.kt$0.85f</ID>
+    <ID>MagicNumber:BookDetailScreen.kt$0.4f</ID>
+    <ID>MagicNumber:CollectionsScreen.kt$1.2f</ID>
+    <ID>MagicNumber:CollectionsScreen.kt$120f</ID>
+    <ID>MagicNumber:ConfettiOverlay.kt$0.15f</ID>
+    <ID>MagicNumber:ConfettiOverlay.kt$0.3f</ID>
+    <ID>MagicNumber:ConfettiOverlay.kt$0.7f</ID>
+    <ID>MagicNumber:ConfettiOverlay.kt$1.1f</ID>
+    <ID>MagicNumber:ConfettiOverlay.kt$70</ID>
+    <ID>MagicNumber:HomeScreen.kt$120f</ID>
+    <ID>MagicNumber:MarkdownText.kt$1.1f</ID>
+    <ID>MagicNumber:MnemoraCollapsibleTopAppBar.kt$0.5f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.02f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.05f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.12f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.15f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.25f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.2f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.35f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.48f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.52f</ID>
+    <ID>MagicNumber:PackageService.kt$PackageService$0.6f</ID>
+    <ID>MagicNumber:PracticeScreen.kt$250</ID>
+    <ID>MagicNumber:QuestionContent.kt$0.7f</ID>
+    <ID>MagicNumber:QuestionContent.kt$0.92f</ID>
+    <ID>MagicNumber:QuestionContent.kt$0.95f</ID>
+    <ID>MagicNumber:QuestionContent.kt$180f</ID>
+    <ID>MagicNumber:QuestionContent.kt$200</ID>
+    <ID>MagicNumber:QuestionContent.kt$300</ID>
+    <ID>MagicNumber:QuestionContent.kt$90f</ID>
+    <ID>MagicNumber:RecordsScreen.kt$120f</ID>
+    <ID>MagicNumber:RecordsScreen.kt$24</ID>
+    <ID>MagicNumber:RecordsScreen.kt$6</ID>
+    <ID>MagicNumber:SettingsScreen.kt$120f</ID>
+    <ID>MagicNumber:SettingsScreen.kt$300</ID>
+    <ID>MatchingDeclarationName:MnemoraNavHost.kt$Routes</ID>
+    <ID>MaxLineLength:BookImporter.kt$BookImporter$"The schema allows arbitrary nesting, but the app limits depth to prevent UI degradation."</ID>
+    <ID>MaxLineLength:ChatDao.kt$ChatHistoryDao$"DELETE FROM ai_chat_history WHERE sessionId IN (SELECT id FROM ai_chat_sessions WHERE questionId IN (SELECT id FROM questions WHERE bookId = :bookId))"</ID>
+    <ID>NestedBlockDepth:BookImporter.kt$BookImporter$private fun countImportWork(nodes: List&lt;*&gt;?): Int</ID>
+    <ID>NestedBlockDepth:PackageService.kt$PackageService$private fun extractZip( zipFile: File, destDir: File, onProgress: ((Float) -&gt; Unit)? = null, )</ID>
+    <ID>NestedBlockDepth:PackageService.kt$PackageService$private fun getFileName(uri: Uri): String?</ID>
+    <ID>NestedBlockDepth:PackageService.kt$PackageService$private fun getFileSize(uri: Uri): Long</ID>
+    <ID>ReturnCount:CollectionManager.kt$CollectionManager$suspend fun addToCollection( collectionId: Int, bookId: Int, questionId: Int, ): Boolean</ID>
+    <ID>ReturnCount:CollectionRepository.kt$CollectionRepository$suspend fun isQuestionInCollection( collectionId: Int, bookId: Int, questionId: Int, ): Boolean</ID>
+    <ID>ReturnCount:MarkdownText.kt$private fun parseInlinePartsForLine(line: String): List&lt;InlinePart&gt;</ID>
+    <ID>ReturnCount:MarkdownText.kt$private fun parseParagraph(paragraph: String): List&lt;RenderBlock&gt;</ID>
+    <ID>ReturnCount:MarkdownText.kt$private fun parseTextSegment(text: String): List&lt;RenderBlock&gt;</ID>
+    <ID>ReturnCount:PackageService.kt$PackageService$private fun findDataJson(dir: File): File?</ID>
+    <ID>ReturnCount:PracticeViewModel.kt$PracticeViewModel$fun getQuestionStatus(index: Int): QuestionStatus</ID>
+    <ID>SpreadOperator:DatabaseModule.kt$DatabaseModule$(*DatabaseMigrations.ALL_MIGRATIONS)</ID>
+    <ID>TooGenericExceptionCaught:BookDetailViewModel.kt$BookDetailViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:BookImporter.kt$BookImporter$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CollectionDetailViewModel.kt$CollectionDetailViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:CollectionsViewModel.kt$CollectionsViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:HomeViewModel.kt$HomeViewModel$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PackageService.kt$PackageService$e: Exception</ID>
+    <ID>TooGenericExceptionCaught:PracticeViewModel.kt$PracticeViewModel$e: Exception</ID>
+    <ID>UnusedParameter:AiChatUseCase.kt$AiChatUseCase$sessionId: Int</ID>
+    <ID>UnusedParameter:CollectionsViewModel.kt$CollectionsViewModel$description: String = ""</ID>
+    <ID>UnusedParameter:CollectionsViewModel.kt$CollectionsViewModel$name: String</ID>
+    <ID>UnusedParameter:MnemoraCollapsibleTopAppBar.kt$colors: TopAppBarColors = TopAppBarDefaults.topAppBarColors( containerColor = MaterialTheme.colorScheme.background, )</ID>
+    <ID>UnusedParameter:QuestionContent.kt$showAnswer: Boolean</ID>
+    <ID>UnusedPrivateProperty:BookImporter.kt$BookImporter$private val json = Json { ignoreUnknownKeys = true }</ID>
+    <ID>UnusedPrivateProperty:HomeScreen.kt$val scope = rememberCoroutineScope()</ID>
+    <ID>UnusedPrivateProperty:HomeViewModel.kt$HomeViewModel$private val settingsRepository: SettingsRepository</ID>
+  </CurrentIssues>
+</SmellBaseline>

@@ -9,18 +9,18 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.ui.Alignment
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.hihusky.mnemora.ui.components.MnemoraSettingsGroup
 import com.hihusky.mnemora.ui.components.MnemoraSettingsSectionHeader
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
-import androidx.compose.ui.unit.dp
 
 /**
  * Debug-only settings section. Lives in `src/debug/`; the release variant
@@ -36,34 +36,35 @@ fun DebugSettingsSection(onNavigateToMarkdownTest: () -> Unit) {
 
     MnemoraSettingsGroup {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onNavigateToMarkdownTest)
-                .padding(
-                    horizontal = MnemoraSpacing.Large,
-                    vertical = MnemoraSpacing.Medium
-                )
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateToMarkdownTest)
+                    .padding(
+                        horizontal = MnemoraSpacing.Large,
+                        vertical = MnemoraSpacing.Medium,
+                    ),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Markdown Preview",
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
                         text = "Test rendering of tables, formulas, and streaming",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

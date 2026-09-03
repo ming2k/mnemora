@@ -13,10 +13,16 @@ interface SrsReviewDao {
     suspend fun getByBookId(bookId: Int): List<SrsReviewEntity>
 
     @Query("SELECT * FROM srs_reviews WHERE bookId = :bookId AND dueDate <= :now")
-    suspend fun getDueByBookId(bookId: Int, now: Long): List<SrsReviewEntity>
+    suspend fun getDueByBookId(
+        bookId: Int,
+        now: Long,
+    ): List<SrsReviewEntity>
 
     @Query("SELECT questionId FROM srs_reviews WHERE bookId = :bookId AND dueDate <= :now")
-    suspend fun getDueQuestionIds(bookId: Int, now: Long): List<Int>
+    suspend fun getDueQuestionIds(
+        bookId: Int,
+        now: Long,
+    ): List<Int>
 
     @Query("SELECT * FROM srs_reviews WHERE questionId = :questionId")
     suspend fun getByQuestionId(questionId: Int): SrsReviewEntity?
@@ -30,7 +36,8 @@ interface SrsReviewDao {
     @Query("DELETE FROM srs_reviews WHERE bookId = :bookId")
     suspend fun deleteByBookId(bookId: Int)
 
-    @Query("""
+    @Query(
+        """
         SELECT 
             COUNT(*) as total,
             SUM(CASE WHEN reviewState = 0 THEN 1 ELSE 0 END) as newCards,
@@ -38,8 +45,12 @@ interface SrsReviewDao {
             SUM(CASE WHEN reviewState = 2 THEN 1 ELSE 0 END) as review,
             SUM(CASE WHEN dueDate <= :now THEN 1 ELSE 0 END) as dueToday
         FROM srs_reviews WHERE bookId = :bookId
-    """)
-    suspend fun getStats(bookId: Int, now: Long): SrsStatsRow?
+    """,
+    )
+    suspend fun getStats(
+        bookId: Int,
+        now: Long,
+    ): SrsStatsRow?
 }
 
 data class SrsStatsRow(
@@ -47,5 +58,5 @@ data class SrsStatsRow(
     val newCards: Int = 0,
     val learning: Int = 0,
     val review: Int = 0,
-    val dueToday: Int = 0
+    val dueToday: Int = 0,
 )

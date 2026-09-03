@@ -19,105 +19,125 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class HomeViewModel @Inject constructor(
-    private val bookRepository: BookRepository,
-    private val studySessionRepository: StudySessionRepository,
-    private val packageService: PackageService,
-    private val settingsRepository: SettingsRepository
-) : ViewModel() {
+class HomeViewModel
+    @Inject
+    constructor(
+        private val bookRepository: BookRepository,
+        private val studySessionRepository: StudySessionRepository,
+        private val packageService: PackageService,
+        private val settingsRepository: SettingsRepository,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(HomeUiState())
+        val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow(HomeUiState())
-    val uiState: StateFlow<HomeUiState> = _uiState.asStateFlow()
+        private var booksCollectorJob: kotlinx.coroutines.Job? = null
 
-    private var booksCollectorJob: kotlinx.coroutines.Job? = null
+        init {
+            collectBooks()
+        }
 
-    init {
-        collectBooks()
-    }
+        private fun collectBooks() {
+            booksCollectorJob?.cancel()
+            booksCollectorJob =
+                viewModelScope.launch {
+                    bookRepository.getBooksFlow(_uiState.value.searchQuery).collect { books ->
+                        val sessions = studySessionRepository.getActiveSessionsPerMode(books.map { it.id })
+                        _uiState.update {
+                            it.copy(books = books, activeSessions = sessions, isLoading = false, error = null)
+                        }
+                    }
+                }
+        }
 
-    private fun collectBooks() {
-        booksCollectorJob?.cancel()
-        booksCollectorJob = viewModelScope.launch {
-            bookRepository.getBooksFlow(_uiState.value.searchQuery).collect { books ->
-                val sessions = studySessionRepository.getActiveSessionsPerMode(books.map { it.id })
-                _uiState.update {
-                    it.copy(books = books, activeSessions = sessions, isLoading = false, error = null)
+        fun onSearchQueryChange(query: String) {
+            _uiState.update { it.copy(searchQuery = query) }
+            collectBooks()
+        }
+
+        fun loadBooks() {
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true, error = null) }
+                try {
+                    val books = bookRepository.getBooks()
+                    val sessions = studySessionRepository.getActiveSessionsPerMode(books.map { it.id })
+                    _uiState.update { it.copy(books = books, activeSessions = sessions, isLoading = false) }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(error = e.message, isLoading = false) }
                 }
             }
         }
-    }
 
-    fun onSearchQueryChange(query: String) {
-        _uiState.update { it.copy(searchQuery = query) }
-        collectBooks()
-    }
+        fun importPackage(uri: Uri) {
+            viewModelScope.launch {
+                _uiState.update { it.copy(importStatus = "Importing...", importProgress = null) }
+                val result =
+                    packageService.importPackage(uri) { status, progress ->
+                        _uiState.update { it.copy(importStatus = status, importProgress = progress) }
+                    }
+                when (result) {
+                    is ImportResult.Success -> {
+                        loadBooks()
+                        _uiState.update {
+                            it.copy(
+                                importStatus = null,
+                                importProgress = null,
+                                importSuccess = result.packageName,
+                            )
+                        }
+                    }
 
-    fun loadBooks() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, error = null) }
-            try {
-                val books = bookRepository.getBooks()
-                val sessions = studySessionRepository.getActiveSessionsPerMode(books.map { it.id })
-                _uiState.update { it.copy(books = books, activeSessions = sessions, isLoading = false) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
-            }
-        }
-    }
+                    is ImportResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                importStatus = null,
+                                importProgress = null,
+                                importError = result.errorMessage,
+                            )
+                        }
+                    }
 
-    fun importPackage(uri: Uri) {
-        viewModelScope.launch {
-            _uiState.update { it.copy(importStatus = "Importing...", importProgress = null) }
-            val result = packageService.importPackage(uri) { status, progress ->
-                _uiState.update { it.copy(importStatus = status, importProgress = progress) }
-            }
-            when (result) {
-                is ImportResult.Success -> {
-                    loadBooks()
-                    _uiState.update { it.copy(importStatus = null, importProgress = null, importSuccess = result.packageName) }
-                }
-                is ImportResult.Error -> {
-                    _uiState.update { it.copy(importStatus = null, importProgress = null, importError = result.errorMessage) }
-                }
-                ImportResult.Cancelled -> {
-                    _uiState.update { it.copy(importStatus = null, importProgress = null) }
+                    ImportResult.Cancelled -> {
+                        _uiState.update { it.copy(importStatus = null, importProgress = null) }
+                    }
                 }
             }
         }
-    }
 
-    fun dismissImportSuccess() {
-        _uiState.update { it.copy(importSuccess = null) }
-    }
-
-    fun dismissImportError() {
-        _uiState.update { it.copy(importError = null) }
-    }
-
-    fun deleteBook(bookId: Int) {
-        viewModelScope.launch {
-            bookRepository.deleteBook(bookId)
-            loadBooks()
+        fun dismissImportSuccess() {
+            _uiState.update { it.copy(importSuccess = null) }
         }
-    }
 
-    fun reorderBooks(fromIndex: Int, toIndex: Int) {
-        viewModelScope.launch {
-            val current = _uiState.value.books.toMutableList()
-            val moved = current.removeAt(fromIndex)
-            val targetIndex = if (toIndex > fromIndex) toIndex - 1 else toIndex
-            current.add(targetIndex, moved)
-            current.forEachIndexed { index, book ->
-                bookRepository.updateBookSortOrder(book.id, index)
+        fun dismissImportError() {
+            _uiState.update { it.copy(importError = null) }
+        }
+
+        fun deleteBook(bookId: Int) {
+            viewModelScope.launch {
+                bookRepository.deleteBook(bookId)
+                loadBooks()
             }
-            _uiState.update { it.copy(books = current) }
+        }
+
+        fun reorderBooks(
+            fromIndex: Int,
+            toIndex: Int,
+        ) {
+            viewModelScope.launch {
+                val current = _uiState.value.books.toMutableList()
+                val moved = current.removeAt(fromIndex)
+                val targetIndex = if (toIndex > fromIndex) toIndex - 1 else toIndex
+                current.add(targetIndex, moved)
+                current.forEachIndexed { index, book ->
+                    bookRepository.updateBookSortOrder(book.id, index)
+                }
+                _uiState.update { it.copy(books = current) }
+            }
+        }
+
+        fun dismissError() {
+            _uiState.update { it.copy(error = null) }
         }
     }
-
-    fun dismissError() {
-        _uiState.update { it.copy(error = null) }
-    }
-}
 
 data class HomeUiState(
     val books: List<Book> = emptyList(),
@@ -128,5 +148,5 @@ data class HomeUiState(
     val importStatus: String? = null,
     val importProgress: Float? = null,
     val importSuccess: String? = null,
-    val importError: String? = null
+    val importError: String? = null,
 )

@@ -12,7 +12,10 @@ import com.hihusky.mnemora.ui.screens.debug.MarkdownTestScreen
 object DebugNavGraph {
     const val MARKDOWN_TEST = "markdown_test"
 
-    fun addDebugRoutes(builder: NavGraphBuilder, navController: NavHostController) {
+    fun addDebugRoutes(
+        builder: NavGraphBuilder,
+        navController: NavHostController,
+    ) {
         builder.composable(MARKDOWN_TEST) {
             MarkdownTestScreen(onBack = { navController.popBackStack() })
         }

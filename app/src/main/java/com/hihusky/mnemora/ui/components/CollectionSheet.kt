@@ -1,9 +1,7 @@
 package com.hihusky.mnemora.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -60,7 +57,7 @@ fun CollectionSheet(
     onCreate: (String) -> Unit,
     onDelete: (Int) -> Unit,
     onDismiss: () -> Unit,
-    sheetState: SheetState = rememberModalBottomSheetState()
+    sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     var newName by remember { mutableStateOf("") }
     var isCreating by remember { mutableStateOf(false) }
@@ -68,13 +65,13 @@ fun CollectionSheet(
 
     MnemoraBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(modifier = Modifier.padding(bottom = MnemoraSpacing.XLarge)) {
             Text(
                 text = "Collections",
                 style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small)
+                modifier = Modifier.padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
             )
 
             HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
@@ -84,9 +81,10 @@ fun CollectionSheet(
                     text = "No collections yet",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.XLarge)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.XLarge),
                 )
             } else {
                 collections.forEach { collection ->
@@ -94,7 +92,7 @@ fun CollectionSheet(
                         name = collection.name,
                         isSelected = collection.id in questionCollectionIds,
                         onToggle = { onToggle(collection.id) },
-                        onDelete = { onDelete(collection.id) }
+                        onDelete = { onDelete(collection.id) },
                     )
                 }
             }
@@ -103,29 +101,32 @@ fun CollectionSheet(
 
             if (isCreating) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small)
+                    horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small),
                 ) {
                     OutlinedTextField(
                         value = newName,
                         onValueChange = { newName = it },
                         placeholder = { Text("Collection name") },
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester),
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = {
-                            if (newName.isNotBlank()) {
-                                onCreate(newName.trim())
-                                newName = ""
-                                isCreating = false
-                            }
-                        }),
-                        shape = MaterialTheme.shapes.medium
+                        keyboardActions =
+                            KeyboardActions(onDone = {
+                                if (newName.isNotBlank()) {
+                                    onCreate(newName.trim())
+                                    newName = ""
+                                    isCreating = false
+                                }
+                            }),
+                        shape = MaterialTheme.shapes.medium,
                     )
                     FilledTonalIconButton(
                         onClick = {
@@ -134,7 +135,7 @@ fun CollectionSheet(
                                 newName = ""
                                 isCreating = false
                             }
-                        }
+                        },
                     ) {
                         Icon(Icons.Default.Check, contentDescription = "Create")
                     }
@@ -143,12 +144,12 @@ fun CollectionSheet(
             } else {
                 TextButton(
                     onClick = { isCreating = true },
-                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Small)
+                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Small),
                 ) {
                     Icon(
                         Icons.Default.Add,
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.width(MnemoraSpacing.XSmall))
                     Text("New collection")
@@ -163,38 +164,40 @@ private fun CollectionRow(
     name: String,
     isSelected: Boolean,
     onToggle: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onToggle)
-            .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onToggle)
+                .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+        horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
     ) {
         Icon(
             imageVector = if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.RadioButtonUnchecked,
             contentDescription = null,
             tint = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(20.dp),
         )
         Text(
             text = name,
             style = MaterialTheme.typography.bodyLarge,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         IconButton(
             onClick = onDelete,
             modifier = Modifier.size(32.dp),
-            colors = IconButtonDefaults.iconButtonColors(
-                contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            colors =
+                IconButtonDefaults.iconButtonColors(
+                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                ),
         ) {
             Icon(
                 Icons.Outlined.Delete,
                 contentDescription = "Delete collection",
-                modifier = Modifier.size(18.dp)
+                modifier = Modifier.size(18.dp),
             )
         }
     }
@@ -206,17 +209,30 @@ private fun CollectionRow(
 private fun CollectionSheetPreview() {
     MnemoraTheme {
         CollectionSheet(
-            collections = listOf(
-                Collection(id = 1, bookId = 1, kind = CollectionKind.Custom,
-                    behavior = CollectionBehavior.Manual, name = "Exam Prep", createdAt = 0L),
-                Collection(id = 2, bookId = 1, kind = CollectionKind.Custom,
-                    behavior = CollectionBehavior.Manual, name = "Wrong Answers", createdAt = 0L)
-            ),
+            collections =
+                listOf(
+                    Collection(
+                        id = 1,
+                        bookId = 1,
+                        kind = CollectionKind.Custom,
+                        behavior = CollectionBehavior.Manual,
+                        name = "Exam Prep",
+                        createdAt = 0L,
+                    ),
+                    Collection(
+                        id = 2,
+                        bookId = 1,
+                        kind = CollectionKind.Custom,
+                        behavior = CollectionBehavior.Manual,
+                        name = "Wrong Answers",
+                        createdAt = 0L,
+                    ),
+                ),
             questionCollectionIds = setOf(1),
             onToggle = {},
             onCreate = {},
             onDelete = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

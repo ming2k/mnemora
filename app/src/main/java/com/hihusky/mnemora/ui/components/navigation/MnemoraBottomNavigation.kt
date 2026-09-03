@@ -37,28 +37,34 @@ import com.hihusky.mnemora.ui.navigation.BottomNavItem
 @Composable
 fun MnemoraBottomNavigation(
     navController: NavController,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val items = BottomNavItem.entries
-    val currentRoute = navController.currentBackStackEntryAsState().value?.destination?.route
+    val currentRoute =
+        navController
+            .currentBackStackEntryAsState()
+            .value
+            ?.destination
+            ?.route
 
     val isTopLevel = items.any { it.route == currentRoute }
     if (!isTopLevel) return
 
     Surface(
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth(),
     ) {
         Column {
             HorizontalDivider(
                 thickness = 0.5.dp,
-                color = MaterialTheme.colorScheme.outlineVariant
+                color = MaterialTheme.colorScheme.outlineVariant,
             )
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(64.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
                 items.forEach { item ->
                     val selected = currentRoute == item.route
@@ -76,7 +82,7 @@ fun MnemoraBottomNavigation(
                                 }
                             }
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -90,51 +96,55 @@ private fun NavItem(
     item: BottomNavItem,
     selected: Boolean,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val contentColor by animateColorAsState(
-        targetValue = if (selected)
-            MaterialTheme.colorScheme.onSurface
-        else
-            MaterialTheme.colorScheme.onSurfaceVariant,
-        label = "navColor"
+        targetValue =
+            if (selected) {
+                MaterialTheme.colorScheme.onSurface
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+        label = "navColor",
     )
     val indicatorAlpha by animateFloatAsState(
         targetValue = if (selected) 1f else 0f,
-        label = "navIndicator"
+        label = "navIndicator",
     )
 
     Box(
-        modifier = modifier
-            .fillMaxHeight()
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = ripple(bounded = true, color = MaterialTheme.colorScheme.onSurface),
-                onClick = onClick
-            ),
-        contentAlignment = Alignment.Center
+        modifier =
+            modifier
+                .fillMaxHeight()
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = ripple(bounded = true, color = MaterialTheme.colorScheme.onSurface),
+                    onClick = onClick,
+                ),
+        contentAlignment = Alignment.Center,
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically)
+            verticalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterVertically),
         ) {
             Box(
-                modifier = Modifier
-                    .size(width = 24.dp, height = 2.dp)
-                    .clip(RoundedCornerShape(1.dp))
-                    .background(MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha))
+                modifier =
+                    Modifier
+                        .size(width = 24.dp, height = 2.dp)
+                        .clip(RoundedCornerShape(1.dp))
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = indicatorAlpha)),
             )
             Icon(
                 imageVector = if (selected) item.iconSelected else item.icon,
                 contentDescription = item.label,
                 tint = contentColor,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier.size(24.dp),
             )
             Text(
                 text = item.label,
                 style = MaterialTheme.typography.labelSmall,
                 fontWeight = if (selected) FontWeight.Medium else FontWeight.Normal,
-                color = contentColor
+                color = contentColor,
             )
         }
     }

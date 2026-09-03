@@ -10,9 +10,12 @@ import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
-class MainViewModel @Inject constructor(
-    settingsRepository: SettingsRepository
-) : ViewModel() {
-    val themeMode: StateFlow<Int> = settingsRepository.themeMode
-        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
-}
+class MainViewModel
+    @Inject
+    constructor(
+        settingsRepository: SettingsRepository,
+    ) : ViewModel() {
+        val themeMode: StateFlow<Int> =
+            settingsRepository.themeMode
+                .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+    }

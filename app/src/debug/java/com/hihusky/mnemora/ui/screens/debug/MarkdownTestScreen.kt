@@ -41,93 +41,94 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val TEST_CASES = listOf(
-    "table_formula" to (
-        "| Feature | Formula | Description | Units |\n" +
-        "|---------|---------|-------------|-------|\n" +
-        "| Area | ${'$'}A = \\pi r^2${'$'} | The total surface enclosed within a circular boundary, fundamental in geometry and physics calculations involving circular objects | m² |\n" +
-        "| Volume | ${'$'}V = \\frac{4}{3}\\pi r^3${'$'} | The three-dimensional space occupied by a spherical object, essential in fluid dynamics and material science | m³ |\n" +
-        "| Velocity | ${'$'}v = \\frac{ds}{dt}${'$'} | The rate of change of position with respect to time, representing both speed and direction of motion in kinematics | m/s |"
-    ),
-    "math_no_spaces" to (
-        "测试中文环境下公式${'$'}E=mc^2${'$'}前后没有空格的情况，以及英文环境The formula\\(x=1\\)is valid.\n\n" +
-        "The formula${'$'}E=mc^2${'$'}without spaces.\n" +
-        "Block math without spaces:\n" +
-        "text\$\$\\int_0^1 x dx\$\$text\n" +
-        "Escaped bracket \\[ y=2 \\] test."
-    ),
-    "empty_brackets" to (
-        "Empty brackets \\(\\) and \\( \\) should not render as math formulas.\n" +
-        "They often appear in LLM text as normal punctuation like fill-in-the-blank blanks.\n" +
-        "But actual math \\( x = 1 \\) works fine."
-    ),
-    "table_no_newline" to (
-        "This is a paragraph immediately followed by a table without an empty line.\n" +
-        "| A | B |\n" +
-        "|---|---|\n" +
-        "| 1 | 2 |"
-    ),
-    "list_bold" to (
-        "Key points:\n" +
-        "- **Newton's First Law**: object in motion stays in motion\n" +
-        "- **Second Law**: ${'$'}F = ma${'$'} relates force and acceleration\n" +
-        "- **Third Law**: action **reaction** pairs"
-    ),
-    "mixed_paragraphs" to (
-        "This is paragraph one.\n\n" +
-        "This is paragraph two.\n" +
-        "It has a soft break.\n\n" +
-        "> Blockquote time\n" +
-        "> with ${'$'}x=2${'$'} inside."
-    ),
-    "code_block" to (
-        "Example Kotlin code:\n" +
-        "```kotlin\n" +
-        "fun main() {\n" +
-        "    val x = 42\n" +
-        "    println(\"Value: ${'$'}x\")\n" +
-        "}\n" +
-        "```\n" +
-        "Inline code: `val result = compute()`"
-    ),
-    "headings" to (
-        "# Main Title\n" +
-        "## Section A\n" +
-        "Some text here.\n" +
-        "### Subsection 1.1\n" +
-        "More details.\n" +
-        "## Section B\n" +
-        "Final thoughts."
-    ),
-    "table_code" to (
-        "| Language | Example | Notes |\n" +
-        "|----------|---------|-------|\n" +
-        "| Kotlin | `val x = 42` | Immutable |\n" +
-        "| Python | `x = 42` | Dynamic |\n" +
-        "| Rust | `let x = 42` | **Ownership**: borrow checker ensures safety |"
-    ),
-    "bold_punct" to (
-        "**Important**: This is bold followed by colon.\n" +
-        "**Note**; semicolon also works.\n" +
-        "**Warning**. period too.\n" +
-        "**Key**, comma as well."
-    ),
-    "bold_latex" to (
-        "**${'$'}E=mc^2${'$'}** is the most famous equation.\n\n" +
-        "The **formula ${'$'}F=ma${'$'}** relates force and acceleration.\n\n" +
-        "**Key concept**: the energy ${'$'}E${'$'} equals mass ${'$'}m${'$'} times ${'$'}c^2${'$'}."
-    ),
-    "streaming" to (
-        "The **quick** brown ${'$'}f(x)${'$'} jumps over the lazy dog. " +
-        "This simulates how ${'$'}\\frac{1}{2}${'$'} appears during token streaming."
+private val TEST_CASES =
+    listOf(
+        "table_formula" to (
+            "| Feature | Formula | Description | Units |\n" +
+                "|---------|---------|-------------|-------|\n" +
+                "| Area | ${'$'}A = \\pi r^2${'$'} | The total surface enclosed within a circular boundary, " +
+                "fundamental in geometry and physics calculations involving circular objects | m² |\n" +
+                "| Volume | ${'$'}V = \\frac{4}{3}\\pi r^3${'$'} | The three-dimensional space occupied by a " +
+                "spherical object, essential in fluid dynamics and material science | m³ |\n" +
+                "| Velocity | ${'$'}v = \\frac{ds}{dt}${'$'} | The rate of change of position with respect to time, representing both speed and direction of motion in kinematics | m/s |"
+        ),
+        "math_no_spaces" to (
+            "测试中文环境下公式${'$'}E=mc^2${'$'}前后没有空格的情况，以及英文环境The formula\\(x=1\\)is valid.\n\n" +
+                "The formula${'$'}E=mc^2${'$'}without spaces.\n" +
+                "Block math without spaces:\n" +
+                "text\$\$\\int_0^1 x dx\$\$text\n" +
+                "Escaped bracket \\[ y=2 \\] test."
+        ),
+        "empty_brackets" to (
+            "Empty brackets \\(\\) and \\( \\) should not render as math formulas.\n" +
+                "They often appear in LLM text as normal punctuation like fill-in-the-blank blanks.\n" +
+                "But actual math \\( x = 1 \\) works fine."
+        ),
+        "table_no_newline" to (
+            "This is a paragraph immediately followed by a table without an empty line.\n" +
+                "| A | B |\n" +
+                "|---|---|\n" +
+                "| 1 | 2 |"
+        ),
+        "list_bold" to (
+            "Key points:\n" +
+                "- **Newton's First Law**: object in motion stays in motion\n" +
+                "- **Second Law**: ${'$'}F = ma${'$'} relates force and acceleration\n" +
+                "- **Third Law**: action **reaction** pairs"
+        ),
+        "mixed_paragraphs" to (
+            "This is paragraph one.\n\n" +
+                "This is paragraph two.\n" +
+                "It has a soft break.\n\n" +
+                "> Blockquote time\n" +
+                "> with ${'$'}x=2${'$'} inside."
+        ),
+        "code_block" to (
+            "Example Kotlin code:\n" +
+                "```kotlin\n" +
+                "fun main() {\n" +
+                "    val x = 42\n" +
+                "    println(\"Value: ${'$'}x\")\n" +
+                "}\n" +
+                "```\n" +
+                "Inline code: `val result = compute()`"
+        ),
+        "headings" to (
+            "# Main Title\n" +
+                "## Section A\n" +
+                "Some text here.\n" +
+                "### Subsection 1.1\n" +
+                "More details.\n" +
+                "## Section B\n" +
+                "Final thoughts."
+        ),
+        "table_code" to (
+            "| Language | Example | Notes |\n" +
+                "|----------|---------|-------|\n" +
+                "| Kotlin | `val x = 42` | Immutable |\n" +
+                "| Python | `x = 42` | Dynamic |\n" +
+                "| Rust | `let x = 42` | **Ownership**: borrow checker ensures safety |"
+        ),
+        "bold_punct" to (
+            "**Important**: This is bold followed by colon.\n" +
+                "**Note**; semicolon also works.\n" +
+                "**Warning**. period too.\n" +
+                "**Key**, comma as well."
+        ),
+        "bold_latex" to (
+            "**${'$'}E=mc^2${'$'}** is the most famous equation.\n\n" +
+                "The **formula ${'$'}F=ma${'$'}** relates force and acceleration.\n\n" +
+                "**Key concept**: the energy ${'$'}E${'$'} equals mass ${'$'}m${'$'} times ${'$'}c^2${'$'}."
+        ),
+        "streaming" to (
+            "The **quick** brown ${'$'}f(x)${'$'} jumps over the lazy dog. " +
+                "This simulates how ${'$'}\\frac{1}{2}${'$'} appears during token streaming."
+        ),
     )
-)
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
-fun MarkdownTestScreen(
-    onBack: () -> Unit
-) {
+fun MarkdownTestScreen(onBack: () -> Unit) {
     var rawText by remember { mutableStateOf(TEST_CASES.first().second) }
     var streamingText by remember { mutableStateOf("") }
     var isStreaming by remember { mutableStateOf(false) }
@@ -144,15 +145,16 @@ fun MarkdownTestScreen(
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState()),
         ) {
             // Preset buttons — 3 rows max, overflow in "More" popup
             val visibleCount = 9
@@ -160,11 +162,12 @@ fun MarkdownTestScreen(
             val hiddenCases = TEST_CASES.drop(visibleCount)
 
             FlowRow(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 visibleCases.forEach { (label, content) ->
                     Button(
@@ -175,7 +178,7 @@ fun MarkdownTestScreen(
                             streamingJob?.cancel()
                             streamingJob = null
                         },
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                     ) {
                         Text(label.replace("_", " "), style = MaterialTheme.typography.labelSmall)
                     }
@@ -184,13 +187,13 @@ fun MarkdownTestScreen(
                     Box {
                         OutlinedButton(
                             onClick = { moreExpanded = true },
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
                         ) {
                             Text("More…", style = MaterialTheme.typography.labelSmall)
                         }
                         DropdownMenu(
                             expanded = moreExpanded,
-                            onDismissRequest = { moreExpanded = false }
+                            onDismissRequest = { moreExpanded = false },
                         ) {
                             hiddenCases.forEach { (label, content) ->
                                 DropdownMenuItem(
@@ -202,7 +205,7 @@ fun MarkdownTestScreen(
                                         streamingJob?.cancel()
                                         streamingJob = null
                                         moreExpanded = false
-                                    }
+                                    },
                                 )
                             }
                         }
@@ -219,7 +222,7 @@ fun MarkdownTestScreen(
                         streamingText = ""
                         isStreaming = false
                     },
-                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Large)
+                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Large),
                 ) {
                     Text("Stop Streaming")
                 }
@@ -229,16 +232,17 @@ fun MarkdownTestScreen(
                         isStreaming = true
                         streamingText = ""
                         val source = rawText
-                        streamingJob = scope.launch {
-                            source.forEach { ch ->
-                                streamingText += ch
-                                delay(30)
+                        streamingJob =
+                            scope.launch {
+                                source.forEach { ch ->
+                                    streamingText += ch
+                                    delay(30)
+                                }
+                                isStreaming = false
+                                streamingJob = null
                             }
-                            isStreaming = false
-                            streamingJob = null
-                        }
                     },
-                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Large)
+                    modifier = Modifier.padding(horizontal = MnemoraSpacing.Large),
                 ) {
                     Text("Simulate Streaming")
                 }
@@ -257,11 +261,12 @@ fun MarkdownTestScreen(
                     isStreaming = false
                 },
                 label = { Text("Raw Markdown") },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = MnemoraSpacing.Large)
-                    .height(160.dp),
-                textStyle = MaterialTheme.typography.bodySmall
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = MnemoraSpacing.Large)
+                        .height(160.dp),
+                textStyle = MaterialTheme.typography.bodySmall,
             )
 
             Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
@@ -271,9 +276,10 @@ fun MarkdownTestScreen(
             if (displayText.isNotBlank()) {
                 MarkdownText(
                     content = displayText,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = MnemoraSpacing.Large)
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = MnemoraSpacing.Large),
                 )
             }
 

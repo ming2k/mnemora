@@ -11,12 +11,18 @@ enum class BottomNavItem(
     val route: String,
     val label: String,
     val icon: ImageVector,
-    val iconSelected: ImageVector
+    val iconSelected: ImageVector,
 ) {
-    Library(Routes.HOME, "Library",
+    Library(
+        Routes.HOME,
+        "Library",
         Icons.AutoMirrored.Outlined.MenuBook,
-        Icons.AutoMirrored.Filled.MenuBook),
-    Settings(Routes.SETTINGS, "Settings",
+        Icons.AutoMirrored.Filled.MenuBook,
+    ),
+    Settings(
+        Routes.SETTINGS,
+        "Settings",
         Icons.Outlined.Settings,
-        Icons.Filled.Settings)
+        Icons.Filled.Settings,
+    ),
 }

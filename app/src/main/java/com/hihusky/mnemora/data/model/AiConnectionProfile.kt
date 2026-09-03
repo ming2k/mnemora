@@ -35,8 +35,10 @@ internal object AiConnectionProfiles {
         return json.encodeToString(profiles)
     }
 
-    private fun key(provider: String, model: String): String =
-        "${provider.trim().lowercase()}::${model.trim().lowercase()}"
+    private fun key(
+        provider: String,
+        model: String,
+    ): String = "${provider.trim().lowercase()}::${model.trim().lowercase()}"
 
     private fun decode(raw: String): MutableMap<String, AiConnectionProfile> =
         try {

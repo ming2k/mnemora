@@ -17,37 +17,39 @@ data class Question(
     val backTemplate: String? = null,
     val parentContent: String? = null,
     val subQuestions: List<Question>? = null,
-    val format: String = "markdown"
+    val format: String = "markdown",
 ) {
     val isPassage: Boolean get() = questionType == QuestionType.Passage
     val isAnswerable: Boolean get() = questionType != QuestionType.Passage
     val isChoiceBased: Boolean
-        get() = isAnswerable && (
+        get() =
+            isAnswerable && (
                 questionType == QuestionType.MultipleChoice ||
-                        questionType == QuestionType.TrueFalse ||
-                        choices.isNotEmpty()
-                )
+                    questionType == QuestionType.TrueFalse ||
+                    choices.isNotEmpty()
+            )
     val needsAnswerReveal: Boolean get() = isAnswerable && choices.isEmpty()
 
     val displayFront: String
         get() = frontTemplate?.takeIf { it.trim().isNotEmpty() } ?: content
 
     val displayBack: String
-        get() = when {
-            backTemplate?.trim()?.isNotEmpty() == true -> backTemplate
-            explanation.trim().isEmpty() -> answer
-            else -> "$answer\n\n$explanation"
-        }
+        get() =
+            when {
+                backTemplate?.trim()?.isNotEmpty() == true -> backTemplate
+                explanation.trim().isEmpty() -> answer
+                else -> "$answer\n\n$explanation"
+            }
 
-    fun getChoiceContent(key: String): String {
-        return choices.firstOrNull { it.key == key }?.content ?: ""
-    }
+    fun getChoiceContent(key: String): String = choices.firstOrNull { it.key == key }?.content ?: ""
 
     val choiceEntries: List<Pair<String, String>>
         get() = choices.map { it.key to it.content }
-
 }
 
 enum class QuestionStatus {
-    Unanswered, Correct, Wrong, Marked
+    Unanswered,
+    Correct,
+    Wrong,
+    Marked,
 }

@@ -35,14 +35,14 @@ import com.hihusky.mnemora.ui.theme.MnemoraSize
 @Composable
 fun MnemoraDragHandle(modifier: Modifier = Modifier) {
     Box(
-        modifier = modifier
-            .padding(top = 8.dp, bottom = 6.dp)
-            .size(width = 32.dp, height = 4.dp)
-            .background(
-                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(2.dp)
-            )
-            .clearAndSetSemantics { }
+        modifier =
+            modifier
+                .padding(top = 8.dp, bottom = 6.dp)
+                .size(width = 32.dp, height = 4.dp)
+                .background(
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                    shape = RoundedCornerShape(2.dp),
+                ).clearAndSetSemantics { },
     )
 }
 
@@ -53,10 +53,11 @@ fun MnemoraDragHandle(modifier: Modifier = Modifier) {
  * absolute cap keeps tall devices from feeling cavernous.
  */
 @Composable
-private fun sheetMaxHeight(): Dp = minOf(
-    MnemoraSize.SheetMaxHeight,
-    (LocalConfiguration.current.screenHeightDp * MnemoraSize.SheetMaxHeightFraction).dp
-)
+private fun sheetMaxHeight(): Dp =
+    minOf(
+        MnemoraSize.SheetMaxHeight,
+        (LocalConfiguration.current.screenHeightDp * MnemoraSize.SheetMaxHeightFraction).dp,
+    )
 
 /**
  * Stops content scrolling from spilling into a sheet drag. When an inner scrollable runs out of
@@ -65,38 +66,43 @@ private fun sheetMaxHeight(): Dp = minOf(
  * non-scrolling area, which drags the Surface directly), scrim tap, and back — instead of an
  * accidental over-scroll. Non-scrolling sheets are unaffected: they never produce nested scroll.
  */
-private val SwallowOverscrollToSheet = object : NestedScrollConnection {
-    override fun onPostScroll(
-        consumed: Offset,
-        available: Offset,
-        source: NestedScrollSource
-    ): Offset = available
+private val SwallowOverscrollToSheet =
+    object : NestedScrollConnection {
+        override fun onPostScroll(
+            consumed: Offset,
+            available: Offset,
+            source: NestedScrollSource,
+        ): Offset = available
 
-    override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity = available
-}
+        override suspend fun onPostFling(
+            consumed: Velocity,
+            available: Velocity,
+        ): Velocity = available
+    }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MnemoraBottomSheet(
     onDismissRequest: () -> Unit,
     sheetState: SheetState = rememberModalBottomSheetState(),
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
         sheetState = sheetState,
         dragHandle = {
             MnemoraDragHandle()
-        }
+        },
     ) {
         // Every drawer shares one height policy (wrap content, capped) and one gesture policy
         // (content overscroll can't drag the sheet closed — only the handle/scrim/back do).
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = sheetMaxHeight())
-                .nestedScroll(SwallowOverscrollToSheet),
-            content = content
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = sheetMaxHeight())
+                    .nestedScroll(SwallowOverscrollToSheet),
+            content = content,
         )
     }
 }

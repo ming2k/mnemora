@@ -16,21 +16,21 @@ import com.hihusky.mnemora.ui.theme.stateLayer
 fun MnemoraStatusBadge(
     text: String,
     color: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     Box(
-        modifier = modifier
-            .background(
-                color = color.stateLayer(),
-                shape = MaterialTheme.shapes.small
-            )
-            .padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.XSmall)
+        modifier =
+            modifier
+                .background(
+                    color = color.stateLayer(),
+                    shape = MaterialTheme.shapes.small,
+                ).padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.XSmall),
     ) {
         Text(
             text = text,
             style = MaterialTheme.typography.labelSmall,
             color = color,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
     }
 }

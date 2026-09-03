@@ -27,7 +27,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -42,7 +41,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -54,29 +52,30 @@ import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.takeOrElse
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.text.HtmlCompat
-import coil.compose.AsyncImage
+import coil3.compose.AsyncImage
 import com.hrm.latex.renderer.Latex
 import com.hrm.latex.renderer.model.LatexConfig
-import com.mikepenz.markdown.coil2.Coil2ImageTransformerImpl
+import com.hrm.latex.renderer.model.LatexTheme
+import com.mikepenz.markdown.coil3.Coil3ImageTransformerImpl
 import com.mikepenz.markdown.compose.components.markdownComponents
 import com.mikepenz.markdown.compose.elements.MarkdownCodeBlock
 import com.mikepenz.markdown.compose.elements.MarkdownCodeFence
 import com.mikepenz.markdown.compose.elements.MarkdownParagraph
 import com.mikepenz.markdown.m3.Markdown
-import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import com.mikepenz.markdown.model.DefaultMarkdownColors
 import com.mikepenz.markdown.model.DefaultMarkdownTypography
 import com.mikepenz.markdown.model.rememberMarkdownState
+import com.mikepenz.markdown.utils.getUnescapedTextInNode
 import org.intellij.markdown.MarkdownElementTypes
 import org.intellij.markdown.MarkdownTokenTypes
 import org.intellij.markdown.ast.findChildOfType
-import org.intellij.markdown.ast.getTextInNode
 import org.intellij.markdown.flavours.gfm.GFMElementTypes.HEADER
 import org.intellij.markdown.flavours.gfm.GFMElementTypes.ROW
 import org.intellij.markdown.flavours.gfm.GFMTokenTypes.CELL
@@ -86,18 +85,22 @@ import java.io.File
 // High-performance LRU Caches for parsed Markdown AST and Styled Spans.
 // Eliminates main-thread re-parsing and layout lag during scroll.
 // ------------------------------------------------------------------
-private class SimpleLruCache<K, V>(private val maxSize: Int) {
-    private val map = object : LinkedHashMap<K, V>(maxSize, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean {
-            return size > maxSize
+private class SimpleLruCache<K, V>(
+    private val maxSize: Int,
+) {
+    private val map =
+        object : LinkedHashMap<K, V>(maxSize, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<K, V>?): Boolean = size > maxSize
         }
-    }
 
     @Synchronized
     fun get(key: K): V? = map[key]
 
     @Synchronized
-    fun put(key: K, value: V): V? = map.put(key, value)
+    fun put(
+        key: K,
+        value: V,
+    ): V? = map.put(key, value)
 }
 
 private val renderBlocksCache = SimpleLruCache<String, List<RenderBlock>>(300)
@@ -108,15 +111,34 @@ private val inlineMarkdownCache = SimpleLruCache<String, AnnotatedString>(1000)
 // One paragraph (\n\n-separated) maps to one or more RenderBlocks.
 // ------------------------------------------------------------------
 private sealed class RenderBlock {
-    data class StandaloneMarkdown(val text: String) : RenderBlock()
-    data class InlineFlow(val lines: List<List<InlinePart>>) : RenderBlock()
-    data class DisplayMath(val formula: String) : RenderBlock()
-    data class Image(val alt: String, val path: String) : RenderBlock()
+    data class StandaloneMarkdown(
+        val text: String,
+    ) : RenderBlock()
+
+    data class InlineFlow(
+        val lines: List<List<InlinePart>>,
+    ) : RenderBlock()
+
+    data class DisplayMath(
+        val formula: String,
+    ) : RenderBlock()
+
+    data class Image(
+        val alt: String,
+        val path: String,
+    ) : RenderBlock()
 }
 
 private sealed class InlinePart {
-    data class Text(val text: String, val isBold: Boolean = false) : InlinePart()
-    data class Math(val formula: String, val isBold: Boolean = false) : InlinePart()
+    data class Text(
+        val text: String,
+        val isBold: Boolean = false,
+    ) : InlinePart()
+
+    data class Math(
+        val formula: String,
+        val isBold: Boolean = false,
+    ) : InlinePart()
 }
 
 /**
@@ -137,7 +159,7 @@ fun MarkdownText(
     imageBasePath: String? = null,
     textStyle: TextStyle? = null,
     contentColor: Color? = null,
-    format: String = "markdown"
+    format: String = "markdown",
 ) {
     if (content.isBlank()) return
 
@@ -150,22 +172,23 @@ fun MarkdownText(
             imageBasePath = imageBasePath,
             textStyle = resolvedTextStyle,
             contentColor = resolvedContentColor,
-            modifier = modifier
+            modifier = modifier,
         )
         return
     }
 
-    val blocks = remember(content) {
-        renderBlocksCache.get(content) ?: run {
-            val parsed = parseRenderBlocks(content)
-            renderBlocksCache.put(content, parsed)
-            parsed
+    val blocks =
+        remember(content) {
+            renderBlocksCache.get(content) ?: run {
+                val parsed = parseRenderBlocks(content)
+                renderBlocksCache.put(content, parsed)
+                parsed
+            }
         }
-    }
 
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         blocks.forEach { block ->
             when (block) {
@@ -174,33 +197,42 @@ fun MarkdownText(
                     // spaces + \n) so that line breaks within a paragraph are
                     // visible — paragraphs themselves were already split on \n\n.
                     val withBreaks = block.text.replace("\n", "  \n")
-                    val processed = if (imageBasePath != null) {
-                        resolveImagePaths(withBreaks, imageBasePath)
-                    } else withBreaks
+                    val processed =
+                        if (imageBasePath != null) {
+                            resolveImagePaths(withBreaks, imageBasePath)
+                        } else {
+                            withBreaks
+                        }
                     MarkdownBlock(
                         text = processed,
                         textStyle = resolvedTextStyle,
-                        contentColor = resolvedContentColor
+                        contentColor = resolvedContentColor,
                     )
                 }
 
-                is RenderBlock.InlineFlow -> InlineFlowParagraph(
-                    lines = block.lines,
-                    textStyle = resolvedTextStyle,
-                    contentColor = resolvedContentColor
-                )
+                is RenderBlock.InlineFlow -> {
+                    InlineFlowParagraph(
+                        lines = block.lines,
+                        textStyle = resolvedTextStyle,
+                        contentColor = resolvedContentColor,
+                    )
+                }
 
-                is RenderBlock.DisplayMath -> Latex(
-                    latex = block.formula,
-                    modifier = Modifier.fillMaxWidth(),
-                    config = latexDisplayConfig(resolvedTextStyle, resolvedContentColor)
-                )
+                is RenderBlock.DisplayMath -> {
+                    Latex(
+                        latex = block.formula,
+                        modifier = Modifier.fillMaxWidth(),
+                        config = latexDisplayConfig(resolvedTextStyle, resolvedContentColor),
+                    )
+                }
 
-                is RenderBlock.Image -> MarkdownImage(
-                    alt = block.alt,
-                    path = block.path,
-                    imageBasePath = imageBasePath
-                )
+                is RenderBlock.Image -> {
+                    MarkdownImage(
+                        alt = block.alt,
+                        path = block.path,
+                        imageBasePath = imageBasePath,
+                    )
+                }
             }
         }
     }
@@ -211,12 +243,13 @@ fun MarkdownText(
 private fun InlineFlowParagraph(
     lines: List<List<InlinePart>>,
     textStyle: TextStyle,
-    contentColor: Color
+    contentColor: Color,
 ) {
-    val baseSpanStyle = SpanStyle(
-        fontSize = textStyle.fontSize,
-        fontFamily = textStyle.fontFamily
-    )
+    val baseSpanStyle =
+        SpanStyle(
+            fontSize = textStyle.fontSize,
+            fontFamily = textStyle.fontFamily,
+        )
     Column(modifier = Modifier.fillMaxWidth()) {
         lines.forEach { line ->
             val hasMath = line.any { it is InlinePart.Math }
@@ -226,14 +259,15 @@ private fun InlineFlowParagraph(
                 val lineText = line.filterIsInstance<InlinePart.Text>().joinToString("") { it.text }
                 val isBold = line.filterIsInstance<InlinePart.Text>().any { it.isBold }
                 val effectiveStyle = if (isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
-                val annotated = remember(lineText, effectiveStyle) {
-                    buildInlineMarkdown(lineText, effectiveStyle)
-                }
+                val annotated =
+                    remember(lineText, effectiveStyle) {
+                        buildInlineMarkdown(lineText, effectiveStyle)
+                    }
                 Text(
                     text = annotated,
                     style = textStyle,
                     color = contentColor,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 )
             } else {
                 // Line contains inline LaTeX: render in FlowRow with text segments and math chips.
@@ -242,15 +276,23 @@ private fun InlineFlowParagraph(
                         when (part) {
                             is InlinePart.Text -> {
                                 if (part.text.isNotEmpty()) {
-                                    val effectiveStyle = if (part.isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
-                                    val annotated = remember(part.text, effectiveStyle) {
-                                        buildInlineMarkdown(part.text, effectiveStyle)
-                                    }
+                                    val effectiveStyle =
+                                        if (part.isBold) {
+                                            baseSpanStyle.copy(
+                                                fontWeight = FontWeight.Bold,
+                                            )
+                                        } else {
+                                            baseSpanStyle
+                                        }
+                                    val annotated =
+                                        remember(part.text, effectiveStyle) {
+                                            buildInlineMarkdown(part.text, effectiveStyle)
+                                        }
                                     Text(
                                         text = annotated,
                                         style = textStyle,
                                         color = contentColor,
-                                        modifier = Modifier.align(Alignment.CenterVertically)
+                                        modifier = Modifier.align(Alignment.CenterVertically),
                                     )
                                 }
                             }
@@ -258,10 +300,11 @@ private fun InlineFlowParagraph(
                             is InlinePart.Math -> {
                                 Latex(
                                     latex = part.formula,
-                                    modifier = Modifier
-                                        .wrapContentSize()
-                                        .align(Alignment.CenterVertically),
-                                    config = latexInlineConfig(textStyle, contentColor)
+                                    modifier =
+                                        Modifier
+                                            .wrapContentSize()
+                                            .align(Alignment.CenterVertically),
+                                    config = latexInlineConfig(textStyle, contentColor),
                                 )
                             }
                         }
@@ -276,26 +319,28 @@ private fun InlineFlowParagraph(
 private fun MarkdownImage(
     alt: String,
     path: String,
-    imageBasePath: String?
+    imageBasePath: String?,
 ) {
     val model = remember(path, imageBasePath) { resolveImagePath(path, imageBasePath) }
     var showPreview by remember { mutableStateOf(false) }
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(8.dp))
-            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
-            .clickable { showPreview = true }
-            .padding(8.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .clickable { showPreview = true }
+                .padding(8.dp),
     ) {
         AsyncImage(
             model = model,
             contentDescription = alt.ifBlank { null },
             contentScale = ContentScale.Fit,
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(max = 320.dp)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 320.dp),
         )
     }
 
@@ -303,7 +348,7 @@ private fun MarkdownImage(
         ImagePreviewDialog(
             model = model,
             contentDescription = alt.ifBlank { null },
-            onDismiss = { showPreview = false }
+            onDismiss = { showPreview = false },
         )
     }
 }
@@ -312,43 +357,44 @@ private fun MarkdownImage(
 private fun ImagePreviewDialog(
     model: String,
     contentDescription: String?,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
 ) {
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(usePlatformDefaultWidth = false),
     ) {
         var scale by remember { mutableFloatStateOf(1f) }
         var offset by remember { mutableStateOf(Offset.Zero) }
 
         Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.Black)
-                .pointerInput(Unit) {
-                    detectTapGestures(onTap = { onDismiss() })
-                }
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .pointerInput(Unit) {
+                        detectTapGestures(onTap = { onDismiss() })
+                    },
         ) {
             AsyncImage(
                 model = model,
                 contentDescription = contentDescription,
                 contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(16.dp)
-                    .graphicsLayer {
-                        scaleX = scale
-                        scaleY = scale
-                        translationX = offset.x
-                        translationY = offset.y
-                    }
-                    .pointerInput(Unit) {
-                        detectTransformGestures { _, pan, zoom, _ ->
-                            val nextScale = (scale * zoom).coerceIn(1f, 5f)
-                            scale = nextScale
-                            offset = if (nextScale == 1f) Offset.Zero else offset + pan
-                        }
-                    }
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                        .graphicsLayer {
+                            scaleX = scale
+                            scaleY = scale
+                            translationX = offset.x
+                            translationY = offset.y
+                        }.pointerInput(Unit) {
+                            detectTransformGestures { _, pan, zoom, _ ->
+                                val nextScale = (scale * zoom).coerceIn(1f, 5f)
+                                scale = nextScale
+                                offset = if (nextScale == 1f) Offset.Zero else offset + pan
+                            }
+                        },
             )
         }
     }
@@ -370,25 +416,28 @@ private fun CustomMarkdownTable(
     val headerNode = node.findChildOfType(HEADER)
     val rows = node.children.filter { it.type == ROW }
 
-    val headerCells = headerNode?.children?.filter { it.type == CELL }?.map { cell ->
-        content.substring(cell.startOffset, cell.endOffset).trim()
-    } ?: emptyList()
-
-    val dataRows = rows.map { row ->
-        row.children.filter { it.type == CELL }.map { cell ->
+    val headerCells =
+        headerNode?.children?.filter { it.type == CELL }?.map { cell ->
             content.substring(cell.startOffset, cell.endOffset).trim()
+        } ?: emptyList()
+
+    val dataRows =
+        rows.map { row ->
+            row.children.filter { it.type == CELL }.map { cell ->
+                content.substring(cell.startOffset, cell.endOffset).trim()
+            }
         }
-    }
 
     if (headerCells.isEmpty()) return
 
     val columnCount = headerCells.size
 
-    val maxColWidth = when {
-        columnCount <= 2 -> 270.dp
-        columnCount <= 4 -> 225.dp
-        else -> 180.dp
-    }
+    val maxColWidth =
+        when {
+            columnCount <= 2 -> 270.dp
+            columnCount <= 4 -> 225.dp
+            else -> 180.dp
+        }
     val minColWidth = 60.dp
     val dividerThickness = 0.5.dp
     val cellPaddingH = 12.dp
@@ -405,134 +454,155 @@ private fun CustomMarkdownTable(
 
     SubcomposeLayout { constraints ->
         // ----- Phase 1: measure every cell at natural width -----
-        data class Cell(val col: Int, val row: Int, val text: String, val isHeader: Boolean)
-        val allCells = headerCells.mapIndexed { col, t -> Cell(col, 0, t, true) } +
-            dataRows.flatMapIndexed { rowIdx, row ->
-                row.mapIndexed { col, t -> Cell(col, rowIdx + 1, t, false) }
-            }
+        data class Cell(
+            val col: Int,
+            val row: Int,
+            val text: String,
+            val isHeader: Boolean,
+        )
+        val allCells =
+            headerCells.mapIndexed { col, t -> Cell(col, 0, t, true) } +
+                dataRows.flatMapIndexed { rowIdx, row ->
+                    row.mapIndexed { col, t -> Cell(col, rowIdx + 1, t, false) }
+                }
 
-        val measurements = allCells.map { cell ->
-            val cellStyle = if (cell.isHeader) style.copy(fontWeight = FontWeight.SemiBold) else style
-            val p = subcompose("m_${cell.row}_${cell.col}") {
-                TableCellContent(cell.text, cellStyle, textColor)
-            }.first().measure(Constraints(maxWidth = Constraints.Infinity))
-            Triple(cell.col, cell.row, p.width)
-        }
+        val measurements =
+            allCells.map { cell ->
+                val cellStyle = if (cell.isHeader) style.copy(fontWeight = FontWeight.SemiBold) else style
+                val p =
+                    subcompose("m_${cell.row}_${cell.col}") {
+                        TableCellContent(cell.text, cellStyle, textColor)
+                    }.first().measure(Constraints(maxWidth = Constraints.Infinity))
+                Triple(cell.col, cell.row, p.width)
+            }
 
         // ----- Phase 2: compute per-column widths -----
         val padHPx = with(density) { (cellPaddingH * 2).roundToPx() }
         val maxColWidthPx = with(density) { maxColWidth.roundToPx() }
         val minColWidthPx = with(density) { minColWidth.roundToPx() }
 
-        val columnWidthsDp = (0 until columnCount).map { col ->
-            val maxCellW = measurements.filter { it.first == col }.maxOf { it.third }
-            val padded = maxCellW + padHPx
-            val hasFormula = allCells.any { it.col == col && hasLatex.containsMatchIn(it.text) }
-            val px = if (hasFormula) padded.coerceAtLeast(minColWidthPx)
-                      else padded.coerceAtLeast(minColWidthPx).coerceAtMost(maxColWidthPx)
-            with(density) { px.toDp() }
-        }
+        val columnWidthsDp =
+            (0 until columnCount).map { col ->
+                val maxCellW = measurements.filter { it.first == col }.maxOf { it.third }
+                val padded = maxCellW + padHPx
+                val hasFormula = allCells.any { it.col == col && hasLatex.containsMatchIn(it.text) }
+                val px =
+                    if (hasFormula) {
+                        padded.coerceAtLeast(minColWidthPx)
+                    } else {
+                        padded.coerceAtLeast(minColWidthPx).coerceAtMost(maxColWidthPx)
+                    }
+                with(density) { px.toDp() }
+            }
 
-        val tableWidth = (columnWidthsDp.map { it.value }.sum() +
-            (columnCount + 1).toFloat() * dividerThickness.value).dp
+        val tableWidth =
+            (
+                columnWidthsDp.map { it.value }.sum() +
+                    (columnCount + 1).toFloat() * dividerThickness.value
+            ).dp
 
         // ----- Phase 3: compose & measure the final table -----
-        val tableMeasurable = subcompose("table") {
-            Box(
-                modifier = Modifier
-                    .horizontalScroll(scrollState)
-                    .padding(vertical = tablePaddingV)
-            ) {
-                Column {
-                    HorizontalDivider(
-                        modifier = Modifier.width(tableWidth),
-                        color = outlineColor,
-                        thickness = dividerThickness
-                    )
-                    // Header row
-                    Row(
-                        modifier = Modifier
-                            .width(tableWidth)
-                            .height(IntrinsicSize.Min)
-                    ) {
-                        VerticalDivider(
-                            modifier = Modifier.fillMaxHeight(),
+        val tableMeasurable =
+            subcompose("table") {
+                Box(
+                    modifier =
+                        Modifier
+                            .horizontalScroll(scrollState)
+                            .padding(vertical = tablePaddingV),
+                ) {
+                    Column {
+                        HorizontalDivider(
+                            modifier = Modifier.width(tableWidth),
                             color = outlineColor,
-                            thickness = dividerThickness
+                            thickness = dividerThickness,
                         )
-                        headerCells.forEachIndexed { col, cellText ->
-                            Box(
-                                modifier = Modifier
-                                    .width(columnWidthsDp[col])
-                                    .padding(horizontal = cellPaddingH, vertical = cellPaddingV),
-                                contentAlignment = Alignment.CenterStart
-                            ) {
-                                TableCellContent(
-                                    text = cellText,
-                                    style = style.copy(fontWeight = FontWeight.SemiBold),
-                                    contentColor = textColor
-                                )
-                            }
-                            VerticalDivider(
-                                modifier = Modifier.fillMaxHeight(),
-                                color = outlineColor,
-                                thickness = dividerThickness
-                            )
-                        }
-                    }
-                    HorizontalDivider(
-                        modifier = Modifier.width(tableWidth),
-                        color = headerDividerColor,
-                        thickness = dividerThickness
-                    )
-                    // Data rows
-                    dataRows.forEach { rowCells ->
+                        // Header row
                         Row(
-                            modifier = Modifier
-                                .width(tableWidth)
-                                .height(IntrinsicSize.Min)
+                            modifier =
+                                Modifier
+                                    .width(tableWidth)
+                                    .height(IntrinsicSize.Min),
                         ) {
                             VerticalDivider(
                                 modifier = Modifier.fillMaxHeight(),
                                 color = outlineColor,
-                                thickness = dividerThickness
+                                thickness = dividerThickness,
                             )
-                            rowCells.forEachIndexed { col, cellText ->
+                            headerCells.forEachIndexed { col, cellText ->
                                 Box(
-                                    modifier = Modifier
-                                        .width(columnWidthsDp[col])
-                                        .padding(horizontal = cellPaddingH, vertical = cellPaddingV),
-                                    contentAlignment = Alignment.CenterStart
+                                    modifier =
+                                        Modifier
+                                            .width(columnWidthsDp[col])
+                                            .padding(horizontal = cellPaddingH, vertical = cellPaddingV),
+                                    contentAlignment = Alignment.CenterStart,
                                 ) {
                                     TableCellContent(
                                         text = cellText,
-                                        style = style,
-                                        contentColor = textColor
+                                        style = style.copy(fontWeight = FontWeight.SemiBold),
+                                        contentColor = textColor,
                                     )
                                 }
                                 VerticalDivider(
                                     modifier = Modifier.fillMaxHeight(),
                                     color = outlineColor,
-                                    thickness = dividerThickness
+                                    thickness = dividerThickness,
                                 )
                             }
                         }
                         HorizontalDivider(
                             modifier = Modifier.width(tableWidth),
-                            color = outlineColor,
-                            thickness = dividerThickness
+                            color = headerDividerColor,
+                            thickness = dividerThickness,
                         )
+                        // Data rows
+                        dataRows.forEach { rowCells ->
+                            Row(
+                                modifier =
+                                    Modifier
+                                        .width(tableWidth)
+                                        .height(IntrinsicSize.Min),
+                            ) {
+                                VerticalDivider(
+                                    modifier = Modifier.fillMaxHeight(),
+                                    color = outlineColor,
+                                    thickness = dividerThickness,
+                                )
+                                rowCells.forEachIndexed { col, cellText ->
+                                    Box(
+                                        modifier =
+                                            Modifier
+                                                .width(columnWidthsDp[col])
+                                                .padding(horizontal = cellPaddingH, vertical = cellPaddingV),
+                                        contentAlignment = Alignment.CenterStart,
+                                    ) {
+                                        TableCellContent(
+                                            text = cellText,
+                                            style = style,
+                                            contentColor = textColor,
+                                        )
+                                    }
+                                    VerticalDivider(
+                                        modifier = Modifier.fillMaxHeight(),
+                                        color = outlineColor,
+                                        thickness = dividerThickness,
+                                    )
+                                }
+                            }
+                            HorizontalDivider(
+                                modifier = Modifier.width(tableWidth),
+                                color = outlineColor,
+                                thickness = dividerThickness,
+                            )
+                        }
                     }
                 }
             }
-        }
         val tableP = tableMeasurable.first().measure(constraints)
         layout(tableP.width, tableP.height) {
             tableP.placeRelative(0, 0)
         }
     }
 }
-
 
 /**
  * Renders a single table cell, mixing inline Markdown (bold/italic/code)
@@ -543,42 +613,52 @@ private fun CustomMarkdownTable(
 private fun TableCellContent(
     text: String,
     style: TextStyle,
-    contentColor: Color
+    contentColor: Color,
 ) {
     val parts = remember(text) { parseInlinePartsForLine(text) }
-    val baseSpanStyle = remember(style) {
-        SpanStyle(
-            fontSize = style.fontSize,
-            fontFamily = style.fontFamily
-        )
-    }
+    val baseSpanStyle =
+        remember(style) {
+            SpanStyle(
+                fontSize = style.fontSize,
+                fontFamily = style.fontFamily,
+            )
+        }
 
     FlowRow(modifier = Modifier.fillMaxWidth()) {
         parts.forEach { part ->
             when (part) {
                 is InlinePart.Text -> {
                     if (part.text.isNotEmpty()) {
-                        val effectiveStyle = if (part.isBold) baseSpanStyle.copy(fontWeight = FontWeight.Bold) else baseSpanStyle
+                        val effectiveStyle =
+                            if (part.isBold) {
+                                baseSpanStyle.copy(
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            } else {
+                                baseSpanStyle
+                            }
                         val annotated = buildInlineMarkdown(part.text, effectiveStyle)
                         Text(
                             text = annotated,
                             style = style,
                             color = contentColor,
-                            modifier = Modifier.align(Alignment.CenterVertically)
+                            modifier = Modifier.align(Alignment.CenterVertically),
                         )
                     }
                 }
+
                 is InlinePart.Math -> {
                     Latex(
                         latex = part.formula,
-                        modifier = Modifier
-                            .wrapContentSize()
-                            .align(Alignment.CenterVertically),
-                        config = LatexConfig(
-                            fontSize = style.fontSize,
-                            color = contentColor,
-                            darkColor = contentColor
-                        )
+                        modifier =
+                            Modifier
+                                .wrapContentSize()
+                                .align(Alignment.CenterVertically),
+                        config =
+                            LatexConfig(
+                                fontSize = style.fontSize,
+                                theme = LatexTheme.light(color = contentColor),
+                            ),
                     )
                 }
             }
@@ -593,110 +673,116 @@ private fun TableCellContent(
 private fun MarkdownBlock(
     text: String,
     textStyle: TextStyle,
-    contentColor: Color
+    contentColor: Color,
 ) {
     val surfaceContainerLowest = MaterialTheme.colorScheme.surfaceContainerLowest
     val outline = MaterialTheme.colorScheme.outline
     val monoBodyMedium = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace)
 
-    val colors = remember(contentColor, surfaceContainerLowest, outline) {
-        DefaultMarkdownColors(
-            text = contentColor,
-            codeBackground = surfaceContainerLowest,
-            inlineCodeBackground = surfaceContainerLowest,
-            dividerColor = outline,
-            tableBackground = Color.Transparent
-        )
-    }
+    val colors =
+        remember(contentColor, surfaceContainerLowest, outline) {
+            DefaultMarkdownColors(
+                text = contentColor,
+                codeBackground = surfaceContainerLowest,
+                inlineCodeBackground = surfaceContainerLowest,
+                dividerColor = outline,
+                tableBackground = Color.Transparent,
+            )
+        }
     val baseSize = textStyle.fontSize.takeOrElse { 16.sp }
-    val typography = remember(textStyle, contentColor, baseSize, monoBodyMedium) {
-        DefaultMarkdownTypography(
-            h1 = textStyle.copy(fontSize = baseSize * 1.25f, fontWeight = FontWeight.Bold),
-            h2 = textStyle.copy(fontSize = baseSize * 1.15f, fontWeight = FontWeight.Bold),
-            h3 = textStyle.copy(fontSize = baseSize * 1.05f, fontWeight = FontWeight.Bold),
-            h4 = textStyle.copy(fontWeight = FontWeight.Bold),
-            h5 = textStyle.copy(fontSize = baseSize * 0.9f, fontWeight = FontWeight.Bold),
-            h6 = textStyle.copy(fontSize = baseSize * 0.85f, fontWeight = FontWeight.Bold),
-            text = textStyle,
-            code = monoBodyMedium,
-            inlineCode = monoBodyMedium,
-            quote = textStyle,
-            paragraph = textStyle,
-            ordered = textStyle,
-            bullet = textStyle,
-            list = textStyle,
-            textLink = TextLinkStyles(
-                style = SpanStyle(color = contentColor)
-            ),
-            table = textStyle
-        )
-    }
+    val typography =
+        remember(textStyle, contentColor, baseSize, monoBodyMedium) {
+            DefaultMarkdownTypography(
+                h1 = textStyle.copy(fontSize = baseSize * 1.25f, fontWeight = FontWeight.Bold),
+                h2 = textStyle.copy(fontSize = baseSize * 1.15f, fontWeight = FontWeight.Bold),
+                h3 = textStyle.copy(fontSize = baseSize * 1.05f, fontWeight = FontWeight.Bold),
+                h4 = textStyle.copy(fontWeight = FontWeight.Bold),
+                h5 = textStyle.copy(fontSize = baseSize * 0.9f, fontWeight = FontWeight.Bold),
+                h6 = textStyle.copy(fontSize = baseSize * 0.85f, fontWeight = FontWeight.Bold),
+                text = textStyle,
+                code = monoBodyMedium,
+                inlineCode = monoBodyMedium,
+                quote = textStyle,
+                paragraph = textStyle,
+                ordered = textStyle,
+                bullet = textStyle,
+                list = textStyle,
+                textLink =
+                    TextLinkStyles(
+                        style = SpanStyle(color = contentColor),
+                    ),
+                table = textStyle,
+            )
+        }
     val markdownState = rememberMarkdownState(text, retainState = true)
-    val components = remember(colors, typography) {
-        markdownComponents(
-            paragraph = { model ->
-                val paragraphText = model.node.getUnescapedTextInNode(model.content)
-                if ('$' in paragraphText) {
-                    val lines = paragraphText.split('\n')
-                        .map { parseInlinePartsForLine(it) }
-                        .filter { it.isNotEmpty() }
-                    if (lines.isNotEmpty()) {
-                        InlineFlowParagraph(
-                            lines = lines,
-                            textStyle = model.typography.paragraph,
-                            contentColor = contentColor
+    val components =
+        remember(colors, typography) {
+            markdownComponents(
+                paragraph = { model ->
+                    val paragraphText = model.node.getUnescapedTextInNode(model.content)
+                    if ('$' in paragraphText) {
+                        val lines =
+                            paragraphText
+                                .split('\n')
+                                .map { parseInlinePartsForLine(it) }
+                                .filter { it.isNotEmpty() }
+                        if (lines.isNotEmpty()) {
+                            InlineFlowParagraph(
+                                lines = lines,
+                                textStyle = model.typography.paragraph,
+                                contentColor = contentColor,
+                            )
+                        }
+                    } else {
+                        MarkdownParagraph(
+                            content = model.content,
+                            node = model.node,
+                            style = model.typography.paragraph,
                         )
                     }
-                } else {
-                    MarkdownParagraph(
+                },
+                table = { model ->
+                    CustomMarkdownTable(
                         content = model.content,
                         node = model.node,
-                        style = model.typography.paragraph
+                        style = model.typography.table,
                     )
-                }
-            },
-            table = { model ->
-                CustomMarkdownTable(
-                    content = model.content,
-                    node = model.node,
-                    style = model.typography.table
-                )
-            },
-            codeFence = { model ->
-                MarkdownCodeFence(
-                    content = model.content,
-                    node = model.node,
-                    style = model.typography.code,
-                    block = { code, language, style ->
-                        ModernCodeBlock(code = code, language = language, style = style)
-                    }
-                )
-            },
-            codeBlock = { model ->
-                MarkdownCodeBlock(
-                    content = model.content,
-                    node = model.node,
-                    style = model.typography.code,
-                    block = { code, language, style ->
-                        ModernCodeBlock(code = code, language = language, style = style)
-                    }
-                )
-            },
-            blockQuote = { model ->
-                ModernBlockQuote(
-                    content = model.content,
-                    node = model.node,
-                    style = model.typography.quote
-                )
-            }
-        )
-    }
+                },
+                codeFence = { model ->
+                    MarkdownCodeFence(
+                        content = model.content,
+                        node = model.node,
+                        style = model.typography.code,
+                        block = { code, language, style ->
+                            ModernCodeBlock(code = code, language = language, style = style)
+                        },
+                    )
+                },
+                codeBlock = { model ->
+                    MarkdownCodeBlock(
+                        content = model.content,
+                        node = model.node,
+                        style = model.typography.code,
+                        block = { code, language, style ->
+                            ModernCodeBlock(code = code, language = language, style = style)
+                        },
+                    )
+                },
+                blockQuote = { model ->
+                    ModernBlockQuote(
+                        content = model.content,
+                        node = model.node,
+                        style = model.typography.quote,
+                    )
+                },
+            )
+        }
     Markdown(
         markdownState = markdownState,
         colors = colors,
         typography = typography,
         components = components,
-        imageTransformer = Coil2ImageTransformerImpl
+        imageTransformer = Coil3ImageTransformerImpl,
     )
 }
 
@@ -707,55 +793,59 @@ private fun MarkdownBlock(
 private fun ModernCodeBlock(
     code: String,
     language: String?,
-    style: TextStyle
+    style: TextStyle,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLowest),
         ) {
             // Accent bar on the left
             Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.primary)
+                modifier =
+                    Modifier
+                        .width(3.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.primary),
             )
 
             Column(modifier = Modifier.fillMaxWidth()) {
                 if (!language.isNullOrBlank()) {
                     Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                MaterialTheme.colorScheme.surfaceContainer
-                            )
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceContainer,
+                                ).padding(horizontal = 16.dp, vertical = 6.dp),
                     ) {
                         Text(
                             text = language.uppercase(),
                             style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
                     HorizontalDivider(
                         thickness = 0.5.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant
+                        color = MaterialTheme.colorScheme.outlineVariant,
                     )
                 }
                 Text(
                     text = code,
                     style = style,
                     color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier
-                        .horizontalScroll(rememberScrollState())
-                        .padding(horizontal = 16.dp, vertical = 14.dp)
+                    modifier =
+                        Modifier
+                            .horizontalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 14.dp),
                 )
             }
         }
@@ -769,27 +859,30 @@ private fun ModernCodeBlock(
 private fun ModernBlockQuote(
     content: String,
     node: org.intellij.markdown.ast.ASTNode,
-    style: TextStyle
+    style: TextStyle,
 ) {
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(8.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerLow)
-                .padding(start = 0.dp, top = 12.dp, end = 16.dp, bottom = 12.dp)
-                .height(IntrinsicSize.Min)
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                    .padding(start = 0.dp, top = 12.dp, end = 16.dp, bottom = 12.dp)
+                    .height(IntrinsicSize.Min),
         ) {
             // Accent bar
             Box(
-                modifier = Modifier
-                    .width(3.dp)
-                    .fillMaxHeight()
-                    .background(MaterialTheme.colorScheme.primary)
+                modifier =
+                    Modifier
+                        .width(3.dp)
+                        .fillMaxHeight()
+                        .background(MaterialTheme.colorScheme.primary),
             )
 
             Column(modifier = Modifier.padding(start = 12.dp)) {
@@ -802,18 +895,20 @@ private fun ModernBlockQuote(
                             ModernBlockQuote(
                                 content = content,
                                 node = child,
-                                style = quoteStyle
+                                style = quoteStyle,
                             )
                         }
+
                         MarkdownTokenTypes.EOL -> {
                             // Skip blank lines
                         }
+
                         else -> {
                             com.mikepenz.markdown.compose.MarkdownElement(
                                 node = child,
                                 components = com.mikepenz.markdown.compose.LocalMarkdownComponents.current,
                                 content = content,
-                                includeSpacer = false
+                                includeSpacer = false,
                             )
                         }
                     }
@@ -842,11 +937,12 @@ private fun parseRenderBlocks(content: String): List<RenderBlock> {
 private val WHOLE_IMAGE = Regex("^!\\[([^\\]]*)]\\(([^)]+)\\)$")
 private val WHOLE_DISPLAY_MATH = Regex("^\\\$\\\$([\\s\\S]+?)\\\$\\\$$|^\\\\\\[([\\s\\S]+?)\\\\\\]$")
 private val WHOLE_INLINE_MATH = Regex("^\\\$([^\\\$]+?)\\\$$|^\\\\\\((?!\\s*\\\\\\))(.+?)\\\\\\)$")
-private val ANCHOR_REGEX = Regex(
-    "(!\\[[^\\]]*]\\([^)]+\\))" +    // group 1: image
-        "|(\\\$\\\$[\\s\\S]+?\\\$\\\$)" + // group 2: display math $$...$$
-        "|(\\\\\\[[\\s\\S]+?\\\\\\])"    // group 3: display math \[...\]
-)
+private val ANCHOR_REGEX =
+    Regex(
+        "(!\\[[^\\]]*]\\([^)]+\\))" + // group 1: image
+            "|(\\\$\\\$[\\s\\S]+?\\\$\\\$)" + // group 2: display math $$...$$
+            "|(\\\\\\[[\\s\\S]+?\\\\\\])", // group 3: display math \[...\]
+    )
 private val IMAGE_PARTS = Regex("!\\[([^\\]]*)]\\(([^)]+)\\)")
 
 private fun parseParagraph(paragraph: String): List<RenderBlock> {
@@ -885,11 +981,18 @@ private fun parseParagraph(paragraph: String): List<RenderBlock> {
             }
         } else {
             val isEscapedBracket = m.value.startsWith("\\[")
-            val mathContent = if (isEscapedBracket) {
-                m.value.removePrefix("\\[").removeSuffix("\\]").trim()
-            } else {
-                m.value.removePrefix("$$").removeSuffix("$$").trim()
-            }
+            val mathContent =
+                if (isEscapedBracket) {
+                    m.value
+                        .removePrefix("\\[")
+                        .removeSuffix("\\]")
+                        .trim()
+                } else {
+                    m.value
+                        .removePrefix("$$")
+                        .removeSuffix("$$")
+                        .trim()
+                }
             result.add(RenderBlock.DisplayMath(mathContent))
         }
         lastEnd = m.range.last + 1
@@ -904,8 +1007,11 @@ private fun parseParagraph(paragraph: String): List<RenderBlock> {
 private fun parseTextSegment(text: String): List<RenderBlock> {
     val trimmed = text.trim()
     if (trimmed.isEmpty()) return emptyList()
-    val lines = trimmed.split('\n').map { parseInlinePartsForLine(it) }
-        .filter { it.isNotEmpty() }
+    val lines =
+        trimmed
+            .split('\n')
+            .map { parseInlinePartsForLine(it) }
+            .filter { it.isNotEmpty() }
     if (lines.isEmpty()) return emptyList()
     val anyMath = lines.any { line -> line.any { it is InlinePart.Math } }
 
@@ -915,14 +1021,15 @@ private fun parseTextSegment(text: String): List<RenderBlock> {
     // structural elements correctly; inline formulas inside them will
     // simply render as plain text (the $...$ syntax is not native
     // Markdown).
-    val hasComplexStructure = trimmed.lines().any { line ->
-        val t = line.trimStart()
-        t.startsWith("|") ||          // table row
-            Regex("^[-*+]\\s").containsMatchIn(t) || // unordered list
-            Regex("^\\d+\\.\\s").containsMatchIn(t) || // ordered list
-            t.startsWith(">") ||      // blockquote
-            t.startsWith("```")       // code fence
-    }
+    val hasComplexStructure =
+        trimmed.lines().any { line ->
+            val t = line.trimStart()
+            t.startsWith("|") || // table row
+                Regex("^[-*+]\\s").containsMatchIn(t) || // unordered list
+                Regex("^\\d+\\.\\s").containsMatchIn(t) || // ordered list
+                t.startsWith(">") || // blockquote
+                t.startsWith("```") // code fence
+        }
 
     return if (anyMath && !hasComplexStructure) {
         listOf(RenderBlock.InlineFlow(lines))
@@ -943,18 +1050,21 @@ private fun parseInlinePartsForLine(line: String): List<InlinePart> {
 
     val mathRanges = INLINE_MATH_REGEX.findAll(line).map { it.range }.toList()
 
-    val boldPositions = BOLD_DELIMITER.findAll(line)
-        .map { it.range.first }
-        .filter { pos -> mathRanges.none { pos in it } }
-        .toList()
+    val boldPositions =
+        BOLD_DELIMITER
+            .findAll(line)
+            .map { it.range.first }
+            .filter { pos -> mathRanges.none { pos in it } }
+            .toList()
 
     if (boldPositions.size < 2) {
         return splitOnMath(line, bold = false)
     }
 
-    val paired = boldPositions.chunked(2).mapNotNull { pair ->
-        if (pair.size == 2) pair[0] to pair[1] else null
-    }
+    val paired =
+        boldPositions.chunked(2).mapNotNull { pair ->
+            if (pair.size == 2) pair[0] to pair[1] else null
+        }
 
     if (paired.isEmpty()) return splitOnMath(line, bold = false)
 
@@ -976,7 +1086,10 @@ private fun parseInlinePartsForLine(line: String): List<InlinePart> {
     return parts.ifEmpty { splitOnMath(line, bold = false) }
 }
 
-private fun splitOnMath(text: String, bold: Boolean): List<InlinePart> {
+private fun splitOnMath(
+    text: String,
+    bold: Boolean,
+): List<InlinePart> {
     if (text.isEmpty()) return emptyList()
     val parts = mutableListOf<InlinePart>()
     var lastEnd = 0
@@ -1005,7 +1118,7 @@ private data class InlineMark(
     val end: Int,
     val innerStart: Int,
     val innerEnd: Int,
-    val style: (SpanStyle) -> SpanStyle
+    val style: (SpanStyle) -> SpanStyle,
 )
 
 private fun collectInlineMarks(text: String): List<InlineMark> {
@@ -1013,39 +1126,75 @@ private fun collectInlineMarks(text: String): List<InlineMark> {
 
     val boldAsterisk = Regex("\\*\\*(.+?)\\*\\*")
     boldAsterisk.findAll(text).forEach { m ->
-        marks.add(InlineMark(m.range.first, m.range.last + 1,
-            m.range.first + 2, m.range.last - 1,
-            { it.copy(fontWeight = FontWeight.Bold) }))
+        marks.add(
+            InlineMark(
+                m.range.first,
+                m.range.last + 1,
+                m.range.first + 2,
+                m.range.last - 1,
+                { it.copy(fontWeight = FontWeight.Bold) },
+            ),
+        )
     }
     val boldUnderscore = Regex("__(.+?)__")
     boldUnderscore.findAll(text).forEach { m ->
-        marks.add(InlineMark(m.range.first, m.range.last + 1,
-            m.range.first + 2, m.range.last - 1,
-            { it.copy(fontWeight = FontWeight.Bold) }))
+        marks.add(
+            InlineMark(
+                m.range.first,
+                m.range.last + 1,
+                m.range.first + 2,
+                m.range.last - 1,
+                { it.copy(fontWeight = FontWeight.Bold) },
+            ),
+        )
     }
     val italicAsterisk = Regex("(?<!\\*)\\*(?!\\*)(.+?)(?<!\\*)\\*(?!\\*)")
     italicAsterisk.findAll(text).forEach { m ->
-        marks.add(InlineMark(m.range.first, m.range.last + 1,
-            m.range.first + 1, m.range.last,
-            { it.copy(fontStyle = FontStyle.Italic) }))
+        marks.add(
+            InlineMark(
+                m.range.first,
+                m.range.last + 1,
+                m.range.first + 1,
+                m.range.last,
+                { it.copy(fontStyle = FontStyle.Italic) },
+            ),
+        )
     }
     val italicUnderscore = Regex("(?<!_)_(?!_)(.+?)(?<!_)_(?!_)")
     italicUnderscore.findAll(text).forEach { m ->
-        marks.add(InlineMark(m.range.first, m.range.last + 1,
-            m.range.first + 1, m.range.last,
-            { it.copy(fontStyle = FontStyle.Italic) }))
+        marks.add(
+            InlineMark(
+                m.range.first,
+                m.range.last + 1,
+                m.range.first + 1,
+                m.range.last,
+                { it.copy(fontStyle = FontStyle.Italic) },
+            ),
+        )
     }
     val code = Regex("`([^`]+)`")
     code.findAll(text).forEach { m ->
-        marks.add(InlineMark(m.range.first, m.range.last + 1,
-            m.range.first + 1, m.range.last,
-            { it.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace) }))
+        marks.add(
+            InlineMark(
+                m.range.first,
+                m.range.last + 1,
+                m.range.first + 1,
+                m.range.last,
+                { it.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace) },
+            ),
+        )
     }
     val strike = Regex("~~(.+?)~~")
     strike.findAll(text).forEach { m ->
-        marks.add(InlineMark(m.range.first, m.range.last + 1,
-            m.range.first + 2, m.range.last - 1,
-            { it.copy(textDecoration = TextDecoration.LineThrough) }))
+        marks.add(
+            InlineMark(
+                m.range.first,
+                m.range.last + 1,
+                m.range.first + 2,
+                m.range.last - 1,
+                { it.copy(textDecoration = TextDecoration.LineThrough) },
+            ),
+        )
     }
 
     return marks.sortedBy { it.start }
@@ -1056,32 +1205,33 @@ private fun collectInlineMarks(text: String): List<InlineMark> {
  * inline code and strikethrough. */
 private fun buildInlineMarkdown(
     text: String,
-    baseStyle: SpanStyle
+    baseStyle: SpanStyle,
 ): AnnotatedString {
     val cacheKey = "${text.hashCode()}_${baseStyle.fontWeight?.weight ?: 0}_${baseStyle.fontSize.value}"
     inlineMarkdownCache.get(cacheKey)?.let { return it }
 
     val marks = collectInlineMarks(text)
-    val result = if (marks.isEmpty()) {
-        AnnotatedString(text, baseStyle)
-    } else {
-        buildAnnotatedString {
-            var cursor = 0
-            for (m in marks) {
-                if (m.start < cursor) continue
-                if (cursor < m.start) {
-                    withStyle(baseStyle) { append(text, cursor, m.start) }
+    val result =
+        if (marks.isEmpty()) {
+            AnnotatedString(text, baseStyle)
+        } else {
+            buildAnnotatedString {
+                var cursor = 0
+                for (m in marks) {
+                    if (m.start < cursor) continue
+                    if (cursor < m.start) {
+                        withStyle(baseStyle) { append(text, cursor, m.start) }
+                    }
+                    withStyle(m.style(baseStyle)) {
+                        append(text, m.innerStart, m.innerEnd)
+                    }
+                    cursor = m.end
                 }
-                withStyle(m.style(baseStyle)) {
-                    append(text, m.innerStart, m.innerEnd)
+                if (cursor < text.length) {
+                    withStyle(baseStyle) { append(text, cursor, text.length) }
                 }
-                cursor = m.end
-            }
-            if (cursor < text.length) {
-                withStyle(baseStyle) { append(text, cursor, text.length) }
             }
         }
-    }
     inlineMarkdownCache.put(cacheKey, result)
     return result
 }
@@ -1089,12 +1239,16 @@ private fun buildInlineMarkdown(
 // ------------------------------------------------------------------
 // HTML content handler
 // ------------------------------------------------------------------
-private val HTML_IMG_REGEX = Regex(
-    """<img[^>]*src=["']([^"']*)["'][^>]*/?>""",
-    RegexOption.IGNORE_CASE
-)
+private val HTML_IMG_REGEX =
+    Regex(
+        """<img[^>]*src=["']([^"']*)["'][^>]*/?>""",
+        RegexOption.IGNORE_CASE,
+    )
 
-private data class HtmlSegment(val text: String, val imagePath: String? = null)
+private data class HtmlSegment(
+    val text: String,
+    val imagePath: String? = null,
+)
 
 private fun parseHtmlSegments(html: String): List<HtmlSegment> {
     val segments = mutableListOf<HtmlSegment>()
@@ -1120,7 +1274,7 @@ private fun HtmlContent(
     imageBasePath: String?,
     textStyle: TextStyle,
     contentColor: Color,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val segments = remember(html) { parseHtmlSegments(html) }
     Column(modifier = modifier) {
@@ -1129,18 +1283,20 @@ private fun HtmlContent(
                 MarkdownImage(
                     alt = "",
                     path = seg.imagePath,
-                    imageBasePath = imageBasePath
+                    imageBasePath = imageBasePath,
                 )
             } else {
-                val plainText = remember(seg.text) {
-                    HtmlCompat.fromHtml(seg.text, HtmlCompat.FROM_HTML_MODE_LEGACY)
-                        .toString()
-                        .trimEnd()
-                }
+                val plainText =
+                    remember(seg.text) {
+                        HtmlCompat
+                            .fromHtml(seg.text, HtmlCompat.FROM_HTML_MODE_LEGACY)
+                            .toString()
+                            .trimEnd()
+                    }
                 Text(
                     text = plainText,
                     style = textStyle,
-                    color = contentColor
+                    color = contentColor,
                 )
             }
         }
@@ -1150,28 +1306,35 @@ private fun HtmlContent(
 // ------------------------------------------------------------------
 // LaTeX config helpers
 // ------------------------------------------------------------------
-private fun latexInlineConfig(textStyle: TextStyle, contentColor: Color): LatexConfig {
+private fun latexInlineConfig(
+    textStyle: TextStyle,
+    contentColor: Color,
+): LatexConfig {
     val size = textStyle.fontSize.takeOrElse { 16.sp }
     return LatexConfig(
         fontSize = size,
-        color = contentColor,
-        darkColor = contentColor
+        theme = LatexTheme.light(color = contentColor),
     )
 }
 
-private fun latexDisplayConfig(textStyle: TextStyle, contentColor: Color): LatexConfig {
+private fun latexDisplayConfig(
+    textStyle: TextStyle,
+    contentColor: Color,
+): LatexConfig {
     val size = textStyle.fontSize.takeOrElse { 16.sp } * 1.1f
     return LatexConfig(
         fontSize = size,
-        color = contentColor,
-        darkColor = contentColor
+        theme = LatexTheme.light(color = contentColor),
     )
 }
 
 // ------------------------------------------------------------------
 // Image path resolution
 // ------------------------------------------------------------------
-private fun resolveImagePaths(content: String, basePath: String): String {
+private fun resolveImagePaths(
+    content: String,
+    basePath: String,
+): String {
     val regex = "!\\[(.*?)]\\((.*?)\\)".toRegex()
     return regex.replace(content) { matchResult ->
         val alt = matchResult.groupValues[1]
@@ -1180,7 +1343,10 @@ private fun resolveImagePaths(content: String, basePath: String): String {
     }
 }
 
-private fun resolveImagePath(path: String, basePath: String?): String {
+private fun resolveImagePath(
+    path: String,
+    basePath: String?,
+): String {
     if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("file://")) {
         return path
     }

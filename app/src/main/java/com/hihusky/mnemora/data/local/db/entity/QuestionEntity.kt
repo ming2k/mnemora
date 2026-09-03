@@ -12,19 +12,19 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = NodeEntity::class,
             parentColumns = ["id"],
             childColumns = ["nodeId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["bookId"]),
-        Index(value = ["nodeId"])
-    ]
+        Index(value = ["nodeId"]),
+    ],
 )
 data class QuestionEntity(
     @PrimaryKey(autoGenerate = true)
@@ -39,5 +39,5 @@ data class QuestionEntity(
     val questionType: String = "multiple_choice",
     val frontTemplate: String? = null,
     val backTemplate: String? = null,
-    val format: String = "markdown"
+    val format: String = "markdown",
 )

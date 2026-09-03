@@ -16,70 +16,75 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CollectionDetailViewModel @Inject constructor(
-    savedStateHandle: SavedStateHandle,
-    private val collectionRepository: CollectionRepository,
-    private val bookRepository: BookRepository,
-    private val packageService: PackageService
-) : ViewModel() {
+class CollectionDetailViewModel
+    @Inject
+    constructor(
+        savedStateHandle: SavedStateHandle,
+        private val collectionRepository: CollectionRepository,
+        private val bookRepository: BookRepository,
+        private val packageService: PackageService,
+    ) : ViewModel() {
+        private val collectionId: Int = checkNotNull(savedStateHandle["collectionId"])
 
-    private val collectionId: Int = checkNotNull(savedStateHandle["collectionId"])
+        private val _uiState = MutableStateFlow(CollectionDetailUiState())
+        val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow(CollectionDetailUiState())
-    val uiState: StateFlow<CollectionDetailUiState> = _uiState.asStateFlow()
-
-    init {
-        loadCollection()
-    }
-
-    fun loadCollection() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val collection = collectionRepository.getCollectionById(collectionId)
-                    ?: throw IllegalStateException("Collection not found")
-
-                val book = bookRepository.getBookById(collection.bookId)
-                val imageBasePath = book?.let { packageService.getPackageImagePath(it.filename) }
-
-                val questions = collectionRepository.getQuestionsByCollection(collectionId)
-
-                _uiState.update {
-                    it.copy(
-                        collection = collection,
-                        questions = questions,
-                        imageBasePath = imageBasePath,
-                        representativeBookId = collection.bookId,
-                        isLoading = false
-                    )
-                }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
-            }
-        }
-    }
-
-    fun deleteCollection() {
-        viewModelScope.launch {
-            collectionRepository.deleteCollection(collectionId)
-            _uiState.update { it.copy(deleted = true) }
-        }
-    }
-
-    fun removeQuestion(questionId: Int) {
-        viewModelScope.launch {
-            val bookId = _uiState.value.questions.find { it.id == questionId }?.bookId
-                ?: _uiState.value.representativeBookId
-                ?: return@launch
-            collectionRepository.deleteCollectionItem(collectionId, questionId)
+        init {
             loadCollection()
         }
-    }
 
-    fun dismissError() {
-        _uiState.update { it.copy(error = null) }
+        fun loadCollection() {
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true) }
+                try {
+                    val collection =
+                        collectionRepository.getCollectionById(collectionId)
+                            ?: throw IllegalStateException("Collection not found")
+
+                    val book = bookRepository.getBookById(collection.bookId)
+                    val imageBasePath = book?.let { packageService.getPackageImagePath(it.filename) }
+
+                    val questions = collectionRepository.getQuestionsByCollection(collectionId)
+
+                    _uiState.update {
+                        it.copy(
+                            collection = collection,
+                            questions = questions,
+                            imageBasePath = imageBasePath,
+                            representativeBookId = collection.bookId,
+                            isLoading = false,
+                        )
+                    }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(error = e.message, isLoading = false) }
+                }
+            }
+        }
+
+        fun deleteCollection() {
+            viewModelScope.launch {
+                collectionRepository.deleteCollection(collectionId)
+                _uiState.update { it.copy(deleted = true) }
+            }
+        }
+
+        fun removeQuestion(questionId: Int) {
+            viewModelScope.launch {
+                val bookId =
+                    _uiState.value.questions
+                        .find { it.id == questionId }
+                        ?.bookId
+                        ?: _uiState.value.representativeBookId
+                        ?: return@launch
+                collectionRepository.deleteCollectionItem(collectionId, questionId)
+                loadCollection()
+            }
+        }
+
+        fun dismissError() {
+            _uiState.update { it.copy(error = null) }
+        }
     }
-}
 
 data class CollectionDetailUiState(
     val collection: com.hihusky.mnemora.data.model.Collection? = null,
@@ -88,5 +93,5 @@ data class CollectionDetailUiState(
     val error: String? = null,
     val deleted: Boolean = false,
     val imageBasePath: String? = null,
-    val representativeBookId: Int? = null
+    val representativeBookId: Int? = null,
 )

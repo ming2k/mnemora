@@ -16,8 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
@@ -32,7 +30,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -59,7 +59,7 @@ import java.util.concurrent.TimeUnit
 @Composable
 fun RecordsScreen(
     onResumeSession: (bookId: Int, mode: String, sessionId: Long?) -> Unit,
-    viewModel: RecordsViewModel = hiltViewModel()
+    viewModel: RecordsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
@@ -78,14 +78,14 @@ fun RecordsScreen(
         topBar = {
             MnemoraCollapsibleTopAppBar(title = "Records", scrollFraction = scrollFraction)
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
                 uiState.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
@@ -104,14 +104,14 @@ fun RecordsScreen(
                     LazyColumn(
                         state = listState,
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier.fillMaxSize(),
                     ) {
                         // Stats header
                         item {
                             StatsRow(
                                 total = total,
                                 completed = completed,
-                                inProgress = inProgress
+                                inProgress = inProgress,
                             )
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -128,9 +128,9 @@ fun RecordsScreen(
                                         onResumeSession(
                                             session.bookId,
                                             session.mode,
-                                            if (session.isActive || session.isCompleted) session.id else null
+                                            if (session.isActive || session.isCompleted) session.id else null,
                                         )
-                                    }
+                                    },
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                             }
@@ -143,25 +143,29 @@ fun RecordsScreen(
 }
 
 @Composable
-private fun StatsRow(total: Int, completed: Int, inProgress: Int) {
+private fun StatsRow(
+    total: Int,
+    completed: Int,
+    inProgress: Int,
+) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         MnemoraMetricCard(
             value = total.toString(),
             label = "Sessions",
             color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         MnemoraMetricCard(
             value = completed.toString(),
             label = "Completed",
             color = MaterialTheme.colorScheme.tertiary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         MnemoraMetricCard(
             value = inProgress.toString(),
             label = "In Progress",
             color = MaterialTheme.colorScheme.secondary,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
     }
 }
@@ -173,7 +177,7 @@ private fun SectionHeader(label: String) {
         style = MaterialTheme.typography.labelLarge,
         fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.padding(vertical = 8.dp)
+        modifier = Modifier.padding(vertical = 8.dp),
     )
 }
 
@@ -181,80 +185,87 @@ private fun SectionHeader(label: String) {
 private fun SessionCard(
     session: StudySessionEntity,
     bookName: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val dateText = formatRelativeTime(session.startTime)
     val isCompleted = session.isCompleted
     val isActive = session.isActive
 
-    val statusColor = when {
-        isActive -> MaterialTheme.colorScheme.primary
-        isCompleted -> MaterialTheme.colorScheme.tertiary
-        else -> MaterialTheme.colorScheme.error
-    }
-    val statusIcon = when {
-        isActive -> Icons.Default.PlayArrow
-        isCompleted -> Icons.Default.CheckCircle
-        else -> Icons.Default.Schedule
-    }
-    val statusLabel = when {
-        isActive -> "In progress"
-        isCompleted -> "Completed"
-        else -> "Abandoned"
-    }
+    val statusColor =
+        when {
+            isActive -> MaterialTheme.colorScheme.primary
+            isCompleted -> MaterialTheme.colorScheme.tertiary
+            else -> MaterialTheme.colorScheme.error
+        }
+    val statusIcon =
+        when {
+            isActive -> Icons.Default.PlayArrow
+            isCompleted -> Icons.Default.CheckCircle
+            else -> Icons.Default.Schedule
+        }
+    val statusLabel =
+        when {
+            isActive -> "In progress"
+            isCompleted -> "Completed"
+            else -> "Abandoned"
+        }
 
-    val progressPercent = if (session.totalQuestions > 0) {
-        session.currentIndex * 100 / session.totalQuestions
-    } else 0
+    val progressPercent =
+        if (session.totalQuestions > 0) {
+            session.currentIndex * 100 / session.totalQuestions
+        } else {
+            0
+        }
 
     MnemoraCard(
         modifier = Modifier.fillMaxWidth(),
         contentPadding = PaddingValues(14.dp),
-        onClick = onClick
+        onClick = onClick,
     ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier =
+                    Modifier
                         .size(MnemoraSize.AvatarSmall)
                         .clip(CircleShape)
                         .background(statusColor.statusContainer()),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = statusIcon,
-                        contentDescription = null,
-                        tint = statusColor,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.width(MnemoraSpacing.Medium))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = bookName,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1
-                    )
-                    Text(
-                        text = "$dateText · ${session.mode}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                MnemoraStatusBadge(text = statusLabel, color = statusColor)
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = statusIcon,
+                    contentDescription = null,
+                    tint = statusColor,
+                    modifier = Modifier.size(20.dp),
+                )
             }
+            Spacer(modifier = Modifier.width(MnemoraSpacing.Medium))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = bookName,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                )
+                Text(
+                    text = "$dateText · ${session.mode}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            MnemoraStatusBadge(text = statusLabel, color = statusColor)
+        }
 
-            Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(10.dp))
 
-            MnemoraProgressLine(progress = progressPercent / 100f, color = statusColor)
+        MnemoraProgressLine(progress = progressPercent / 100f, color = statusColor)
 
-            Spacer(modifier = Modifier.height(6.dp))
+        Spacer(modifier = Modifier.height(6.dp))
 
-            Text(
-                text = "${session.currentIndex} / ${session.totalQuestions} questions",
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Text(
+            text = "${session.currentIndex} / ${session.totalQuestions} questions",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -262,19 +273,17 @@ private fun SessionCard(
 private fun EmptyRecordsState() {
     Box(
         modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.Center,
     ) {
         MnemoraEmptyState(
             icon = Icons.Outlined.History,
             title = "No records yet",
-            message = "Start studying to see your history here"
+            message = "Start studying to see your history here",
         )
     }
 }
 
-private fun groupSessionsByDate(
-    sessions: List<StudySessionEntity>
-): List<Pair<String, List<StudySessionEntity>>> {
+private fun groupSessionsByDate(sessions: List<StudySessionEntity>): List<Pair<String, List<StudySessionEntity>>> {
     val now = Calendar.getInstance()
     val today = now.toDateKey()
     now.add(Calendar.DAY_OF_YEAR, -1)
@@ -285,18 +294,31 @@ private fun groupSessionsByDate(
     val groups = mutableMapOf<String, MutableList<StudySessionEntity>>()
 
     sessions.forEach { session ->
-        val sessionDate = Calendar.getInstance().apply {
-            timeInMillis = session.startTime
-        }.toDateKey()
+        val sessionDate =
+            Calendar
+                .getInstance()
+                .apply {
+                    timeInMillis = session.startTime
+                }.toDateKey()
 
-        val label = when {
-            sessionDate == today -> "Today"
-            sessionDate == yesterday -> "Yesterday"
-            sessionDate >= thisWeekStart -> "This week"
-            else -> {
-                SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(session.startTime))
+        val label =
+            when {
+                sessionDate == today -> {
+                    "Today"
+                }
+
+                sessionDate == yesterday -> {
+                    "Yesterday"
+                }
+
+                sessionDate >= thisWeekStart -> {
+                    "This week"
+                }
+
+                else -> {
+                    SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(session.startTime))
+                }
             }
-        }
         groups.getOrPut(label) { mutableListOf() }.add(session)
     }
 
@@ -311,9 +333,8 @@ private fun groupSessionsByDate(
     return sorted
 }
 
-private fun Calendar.toDateKey(): Int {
-    return get(Calendar.YEAR) * 10000 + get(Calendar.MONTH) * 100 + get(Calendar.DAY_OF_MONTH)
-}
+private fun Calendar.toDateKey(): Int =
+    get(Calendar.YEAR) * 10000 + get(Calendar.MONTH) * 100 + get(Calendar.DAY_OF_MONTH)
 
 private fun formatRelativeTime(timestamp: Long): String {
     val now = System.currentTimeMillis()

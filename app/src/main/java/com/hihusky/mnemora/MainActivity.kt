@@ -31,13 +31,14 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
-                    bottomBar = { MnemoraBottomNavigation(navController) }
+                    bottomBar = { MnemoraBottomNavigation(navController) },
                 ) { innerPadding ->
                     MnemoraNavHost(
                         navController = navController,
-                        modifier = Modifier
-                            .padding(innerPadding)
-                            .consumeWindowInsets(innerPadding)
+                        modifier =
+                            Modifier
+                                .padding(innerPadding)
+                                .consumeWindowInsets(innerPadding),
                     )
                 }
             }

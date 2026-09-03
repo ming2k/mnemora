@@ -12,16 +12,16 @@ import androidx.room.PrimaryKey
             entity = QuestionEntity::class,
             parentColumns = ["id"],
             childColumns = ["questionId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["bookId"])]
+    indices = [Index(value = ["bookId"])],
 )
 data class UserAnswerEntity(
     @PrimaryKey
@@ -31,5 +31,5 @@ data class UserAnswerEntity(
     val isCorrect: Int? = null,
     val markedWrong: Int = 0,
     val isMarked: Int = 0,
-    val timestamp: Long
+    val timestamp: Long,
 )

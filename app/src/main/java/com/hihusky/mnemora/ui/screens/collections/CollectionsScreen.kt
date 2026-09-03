@@ -22,7 +22,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
 import androidx.compose.material3.Button
@@ -30,8 +29,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -73,7 +72,7 @@ import com.hihusky.mnemora.ui.theme.identityContainer
 @Composable
 fun CollectionsScreen(
     onNavigateToCollection: (Int) -> Unit,
-    viewModel: CollectionsViewModel = hiltViewModel()
+    viewModel: CollectionsViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -82,7 +81,7 @@ fun CollectionsScreen(
         onNavigateToCollection = onNavigateToCollection,
         onCreateCollection = { name, desc -> viewModel.createCollection(name, desc) },
         onDeleteCollection = { id -> viewModel.deleteCollection(id) },
-        onRetry = { viewModel.loadCollections() }
+        onRetry = { viewModel.loadCollections() },
     )
 }
 
@@ -93,7 +92,7 @@ internal fun CollectionsScreenContent(
     onNavigateToCollection: (Int) -> Unit,
     onCreateCollection: (String, String) -> Unit,
     onDeleteCollection: (Int) -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
 ) {
     var showCreateSheet by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
@@ -121,12 +120,12 @@ internal fun CollectionsScreenContent(
                         Icon(
                             Icons.Default.Add,
                             contentDescription = "New collection",
-                            tint = MaterialTheme.colorScheme.onSurface
+                            tint = MaterialTheme.colorScheme.onSurface,
                         )
                     }
-                }
+                },
             )
-        }
+        },
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
@@ -141,7 +140,7 @@ internal fun CollectionsScreenContent(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
                                 "Error: ${uiState.error}",
-                                color = MaterialTheme.colorScheme.error
+                                color = MaterialTheme.colorScheme.error,
                             )
                             Spacer(Modifier.height(MnemoraSpacing.Small))
                             TextButton(onClick = onRetry) { Text("Retry") }
@@ -153,8 +152,10 @@ internal fun CollectionsScreenContent(
                     MnemoraEmptyState(
                         icon = Icons.Default.FolderOpen,
                         title = "No collections yet",
-                        message = "Save questions you want to revisit, or group them by theme — then study them together.",
-                        modifier = Modifier.fillMaxSize()
+                        message =
+                            "Save questions you want to revisit, or group them by theme — " +
+                                "then study them together.",
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
@@ -162,7 +163,11 @@ internal fun CollectionsScreenContent(
                     LazyColumn(
                         state = listState,
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Medium)
+                        contentPadding =
+                            PaddingValues(
+                                horizontal = MnemoraSpacing.Large,
+                                vertical = MnemoraSpacing.Medium,
+                            ),
                     ) {
                         if (smartCollections.isNotEmpty()) {
                             item {
@@ -173,7 +178,7 @@ internal fun CollectionsScreenContent(
                                 SwipeableCollectionCard(
                                     summary = summary,
                                     onClick = { onNavigateToCollection(summary.collection.id) },
-                                    onDelete = { onDeleteCollection(summary.collection.id) }
+                                    onDelete = { onDeleteCollection(summary.collection.id) },
                                 )
                             }
                             if (customCollections.isNotEmpty()) {
@@ -190,7 +195,7 @@ internal fun CollectionsScreenContent(
                                 SwipeableCollectionCard(
                                     summary = summary,
                                     onClick = { onNavigateToCollection(summary.collection.id) },
-                                    onDelete = { onDeleteCollection(summary.collection.id) }
+                                    onDelete = { onDeleteCollection(summary.collection.id) },
                                 )
                             }
                         }
@@ -208,7 +213,7 @@ internal fun CollectionsScreenContent(
             onCreate = { name, desc ->
                 onCreateCollection(name, desc)
                 showCreateSheet = false
-            }
+            },
         )
     }
 }
@@ -220,7 +225,9 @@ private fun SectionLabel(text: String) {
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         fontWeight = FontWeight.SemiBold,
-        letterSpacing = androidx.compose.ui.unit.TextUnit(1.2f, androidx.compose.ui.unit.TextUnitType.Sp)
+        letterSpacing =
+            androidx.compose.ui.unit
+                .TextUnit(1.2f, androidx.compose.ui.unit.TextUnitType.Sp),
     )
 }
 
@@ -229,7 +236,7 @@ private fun SectionLabel(text: String) {
 private fun SwipeableCollectionCard(
     summary: CollectionSummary,
     onClick: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
 ) {
     val dismissState = rememberSwipeToDismissBoxState()
 
@@ -244,20 +251,21 @@ private fun SwipeableCollectionCard(
         enableDismissFromStartToEnd = false,
         backgroundContent = {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(MaterialTheme.colorScheme.errorContainer),
-                contentAlignment = Alignment.CenterEnd
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(MaterialTheme.colorScheme.errorContainer),
+                contentAlignment = Alignment.CenterEnd,
             ) {
                 Icon(
                     Icons.Default.Delete,
                     contentDescription = "Delete",
                     tint = MaterialTheme.colorScheme.onErrorContainer,
-                    modifier = Modifier.padding(end = MnemoraSpacing.Large)
+                    modifier = Modifier.padding(end = MnemoraSpacing.Large),
                 )
             }
-        }
+        },
     ) {
         CollectionCard(summary = summary, onClick = onClick)
     }
@@ -266,43 +274,46 @@ private fun SwipeableCollectionCard(
 @Composable
 private fun CollectionCard(
     summary: CollectionSummary,
-    onClick: () -> Unit
+    onClick: () -> Unit,
 ) {
     val collection = summary.collection
     val isSmart = collection.isSmart
 
-    val accentColor = if (isSmart) {
-        MaterialTheme.colorScheme.tertiary
-    } else {
-        MaterialTheme.colorScheme.secondary
-    }
+    val accentColor =
+        if (isSmart) {
+            MaterialTheme.colorScheme.tertiary
+        } else {
+            MaterialTheme.colorScheme.secondary
+        }
 
     val icon = if (isSmart) Icons.Default.AutoAwesome else Icons.Default.FolderOpen
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onClick)
-            .animateContentSize()
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClick = onClick)
+                .animateContentSize(),
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.Small),
-            verticalAlignment = Alignment.CenterVertically
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.Small),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(
                 modifier = Modifier.size(32.dp),
                 shape = MaterialTheme.shapes.small,
-                color = accentColor.identityContainer()
+                color = accentColor.identityContainer(),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(MnemoraSize.IconSmall)
+                        modifier = Modifier.size(MnemoraSize.IconSmall),
                     )
                 }
             }
@@ -315,7 +326,7 @@ private fun CollectionCard(
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (!collection.description.isNullOrBlank()) {
                     Spacer(Modifier.height(2.dp))
@@ -324,7 +335,7 @@ private fun CollectionCard(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -336,23 +347,26 @@ private fun CollectionCard(
         HorizontalDivider(
             thickness = 0.5.dp,
             color = MaterialTheme.colorScheme.outlineVariant,
-            modifier = Modifier.padding(start = 48.dp)
+            modifier = Modifier.padding(start = 48.dp),
         )
     }
 }
 
 @Composable
-private fun CountChip(count: Int, color: androidx.compose.ui.graphics.Color) {
+private fun CountChip(
+    count: Int,
+    color: androidx.compose.ui.graphics.Color,
+) {
     Surface(
         shape = MaterialTheme.shapes.extraLarge,
-        color = color.identityContainer()
+        color = color.identityContainer(),
     ) {
         Text(
             text = count.toString(),
             style = MaterialTheme.typography.labelMedium,
             color = color,
             fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.XSmall)
+            modifier = Modifier.padding(horizontal = MnemoraSpacing.Small, vertical = MnemoraSpacing.XSmall),
         )
     }
 }
@@ -361,22 +375,23 @@ private fun CountChip(count: Int, color: androidx.compose.ui.graphics.Color) {
 @Composable
 private fun CreateCollectionSheet(
     onDismiss: () -> Unit,
-    onCreate: (String, String) -> Unit
+    onCreate: (String, String) -> Unit,
 ) {
     var name by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
 
     MnemoraBottomSheet(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier
-                .padding(horizontal = MnemoraSpacing.XLarge)
-                .padding(bottom = MnemoraSpacing.XXLarge),
-            verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium)
+            modifier =
+                Modifier
+                    .padding(horizontal = MnemoraSpacing.XLarge)
+                    .padding(bottom = MnemoraSpacing.XXLarge),
+            verticalArrangement = Arrangement.spacedBy(MnemoraSpacing.Medium),
         ) {
             Text(
                 "New Collection",
                 style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
             )
 
             Spacer(Modifier.height(MnemoraSpacing.XSmall))
@@ -388,7 +403,7 @@ private fun CreateCollectionSheet(
                 placeholder = { Text("e.g. Exam Week, Hard Questions") },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
             )
 
             OutlinedTextField(
@@ -398,7 +413,7 @@ private fun CreateCollectionSheet(
                 placeholder = { Text("Why are you creating this?") },
                 maxLines = 3,
                 modifier = Modifier.fillMaxWidth(),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
             )
 
             Spacer(Modifier.height(MnemoraSpacing.Small))
@@ -406,7 +421,7 @@ private fun CreateCollectionSheet(
             Button(
                 onClick = { if (name.isNotBlank()) onCreate(name.trim(), description.trim()) },
                 enabled = name.isNotBlank(),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
             ) {
                 Text("Create")
             }
@@ -419,49 +434,54 @@ private fun CreateCollectionSheet(
 private fun CollectionsScreenPreview() {
     MnemoraTheme {
         CollectionsScreenContent(
-            uiState = CollectionsUiState(
-                summaries = listOf(
-                    CollectionSummary(
-                        collection = Collection(
-                            id = 1,
-                            bookId = 1,
-                            kind = CollectionKind.Custom,
-                            behavior = CollectionBehavior.Manual,
-                            name = "Exam Week",
-                            description = "Questions for Thursday's test",
-                            createdAt = 0L
+            uiState =
+                CollectionsUiState(
+                    summaries =
+                        listOf(
+                            CollectionSummary(
+                                collection =
+                                    Collection(
+                                        id = 1,
+                                        bookId = 1,
+                                        kind = CollectionKind.Custom,
+                                        behavior = CollectionBehavior.Manual,
+                                        name = "Exam Week",
+                                        description = "Questions for Thursday's test",
+                                        createdAt = 0L,
+                                    ),
+                                itemCount = 23,
+                            ),
+                            CollectionSummary(
+                                collection =
+                                    Collection(
+                                        id = 2,
+                                        bookId = 1,
+                                        kind = CollectionKind.Smart,
+                                        behavior = CollectionBehavior.SmartFilter,
+                                        name = "Wrong Answers",
+                                        description = "Questions I keep getting wrong",
+                                        createdAt = 0L,
+                                    ),
+                                itemCount = 7,
+                            ),
+                            CollectionSummary(
+                                collection =
+                                    Collection(
+                                        id = 3,
+                                        bookId = 2,
+                                        kind = CollectionKind.Custom,
+                                        behavior = CollectionBehavior.Manual,
+                                        name = "Chapter 5",
+                                        createdAt = 0L,
+                                    ),
+                                itemCount = 0,
+                            ),
                         ),
-                        itemCount = 23
-                    ),
-                    CollectionSummary(
-                        collection = Collection(
-                            id = 2,
-                            bookId = 1,
-                            kind = CollectionKind.Smart,
-                            behavior = CollectionBehavior.SmartFilter,
-                            name = "Wrong Answers",
-                            description = "Questions I keep getting wrong",
-                            createdAt = 0L
-                        ),
-                        itemCount = 7
-                    ),
-                    CollectionSummary(
-                        collection = Collection(
-                            id = 3,
-                            bookId = 2,
-                            kind = CollectionKind.Custom,
-                            behavior = CollectionBehavior.Manual,
-                            name = "Chapter 5",
-                            createdAt = 0L
-                        ),
-                        itemCount = 0
-                    )
-                )
-            ),
+                ),
             onNavigateToCollection = {},
             onCreateCollection = { _, _ -> },
             onDeleteCollection = {},
-            onRetry = {}
+            onRetry = {},
         )
     }
 }

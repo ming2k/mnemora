@@ -1,6 +1,5 @@
 package com.hihusky.mnemora.ui.components
 
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
@@ -9,22 +8,24 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.withTransform
 
-private val confettiColors = listOf(
-    Color(0xFFE53935),
-    Color(0xFF43A047),
-    Color(0xFF1E88E5),
-    Color(0xFFFDD835),
-    Color(0xFF8E24AA),
-    Color(0xFFFF7043),
-    Color(0xFF00ACC1),
-    Color(0xFFFF4081),
-)
+private val confettiColors =
+    listOf(
+        Color(0xFFE53935),
+        Color(0xFF43A047),
+        Color(0xFF1E88E5),
+        Color(0xFFFDD835),
+        Color(0xFF8E24AA),
+        Color(0xFFFF7043),
+        Color(0xFF00ACC1),
+        Color(0xFFFF4081),
+    )
 
 private data class Particle(
     val startX: Float,
@@ -42,24 +43,25 @@ private data class Particle(
 fun ConfettiOverlay(
     modifier: Modifier = Modifier,
     durationMs: Long = 2500L,
-    onFinished: () -> Unit = {}
+    onFinished: () -> Unit = {},
 ) {
-    val particles = remember {
-        val rng = kotlin.random.Random(System.currentTimeMillis())
-        List(70) {
-            Particle(
-                startX = rng.nextFloat(),
-                startY = -rng.nextFloat() * 0.15f,
-                vx = (rng.nextFloat() - 0.5f) * 0.25f,
-                vy = rng.nextFloat() * 0.35f + 0.25f,
-                rotation = rng.nextFloat() * 360f,
-                rotationSpeed = (rng.nextFloat() - 0.5f) * 400f,
-                size = rng.nextFloat() * 12f + 6f,
-                color = confettiColors[rng.nextInt(confettiColors.size)],
-                isCircle = rng.nextBoolean(),
-            )
+    val particles =
+        remember {
+            val rng = kotlin.random.Random(System.currentTimeMillis())
+            List(70) {
+                Particle(
+                    startX = rng.nextFloat(),
+                    startY = -rng.nextFloat() * 0.15f,
+                    vx = (rng.nextFloat() - 0.5f) * 0.25f,
+                    vy = rng.nextFloat() * 0.35f + 0.25f,
+                    rotation = rng.nextFloat() * 360f,
+                    rotationSpeed = (rng.nextFloat() - 0.5f) * 400f,
+                    size = rng.nextFloat() * 12f + 6f,
+                    color = confettiColors[rng.nextInt(confettiColors.size)],
+                    isCircle = rng.nextBoolean(),
+                )
+            }
         }
-    }
 
     var elapsed by remember { mutableLongStateOf(0L) }
 

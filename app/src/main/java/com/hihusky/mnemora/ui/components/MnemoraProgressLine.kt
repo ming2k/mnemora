@@ -16,21 +16,23 @@ fun MnemoraProgressLine(
     progress: Float,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.primary,
-    trackColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest
+    trackColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
 ) {
     Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(MnemoraSize.ProgressTrack)
-            .clip(MaterialTheme.shapes.small)
-            .background(trackColor)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(progress.coerceIn(0f, 1f))
+        modifier =
+            modifier
+                .fillMaxWidth()
                 .height(MnemoraSize.ProgressTrack)
                 .clip(MaterialTheme.shapes.small)
-                .background(color)
+                .background(trackColor),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .fillMaxWidth(progress.coerceIn(0f, 1f))
+                    .height(MnemoraSize.ProgressTrack)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(color),
         )
     }
 }

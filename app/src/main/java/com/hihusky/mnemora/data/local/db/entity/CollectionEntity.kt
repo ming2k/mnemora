@@ -12,13 +12,13 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["bookId"]),
-        Index(value = ["kind"])
-    ]
+        Index(value = ["kind"]),
+    ],
 )
 data class CollectionEntity(
     @PrimaryKey(autoGenerate = true)
@@ -31,5 +31,5 @@ data class CollectionEntity(
     val config: String? = null,
     val sortOrder: Int = 0,
     val createdAt: Long,
-    val updatedAt: Long? = null
+    val updatedAt: Long? = null,
 )

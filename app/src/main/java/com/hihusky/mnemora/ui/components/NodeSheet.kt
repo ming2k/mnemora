@@ -36,11 +36,11 @@ fun NodeSheet(
     currentPartitionId: String,
     onNodeSelected: (String) -> Unit,
     onDismiss: () -> Unit,
-    sheetState: SheetState = rememberModalBottomSheetState()
+    sheetState: SheetState = rememberModalBottomSheetState(),
 ) {
     MnemoraBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = sheetState
+        sheetState = sheetState,
     ) {
         Column(modifier = Modifier.padding(horizontal = MnemoraSpacing.Large, vertical = MnemoraSpacing.Small)) {
             LazyColumn(contentPadding = PaddingValues(bottom = MnemoraSpacing.Large)) {
@@ -48,19 +48,20 @@ fun NodeSheet(
                     NodeItem(
                         title = "All Nodes",
                         isSelected = currentPartitionId == "all",
-                        onClick = { onNodeSelected("all") }
+                        onClick = { onNodeSelected("all") },
                     )
                     HorizontalDivider()
                 }
                 items(flattenNodes(nodes)) { flatNode ->
                     NodeItem(
-                        title = if (flatNode.depth > 0) {
-                            "  ".repeat(flatNode.depth) + flatNode.title
-                        } else {
-                            flatNode.title
-                        },
+                        title =
+                            if (flatNode.depth > 0) {
+                                "  ".repeat(flatNode.depth) + flatNode.title
+                            } else {
+                                flatNode.title
+                            },
                         isSelected = currentPartitionId == flatNode.id,
-                        onClick = { onNodeSelected(flatNode.id) }
+                        onClick = { onNodeSelected(flatNode.id) },
                     )
                     HorizontalDivider()
                 }
@@ -69,7 +70,10 @@ fun NodeSheet(
     }
 }
 
-private fun flattenNodes(nodes: List<Node>, depth: Int = 0): List<Node> {
+private fun flattenNodes(
+    nodes: List<Node>,
+    depth: Int = 0,
+): List<Node> {
     val result = mutableListOf<Node>()
     for (node in nodes) {
         result.add(node.copy(depth = depth))
@@ -79,14 +83,19 @@ private fun flattenNodes(nodes: List<Node>, depth: Int = 0): List<Node> {
 }
 
 @Composable
-private fun NodeItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
+private fun NodeItem(
+    title: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = MnemoraSpacing.Medium),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clickable(onClick = onClick)
+                .padding(vertical = MnemoraSpacing.Medium),
         horizontalArrangement = Arrangement.spacedBy(MnemoraSpacing.Small),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = title,
@@ -94,14 +103,14 @@ private fun NodeItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.weight(1f)
+            modifier = Modifier.weight(1f),
         )
         if (isSelected) {
             Icon(
                 imageVector = Icons.Outlined.Check,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+                modifier = Modifier.size(20.dp),
             )
         }
     }
@@ -113,16 +122,23 @@ private fun NodeItem(title: String, isSelected: Boolean, onClick: () -> Unit) {
 private fun NodeSheetPreview() {
     MnemoraTheme {
         NodeSheet(
-            nodes = listOf(
-                Node(id = "1", bookId = 1, title = "Algebra Basics", children = listOf(
-                    Node(id = "1_0", bookId = 1, title = "Sub-topic 1.1", depth = 1)
-                )),
-                Node(id = "2", bookId = 1, title = "Linear Equations"),
-                Node(id = "3", bookId = 1, title = "Quadratic Functions")
-            ),
+            nodes =
+                listOf(
+                    Node(
+                        id = "1",
+                        bookId = 1,
+                        title = "Algebra Basics",
+                        children =
+                            listOf(
+                                Node(id = "1_0", bookId = 1, title = "Sub-topic 1.1", depth = 1),
+                            ),
+                    ),
+                    Node(id = "2", bookId = 1, title = "Linear Equations"),
+                    Node(id = "3", bookId = 1, title = "Quadratic Functions"),
+                ),
             currentPartitionId = "2",
             onNodeSelected = {},
-            onDismiss = {}
+            onDismiss = {},
         )
     }
 }

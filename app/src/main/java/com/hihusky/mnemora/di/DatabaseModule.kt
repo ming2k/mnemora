@@ -14,18 +14,18 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object DatabaseModule {
-
     @Provides
     @Singleton
-    fun provideDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            "quiz.db"
-        )
-            .addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
+    fun provideDatabase(
+        @ApplicationContext context: Context,
+    ): AppDatabase =
+        Room
+            .databaseBuilder(
+                context,
+                AppDatabase::class.java,
+                "quiz.db",
+            ).addMigrations(*DatabaseMigrations.ALL_MIGRATIONS)
             .build()
-    }
 
     @Provides
     fun provideBookDao(db: AppDatabase) = db.bookDao()
@@ -56,5 +56,4 @@ object DatabaseModule {
 
     @Provides
     fun provideStudySessionDao(db: AppDatabase) = db.studySessionDao()
-
 }

@@ -12,19 +12,19 @@ import androidx.room.PrimaryKey
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["bookId", "mode", "isActive"]),
-        Index(value = ["bookId", "startTime"])
-    ]
+        Index(value = ["bookId", "startTime"]),
+    ],
 )
 data class StudySessionEntity(
     @PrimaryKey(autoGenerate = true)
     val id: Long = 0,
     val bookId: Int,
-    val mode: String,           // Practice / Review / Preview / Test
+    val mode: String, // Practice / Review / Preview / Test
     val startTime: Long,
     val lastActiveTime: Long,
     val currentIndex: Int = 0,
@@ -33,5 +33,5 @@ data class StudySessionEntity(
     val isActive: Boolean = true,
     val answersJson: String? = null,
     val collectionId: Int? = null,
-    val nodeId: String? = null
+    val nodeId: String? = null,
 )

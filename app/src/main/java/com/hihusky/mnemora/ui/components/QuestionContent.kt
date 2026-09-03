@@ -55,7 +55,7 @@ fun QuestionContent(
     showAnswer: Boolean,
     modifier: Modifier = Modifier,
     onOptionSelected: ((String) -> Unit)? = null,
-    imageBasePath: String? = null
+    imageBasePath: String? = null,
 ) {
     val textAnswer = remember(question.id) { mutableStateOf("") }
     var flashcardRevealed by remember(question.id, showAnswer) { mutableStateOf(showAnswer) }
@@ -64,158 +64,166 @@ fun QuestionContent(
     if (showAnswer && !flashcardRevealed) {
         flashcardRevealed = true
     }
-    val questionTextStyle = MaterialTheme.typography.bodyLarge.copy(
-        fontSize = 17.sp,
-        lineHeight = 26.sp
-    )
-    val explanationTextStyle = MaterialTheme.typography.bodyMedium.copy(
-        fontSize = 15.sp,
-        lineHeight = 22.sp
-    )
+    val questionTextStyle =
+        MaterialTheme.typography.bodyLarge.copy(
+            fontSize = 17.sp,
+            lineHeight = 26.sp,
+        )
+    val explanationTextStyle =
+        MaterialTheme.typography.bodyMedium.copy(
+            fontSize = 15.sp,
+            lineHeight = 22.sp,
+        )
     Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(vertical = MnemoraSpacing.Small)
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .padding(vertical = MnemoraSpacing.Small),
     ) {
-            // Question content
-            MarkdownText(
-                content = question.content,
-                modifier = Modifier.fillMaxWidth(),
-                imageBasePath = imageBasePath,
-                textStyle = questionTextStyle,
-                format = question.format
-            )
+        // Question content
+        MarkdownText(
+            content = question.content,
+            modifier = Modifier.fillMaxWidth(),
+            imageBasePath = imageBasePath,
+            textStyle = questionTextStyle,
+            format = question.format,
+        )
 
-            if (question.parentContent != null) {
-                Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
-                HorizontalDivider(
-                    modifier = Modifier
+        if (question.parentContent != null) {
+            Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
+            HorizontalDivider(
+                modifier =
+                    Modifier
                         .fillMaxWidth(0.92f)
                         .align(Alignment.CenterHorizontally),
-                    thickness = 0.5.dp
-                )
-                Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
-                MarkdownText(
-                    content = question.parentContent,
-                    modifier = Modifier
+                thickness = 0.5.dp,
+            )
+            Spacer(modifier = Modifier.height(MnemoraSpacing.Medium))
+            MarkdownText(
+                content = question.parentContent,
+                modifier =
+                    Modifier
                         .fillMaxWidth(0.92f)
                         .align(Alignment.CenterHorizontally)
                         .alpha(0.7f),
-                    imageBasePath = imageBasePath,
-                    textStyle = questionTextStyle,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                    format = question.format
+                imageBasePath = imageBasePath,
+                textStyle = questionTextStyle,
+                contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                format = question.format,
+            )
+        }
+
+        Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
+
+        // Render based on question type and available choices
+        when {
+            question.questionType == QuestionType.Flashcard -> {
+                FlashcardContent(
+                    question = question,
+                    revealed = flashcardRevealed,
+                    showAnswer = showAnswer,
+                    onReveal = {
+                        flashcardRevealed = true
+                        if (onOptionSelected != null) {
+                            onOptionSelected.invoke("REVEALED")
+                        }
+                    },
                 )
             }
 
-            Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
-
-            // Render based on question type and available choices
-            when {
-                question.questionType == QuestionType.Flashcard -> {
-                    FlashcardContent(
-                        question = question,
-                        revealed = flashcardRevealed,
-                        showAnswer = showAnswer,
-                        onReveal = {
-                            flashcardRevealed = true
-                            if (onOptionSelected != null) {
-                                onOptionSelected.invoke("REVEALED")
-                            }
-                        }
+            question.choices.isEmpty() -> {
+                // FillBlank, Cloze, or any text-based question
+                if (!showAnswer) {
+                    Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                    OutlinedTextField(
+                        value = textAnswer.value,
+                        onValueChange = { textAnswer.value = it },
+                        label = { Text("Your answer") },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = onOptionSelected != null,
+                        singleLine = false,
+                        minLines = 2,
                     )
-                }
-                question.choices.isEmpty() -> {
-                    // FillBlank, Cloze, or any text-based question
-                    if (!showAnswer) {
-                        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
-                        OutlinedTextField(
-                            value = textAnswer.value,
-                            onValueChange = { textAnswer.value = it },
-                            label = { Text("Your answer") },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = onOptionSelected != null,
-                            singleLine = false,
-                            minLines = 2
-                        )
-                        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
-                        Button(
-                            onClick = { onOptionSelected?.invoke(textAnswer.value.trim()) },
-                            enabled = onOptionSelected != null && textAnswer.value.isNotBlank(),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text("Submit")
-                        }
-                    } else {
-                        Text(
-                            text = "Answer",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
-                        Text(
-                            text = question.answer,
-                            style = questionTextStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                    Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                    Button(
+                        onClick = { onOptionSelected?.invoke(textAnswer.value.trim()) },
+                        enabled = onOptionSelected != null && textAnswer.value.isNotBlank(),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text("Submit")
                     }
-                }
-                else -> {
-                    // MultipleChoice, TrueFalse, Unknown — render choices with slight
-                    // left indent to visually denote they are subordinate to the stem.
-                    question.choices.forEachIndexed { index, choice ->
-                        ChoiceItem(
-                            choice = choice,
-                            isSelected = selectedOption == choice.key,
-                            showAnswer = showAnswer,
-                            isCorrectChoice = choice.key.uppercase() == question.answer.uppercase(),
-                            onClick = { onOptionSelected?.invoke(choice.key) },
-                            enabled = onOptionSelected != null,
-                            imageBasePath = imageBasePath,
-                            textStyle = questionTextStyle,
-                            modifier = Modifier
-                                .fillMaxWidth(0.95f)
-                                .align(Alignment.CenterHorizontally)
-                        )
-                        if (index < question.choices.lastIndex) {
-                            Spacer(modifier = Modifier.height(8.dp))
-                        }
-                    }
+                } else {
+                    Text(
+                        text = "Answer",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                    Text(
+                        text = question.answer,
+                        style = questionTextStyle,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
 
-            // Explanation
-            AnimatedVisibility(
-                visible = showAnswer && question.questionType != QuestionType.Flashcard,
-                enter = fadeIn(tween(300)),
-                exit = fadeOut(tween(200))
-            ) {
-                Column {
-                    Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
-                    HorizontalDivider(thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
-
-                    if (question.explanation.isNotBlank()) {
-                        Text(
-                            text = "Explanation",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
-                        MarkdownText(
-                            content = question.explanation,
-                            modifier = Modifier.fillMaxWidth(),
-                            imageBasePath = imageBasePath,
-                            textStyle = explanationTextStyle,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            format = question.format
-                        )
+            else -> {
+                // MultipleChoice, TrueFalse, Unknown — render choices with slight
+                // left indent to visually denote they are subordinate to the stem.
+                question.choices.forEachIndexed { index, choice ->
+                    ChoiceItem(
+                        choice = choice,
+                        isSelected = selectedOption == choice.key,
+                        showAnswer = showAnswer,
+                        isCorrectChoice = choice.key.uppercase() == question.answer.uppercase(),
+                        onClick = { onOptionSelected?.invoke(choice.key) },
+                        enabled = onOptionSelected != null,
+                        imageBasePath = imageBasePath,
+                        textStyle = questionTextStyle,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth(0.95f)
+                                .align(Alignment.CenterHorizontally),
+                    )
+                    if (index < question.choices.lastIndex) {
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
                 }
             }
         }
+
+        // Explanation
+        AnimatedVisibility(
+            visible = showAnswer && question.questionType != QuestionType.Flashcard,
+            enter = fadeIn(tween(300)),
+            exit = fadeOut(tween(200)),
+        ) {
+            Column {
+                Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
+                HorizontalDivider(thickness = 0.5.dp)
+                Spacer(modifier = Modifier.height(MnemoraSpacing.Large))
+
+                if (question.explanation.isNotBlank()) {
+                    Text(
+                        text = "Explanation",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                    MarkdownText(
+                        content = question.explanation,
+                        modifier = Modifier.fillMaxWidth(),
+                        imageBasePath = imageBasePath,
+                        textStyle = explanationTextStyle,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        format = question.format,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -228,46 +236,48 @@ private fun ChoiceItem(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     imageBasePath: String? = null,
-    textStyle: androidx.compose.ui.text.TextStyle
+    textStyle: androidx.compose.ui.text.TextStyle,
 ) {
     val contentColor by animateColorAsState(
-        targetValue = when {
-            showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
-            showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
-            isSelected -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.onSurface
-        },
-        animationSpec = tween(300)
+        targetValue =
+            when {
+                showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
+                showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
+                isSelected -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.onSurface
+            },
+        animationSpec = tween(300),
     )
 
     val iconTint by animateColorAsState(
-        targetValue = when {
-            showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
-            showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
-            isSelected -> MaterialTheme.colorScheme.primary
-            else -> MaterialTheme.colorScheme.outlineVariant
-        },
-        animationSpec = tween(300)
+        targetValue =
+            when {
+                showAnswer && isCorrectChoice -> MaterialTheme.colorScheme.tertiary
+                showAnswer && isSelected && !isCorrectChoice -> MaterialTheme.colorScheme.error
+                isSelected -> MaterialTheme.colorScheme.primary
+                else -> MaterialTheme.colorScheme.outlineVariant
+            },
+        animationSpec = tween(300),
     )
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = enabled,
-                onClick = onClick,
-                indication = null,
-                interactionSource = remember { MutableInteractionSource() }
-            )
-            .padding(vertical = 8.dp),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .clickable(
+                    enabled = enabled,
+                    onClick = onClick,
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() },
+                ).padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Status indicator — all outlined (stroke) style for visual consistency.
         // Correct = green check, Wrong = red cross, Selected = blue check, Unselected = grey circle.
         Box(
             modifier = Modifier.size(24.dp),
-            contentAlignment = Alignment.Center
+            contentAlignment = Alignment.Center,
         ) {
             when {
                 showAnswer && isCorrectChoice -> {
@@ -275,31 +285,34 @@ private fun ChoiceItem(
                         imageVector = Icons.Outlined.Check,
                         contentDescription = "Correct",
                         tint = iconTint,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(22.dp),
                     )
                 }
+
                 showAnswer && isSelected && !isCorrectChoice -> {
                     Icon(
                         imageVector = Icons.Outlined.Close,
                         contentDescription = "Wrong",
                         tint = iconTint,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(22.dp),
                     )
                 }
+
                 isSelected -> {
                     Icon(
                         imageVector = Icons.Outlined.Check,
                         contentDescription = "Selected",
                         tint = iconTint,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(22.dp),
                     )
                 }
+
                 else -> {
                     Icon(
                         imageVector = Icons.Outlined.Circle,
                         contentDescription = "Unselected",
                         tint = iconTint,
-                        modifier = Modifier.size(22.dp)
+                        modifier = Modifier.size(22.dp),
                     )
                 }
             }
@@ -307,12 +320,13 @@ private fun ChoiceItem(
 
         MarkdownText(
             content = "${choice.key}. ${choice.content}",
-            modifier = Modifier
-                .weight(1f)
-                .padding(end = MnemoraSpacing.Large),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(end = MnemoraSpacing.Large),
             imageBasePath = imageBasePath,
             textStyle = textStyle,
-            contentColor = contentColor
+            contentColor = contentColor,
         )
     }
 }
@@ -322,48 +336,50 @@ private fun FlashcardContent(
     question: Question,
     revealed: Boolean,
     showAnswer: Boolean,
-    onReveal: () -> Unit
+    onReveal: () -> Unit,
 ) {
     val density = LocalDensity.current
     val flipRotation by animateFloatAsState(
         targetValue = if (revealed) 180f else 0f,
-        animationSpec = tween(durationMillis = 600)
+        animationSpec = tween(durationMillis = 600),
     )
 
     Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(tween(300))
-            .graphicsLayer {
-                rotationY = flipRotation
-                cameraDistance = 8f * density.density
-            }
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .animateContentSize(tween(300))
+                .graphicsLayer {
+                    rotationY = flipRotation
+                    cameraDistance = 8f * density.density
+                },
     ) {
         if (flipRotation <= 90f) {
             Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = question.displayFront,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
                 Button(
                     onClick = onReveal,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Text("Reveal Answer")
                 }
             }
         } else {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .graphicsLayer { rotationY = 180f }
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .graphicsLayer { rotationY = 180f },
             ) {
                 Text(
                     text = question.displayFront,
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 HorizontalDivider(thickness = 0.5.dp)
@@ -371,7 +387,7 @@ private fun FlashcardContent(
                 Text(
                     text = question.displayBack,
                     style = MaterialTheme.typography.headlineSmall,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
                 )
             }
         }
@@ -382,20 +398,22 @@ private fun FlashcardContent(
 // Previews
 // ────────────────────────────────────────────────────────────
 
-private val previewQuestion = Question(
-    id = 1,
-    bookId = 1,
-    content = "What is the capital of **France**?",
-    choices = listOf(
-        QuestionChoice("A", "London"),
-        QuestionChoice("B", "Paris"),
-        QuestionChoice("C", "Berlin"),
-        QuestionChoice("D", "Madrid")
-    ),
-    answer = "B",
-    explanation = "Paris is the capital and most populous city of France.",
-    questionType = QuestionType.MultipleChoice
-)
+private val previewQuestion =
+    Question(
+        id = 1,
+        bookId = 1,
+        content = "What is the capital of **France**?",
+        choices =
+            listOf(
+                QuestionChoice("A", "London"),
+                QuestionChoice("B", "Paris"),
+                QuestionChoice("C", "Berlin"),
+                QuestionChoice("D", "Madrid"),
+            ),
+        answer = "B",
+        explanation = "Paris is the capital and most populous city of France.",
+        questionType = QuestionType.MultipleChoice,
+    )
 
 @Preview(showBackground = true)
 @Composable
@@ -405,7 +423,7 @@ private fun QuestionContentUnansweredPreview() {
             question = previewQuestion,
             selectedOption = null,
             showAnswer = false,
-            onOptionSelected = {}
+            onOptionSelected = {},
         )
     }
 }
@@ -418,7 +436,7 @@ private fun QuestionContentSelectedPreview() {
             question = previewQuestion,
             selectedOption = "B",
             showAnswer = false,
-            onOptionSelected = {}
+            onOptionSelected = {},
         )
     }
 }
@@ -431,7 +449,7 @@ private fun QuestionContentAnsweredPreview() {
             question = previewQuestion,
             selectedOption = "A",
             showAnswer = true,
-            onOptionSelected = {}
+            onOptionSelected = {},
         )
     }
 }

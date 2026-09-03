@@ -20,23 +20,24 @@ fun MnemoraCard(
     containerColor: Color = MaterialTheme.colorScheme.surfaceContainerLow,
     contentPadding: PaddingValues = PaddingValues(MnemoraSpacing.Large),
     onClick: (() -> Unit)? = null,
-    content: @Composable ColumnScope.() -> Unit
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    val clickableModifier = if (onClick != null) {
-        modifier.clickable(onClick = onClick)
-    } else {
-        modifier
-    }
+    val clickableModifier =
+        if (onClick != null) {
+            modifier.clickable(onClick = onClick)
+        } else {
+            modifier
+        }
 
     ElevatedCard(
         modifier = clickableModifier,
         shape = MaterialTheme.shapes.large,
         colors = CardDefaults.elevatedCardColors(containerColor = containerColor),
-        elevation = CardDefaults.elevatedCardElevation(defaultElevation = MnemoraElevation.Resting)
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = MnemoraElevation.Resting),
     ) {
         Column(
             modifier = Modifier.padding(contentPadding),
-            content = content
+            content = content,
         )
     }
 }

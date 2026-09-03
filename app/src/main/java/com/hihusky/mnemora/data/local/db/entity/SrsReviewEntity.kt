@@ -12,19 +12,19 @@ import androidx.room.PrimaryKey
             entity = QuestionEntity::class,
             parentColumns = ["id"],
             childColumns = ["questionId"],
-            onDelete = ForeignKey.CASCADE
+            onDelete = ForeignKey.CASCADE,
         ),
         ForeignKey(
             entity = BookEntity::class,
             parentColumns = ["id"],
             childColumns = ["bookId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
     indices = [
         Index(value = ["bookId"]),
-        Index(value = ["dueDate"])
-    ]
+        Index(value = ["dueDate"]),
+    ],
 )
 data class SrsReviewEntity(
     @PrimaryKey
@@ -36,5 +36,5 @@ data class SrsReviewEntity(
     val lapses: Int = 0,
     val dueDate: Long? = null,
     val lastReviewed: Long? = null,
-    val reviewState: Int = 0
+    val reviewState: Int = 0,
 )

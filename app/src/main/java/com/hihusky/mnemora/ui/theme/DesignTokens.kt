@@ -1,3 +1,5 @@
+@file:Suppress("ktlint:standard:property-naming")
+
 package com.hihusky.mnemora.ui.theme
 
 import androidx.compose.ui.graphics.Color

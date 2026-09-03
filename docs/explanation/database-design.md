@@ -1,8 +1,8 @@
 # Database Design
 
 Mnemora stores app content and study state in a local Room database named
-`quiz.db`. The current Room schema is `AppDatabase` version 17, exported under
-`app/schemas/com.hihusky.mnemora.data.local.db.AppDatabase/17.json`.
+`quiz.db`. The current Room schema is `AppDatabase` version 21, exported under
+`app/schemas/com.hihusky.mnemora.data.local.db.AppDatabase/21.json`.
 
 The database is local-first and intentionally scoped to app data. User settings
 such as AI provider, model, sound, and haptic preferences live in DataStore via
@@ -16,7 +16,7 @@ such as AI provider, model, sound, and haptic preferences live in DataStore via
 | DI | `di/DatabaseModule.kt` | Builds the singleton Room database as `quiz.db` |
 | Entities | `data/local/db/entity/` | Defines table names, columns, foreign keys, and indexes |
 | DAOs | `data/local/db/dao/` | Owns SQL queries and insert/update/delete operations |
-| Repository | `data/repository/DatabaseRepository.kt` | Converts entities to domain models and coordinates DAO calls |
+| Repositories | `data/repository/` | One repository per domain (books, questions, answers, SRS, chat, collections, sessions); converts entities to domain models and coordinates DAO calls |
 | Import | `domain/service/BookImporter.kt` | Inserts books, nodes, and questions inside a Room transaction |
 
 ## Naming Direction
@@ -110,6 +110,9 @@ erDiagram
         INTEGER questionId "FK NOT NULL"
         TEXT title
         INTEGER createdAt "NOT NULL"
+        INTEGER lastScrollIndex "NOT NULL"
+        INTEGER lastScrollOffset "NOT NULL"
+        INTEGER lastScrollAtBottom "NOT NULL"
     }
 
     ai_chat_history {
@@ -118,6 +121,7 @@ erDiagram
         TEXT text "NOT NULL"
         INTEGER isUser "NOT NULL"
         INTEGER timestamp "NOT NULL"
+        INTEGER isInterrupted "NOT NULL"
     }
 
     collections {
@@ -278,10 +282,15 @@ AI chat sessions attached to a question.
 | `questionId` | `INTEGER NOT NULL` | Foreign key to `questions.id`, cascade delete |
 | `title` | `TEXT` | Session title |
 | `createdAt` | `INTEGER NOT NULL` | Millisecond timestamp |
+| `lastScrollIndex` | `INTEGER NOT NULL` | Restored first visible item index, default `0` |
+| `lastScrollOffset` | `INTEGER NOT NULL` | Restored pixel offset of the first visible item, default `0` |
+| `lastScrollAtBottom` | `INTEGER NOT NULL` | Whether the sheet was pinned to the bottom, default `1` |
 
 Index: `questionId`.
 
-Sessions for a question are shown newest first by `createdAt DESC`.
+Sessions for a question are shown newest first by `createdAt DESC`. The three
+scroll columns persist the bottom-sheet reading position so reopening a
+session restores the user's place.
 
 ### `ai_chat_history`
 
@@ -294,10 +303,12 @@ Messages inside an AI chat session.
 | `text` | `TEXT NOT NULL` | Message body |
 | `isUser` | `INTEGER NOT NULL` | Boolean encoded as `1` for user and `0` for assistant |
 | `timestamp` | `INTEGER NOT NULL` | Millisecond timestamp |
+| `isInterrupted` | `INTEGER NOT NULL` | Boolean encoded as `1` when the stream was stopped early, default `0` |
 
 Index: `sessionId`.
 
-Messages are read oldest first by `timestamp ASC`.
+Messages are read oldest first by `timestamp ASC`. Interrupted assistant
+messages are offered a "continue" affordance in the UI.
 
 ### `collections`
 
@@ -462,7 +473,7 @@ Database backup is excluded by `res/xml/backup_rules.xml` and
 
 | Pattern | Where Applied | Problem It Solves |
 |---|---|---|
-| Repository | `DatabaseRepository` | Decouples domain logic from persistence details |
+| Repository | `data/repository/*` (one per domain) | Decouples domain logic from persistence details |
 | Data Access Object | `data/local/db/dao/` | Encapsulates SQL in a single responsibility class |
 | Local-first persistence | Entire Room layer | Offline capability; no network dependency |
 | Single source of truth | `questions`, `user_answers` | Prevents stale or conflicting data |
@@ -477,18 +488,21 @@ Database backup is excluded by `res/xml/backup_rules.xml` and
 
 ```mermaid
 flowchart LR
-    domain["Domain Code\nViewModels / Services"] --> repo["DatabaseRepository\nEntity ↔ Domain conversion"]
+    domain["Domain Code\nViewModels / Services"] --> repo["data/repository/*\nPer-domain Entity ↔ Domain conversion"]
     repo --> dao["DAOs\n@Query / @Insert / @Update"]
     dao --> sqlite[("SQLite\nquiz.db")]
 ```
 
-`DatabaseRepository` converts Room entities into domain models and back, so the
-rest of the app never imports `data.local.db.entity.*`. This keeps the domain
-layer independent of the storage schema.
+Each domain owns its repository — `BookRepository`, `QuestionRepository`,
+`SrsRepository`, `ChatRepository`, and so on. Each repository converts Room
+entities into domain models and back, so the rest of the app never imports
+`data.local.db.entity.*`. This keeps the domain layer independent of the
+storage schema.
 
-The repository is also where coordination logic lives — for example, when adding
-a question to a collection, the repository validates package ownership before
-calling the DAO.
+Repositories are also where coordination logic lives — for example, when
+adding a question to a collection, the repository validates package ownership
+before calling the DAO, and `SrsRepository.applyRating` advances the
+scheduling state before persisting the updated row.
 
 ### Data Access Object (DAO)
 
@@ -624,7 +638,7 @@ When changing the database:
 - Add or update the entity in `data/local/db/entity/`.
 - Register new entities and DAOs in `AppDatabase.kt`.
 - Add DAO providers in `DatabaseModule.kt`.
-- Update `DatabaseRepository` conversions if domain models change.
+- Update the owning repository in `data/repository/` if domain models change.
 - Increment the Room database version and commit the exported schema JSON.
 - Update this document and any affected ADRs.
 - Revisit destructive migration before shipping persistent user data.

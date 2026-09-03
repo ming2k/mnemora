@@ -23,7 +23,8 @@ interface BookDao {
      * A real study session wins first; newly imported or manually updated books
      * fall back to their book timestamp so fresh imports are immediately visible.
      */
-    @Query("""
+    @Query(
+        """
         SELECT b.* FROM books b
         LEFT JOIN (
             SELECT bookId, MAX(lastActiveTime) as lastActiveTime
@@ -31,10 +32,12 @@ interface BookDao {
             GROUP BY bookId
         ) s ON b.id = s.bookId
         ORDER BY COALESCE(s.lastActiveTime, b.updatedAt, b.createdAt, 0) DESC, b.sortOrder ASC, b.id DESC
-    """)
+    """,
+    )
     fun getAllSortedByRecentUse(): Flow<List<BookEntity>>
 
-    @Query("""
+    @Query(
+        """
         SELECT b.* FROM books b
         LEFT JOIN (
             SELECT bookId, MAX(lastActiveTime) as lastActiveTime
@@ -42,13 +45,15 @@ interface BookDao {
             GROUP BY bookId
         ) s ON b.id = s.bookId
         ORDER BY COALESCE(s.lastActiveTime, b.updatedAt, b.createdAt, 0) DESC, b.sortOrder ASC, b.id DESC
-    """)
+    """,
+    )
     suspend fun getAllSortedByRecentUseOnce(): List<BookEntity>
 
     /**
      * Search books by name (ZH / EN / filename) and sort by recent use.
      */
-    @Query("""
+    @Query(
+        """
         SELECT b.* FROM books b
         LEFT JOIN (
             SELECT bookId, MAX(lastActiveTime) as lastActiveTime
@@ -58,7 +63,8 @@ interface BookDao {
         WHERE b.name LIKE '%' || :query || '%'
            OR b.filename LIKE '%' || :query || '%'
         ORDER BY COALESCE(s.lastActiveTime, b.updatedAt, b.createdAt, 0) DESC, b.sortOrder ASC, b.id DESC
-    """)
+    """,
+    )
     fun search(query: String): Flow<List<BookEntity>>
 
     @Query("SELECT * FROM books WHERE id = :id")
@@ -80,5 +86,8 @@ interface BookDao {
     suspend fun deleteById(id: Int)
 
     @Query("UPDATE books SET sortOrder = :sortOrder WHERE id = :id")
-    suspend fun updateSortOrder(id: Int, sortOrder: Int)
+    suspend fun updateSortOrder(
+        id: Int,
+        sortOrder: Int,
+    )
 }

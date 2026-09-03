@@ -1,7 +1,9 @@
 package com.hihusky.mnemora.data.model
 
 enum class CollectionKind {
-    Custom, Smart;
+    Custom,
+    Smart,
+    ;
 
     companion object {
         fun fromName(value: String?): CollectionKind {
@@ -12,7 +14,9 @@ enum class CollectionKind {
 }
 
 enum class CollectionBehavior {
-    Manual, SmartFilter;
+    Manual,
+    SmartFilter,
+    ;
 
     companion object {
         fun fromName(value: String?): CollectionBehavior {
@@ -32,14 +36,14 @@ data class Collection(
     val config: String? = null,
     val sortOrder: Int = 0,
     val createdAt: Long,
-    val updatedAt: Long? = null
+    val updatedAt: Long? = null,
 ) {
     val isSmart: Boolean get() = kind == CollectionKind.Smart
 }
 
 data class CollectionSummary(
     val collection: Collection,
-    val itemCount: Int
+    val itemCount: Int,
 )
 
 data class CollectionItem(
@@ -47,5 +51,5 @@ data class CollectionItem(
     val collectionId: Int,
     val questionId: Int,
     val position: Int = 0,
-    val addedAt: Long = System.currentTimeMillis()
+    val addedAt: Long = System.currentTimeMillis(),
 )

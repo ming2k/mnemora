@@ -13,53 +13,57 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class CollectionsViewModel @Inject constructor(
-    private val collectionRepository: CollectionRepository
-) : ViewModel() {
+class CollectionsViewModel
+    @Inject
+    constructor(
+        private val collectionRepository: CollectionRepository,
+    ) : ViewModel() {
+        private val _uiState = MutableStateFlow(CollectionsUiState())
+        val uiState: StateFlow<CollectionsUiState> = _uiState.asStateFlow()
 
-    private val _uiState = MutableStateFlow(CollectionsUiState())
-    val uiState: StateFlow<CollectionsUiState> = _uiState.asStateFlow()
+        init {
+            loadCollections()
+        }
 
-    init {
-        loadCollections()
-    }
-
-    fun loadCollections() {
-        viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            try {
-                val summaries = collectionRepository.getAllCollectionSummaries()
-                _uiState.update { it.copy(summaries = summaries, isLoading = false, error = null) }
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message, isLoading = false) }
+        fun loadCollections() {
+            viewModelScope.launch {
+                _uiState.update { it.copy(isLoading = true) }
+                try {
+                    val summaries = collectionRepository.getAllCollectionSummaries()
+                    _uiState.update { it.copy(summaries = summaries, isLoading = false, error = null) }
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(error = e.message, isLoading = false) }
+                }
             }
         }
-    }
 
-    fun createCollection(name: String, description: String = "") {
-        _uiState.update {
-            it.copy(error = "Create collections from a package detail screen.")
-        }
-    }
-
-    fun deleteCollection(collectionId: Int) {
-        viewModelScope.launch {
-            try {
-                collectionRepository.deleteCollection(collectionId)
-                loadCollections()
-            } catch (e: Exception) {
-                _uiState.update { it.copy(error = e.message) }
+        fun createCollection(
+            name: String,
+            description: String = "",
+        ) {
+            _uiState.update {
+                it.copy(error = "Create collections from a package detail screen.")
             }
         }
-    }
 
-    fun dismissError() {
-        _uiState.update { it.copy(error = null) }
+        fun deleteCollection(collectionId: Int) {
+            viewModelScope.launch {
+                try {
+                    collectionRepository.deleteCollection(collectionId)
+                    loadCollections()
+                } catch (e: Exception) {
+                    _uiState.update { it.copy(error = e.message) }
+                }
+            }
+        }
+
+        fun dismissError() {
+            _uiState.update { it.copy(error = null) }
+        }
     }
-}
 
 data class CollectionsUiState(
     val summaries: List<CollectionSummary> = emptyList(),
     val isLoading: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
 )

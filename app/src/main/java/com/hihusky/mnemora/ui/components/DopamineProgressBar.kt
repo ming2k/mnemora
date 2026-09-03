@@ -18,16 +18,17 @@ fun DopamineProgressBar(
     progress: Float,
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    trackColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest
+    trackColor: Color = MaterialTheme.colorScheme.surfaceContainerHighest,
 ) {
     LinearProgressIndicator(
         progress = { progress },
-        modifier = modifier
-            .fillMaxWidth()
-            .height(MnemoraSize.ProgressTrack)
-            .padding(horizontal = MnemoraSpacing.Large),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .height(MnemoraSize.ProgressTrack)
+                .padding(horizontal = MnemoraSpacing.Large),
         color = color,
-        trackColor = trackColor
+        trackColor = trackColor,
     )
 }
 

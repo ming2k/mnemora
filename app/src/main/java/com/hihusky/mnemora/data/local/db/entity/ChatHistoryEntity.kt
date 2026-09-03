@@ -1,5 +1,6 @@
 package com.hihusky.mnemora.data.local.db.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -12,10 +13,10 @@ import androidx.room.PrimaryKey
             entity = ChatSessionEntity::class,
             parentColumns = ["id"],
             childColumns = ["sessionId"],
-            onDelete = ForeignKey.CASCADE
-        )
+            onDelete = ForeignKey.CASCADE,
+        ),
     ],
-    indices = [Index(value = ["sessionId"])]
+    indices = [Index(value = ["sessionId"])],
 )
 data class ChatHistoryEntity(
     @PrimaryKey(autoGenerate = true)
@@ -23,5 +24,7 @@ data class ChatHistoryEntity(
     val sessionId: Int,
     val text: String,
     val isUser: Int,
-    val timestamp: Long
+    val timestamp: Long,
+    @ColumnInfo(defaultValue = "0")
+    val isInterrupted: Int = 0,
 )

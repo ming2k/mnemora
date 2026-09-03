@@ -19,19 +19,15 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SmartToy
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
-import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +45,10 @@ import com.hihusky.mnemora.data.model.CollectionKind
 import com.hihusky.mnemora.data.model.Question
 import com.hihusky.mnemora.data.model.QuestionChoice
 import com.hihusky.mnemora.data.model.QuestionType
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import com.hihusky.mnemora.ui.components.MnemoraCard
 import com.hihusky.mnemora.ui.components.QuestionContent
+import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import com.hihusky.mnemora.ui.theme.MnemoraSize
 import com.hihusky.mnemora.ui.theme.MnemoraSpacing
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
@@ -60,7 +58,7 @@ import com.hihusky.mnemora.ui.theme.MnemoraTheme
 fun CollectionDetailScreen(
     onBack: () -> Unit,
     onNavigateToPractice: (Int, Int) -> Unit,
-    viewModel: CollectionDetailViewModel = hiltViewModel()
+    viewModel: CollectionDetailViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -73,7 +71,7 @@ fun CollectionDetailScreen(
         onBack = onBack,
         onNavigateToPractice = onNavigateToPractice,
         onDeleteCollection = { viewModel.deleteCollection() },
-        onRetry = { viewModel.loadCollection() }
+        onRetry = { viewModel.loadCollection() },
     )
 }
 
@@ -84,7 +82,7 @@ internal fun CollectionDetailScreenContent(
     onBack: () -> Unit,
     onNavigateToPractice: (Int, Int) -> Unit,
     onDeleteCollection: () -> Unit,
-    onRetry: () -> Unit
+    onRetry: () -> Unit,
 ) {
     val collection = uiState.collection
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -96,14 +94,14 @@ internal fun CollectionDetailScreenContent(
                     Text(
                         collection?.name ?: "Collection",
                         maxLines = 1,
-                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                     )
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back"
+                            contentDescription = "Back",
                         )
                     }
                 },
@@ -121,21 +119,21 @@ internal fun CollectionDetailScreenContent(
                             Icon(
                                 Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
-                }
+                },
             )
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Box(modifier = Modifier.padding(padding)) {
             when {
                 uiState.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
@@ -144,20 +142,20 @@ internal fun CollectionDetailScreenContent(
                 uiState.error != null -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(
                                 Icons.AutoMirrored.Filled.HelpOutline,
                                 contentDescription = null,
                                 modifier = Modifier.size(MnemoraSize.AvatarLarge),
-                                tint = MaterialTheme.colorScheme.error
+                                tint = MaterialTheme.colorScheme.error,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             Text(
                                 "Error: ${uiState.error}",
                                 color = MaterialTheme.colorScheme.error,
-                                style = MaterialTheme.typography.bodyLarge
+                                style = MaterialTheme.typography.bodyLarge,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                             IconButton(onClick = onRetry) {
@@ -170,38 +168,39 @@ internal fun CollectionDetailScreenContent(
                 collection != null -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp)
+                        contentPadding = PaddingValues(16.dp),
                     ) {
                         item {
                             MnemoraCard(
                                 modifier = Modifier.fillMaxWidth(),
                             ) {
-                                    if (!collection.description.isNullOrBlank()) {
-                                        Text(
-                                            collection.description,
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
-                                    }
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            "${uiState.questions.size} questions",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        AssistChip(
-                                            onClick = {},
-                                            label = { Text(collection.kind.name) },
-                                            colors = AssistChipDefaults.assistChipColors(
-                                                labelColor = MaterialTheme.colorScheme.primary
-                                            )
-                                        )
-                                    }
+                                if (!collection.description.isNullOrBlank()) {
+                                    Text(
+                                        collection.description,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    )
+                                    Spacer(modifier = Modifier.height(MnemoraSpacing.Small))
+                                }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Text(
+                                        "${uiState.questions.size} questions",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    AssistChip(
+                                        onClick = {},
+                                        label = { Text(collection.kind.name) },
+                                        colors =
+                                            AssistChipDefaults.assistChipColors(
+                                                labelColor = MaterialTheme.colorScheme.primary,
+                                            ),
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.height(16.dp))
                         }
@@ -211,7 +210,7 @@ internal fun CollectionDetailScreenContent(
                                 selectedOption = null,
                                 showAnswer = false,
                                 onOptionSelected = null,
-                                imageBasePath = uiState.imageBasePath
+                                imageBasePath = uiState.imageBasePath,
                             )
                             Spacer(modifier = Modifier.height(12.dp))
                         }
@@ -232,7 +231,7 @@ internal fun CollectionDetailScreenContent(
                 onDeleteCollection()
             },
             dismissText = "Cancel",
-            isDestructive = true
+            isDestructive = true,
         )
     }
 }
@@ -241,19 +240,21 @@ internal fun CollectionDetailScreenContent(
 // Previews
 // ────────────────────────────────────────────────────────────
 
-private val previewCollectionQuestion = Question(
-    id = 1,
-    bookId = 1,
-    content = "What does this buoy indicate?",
-    choices = listOf(
-        QuestionChoice("A", "Safe water"),
-        QuestionChoice("B", "Danger"),
-        QuestionChoice("C", "Channel edge")
-    ),
-    answer = "A",
-    explanation = "Safe water marks indicate safe water all around.",
-    questionType = QuestionType.MultipleChoice
-)
+private val previewCollectionQuestion =
+    Question(
+        id = 1,
+        bookId = 1,
+        content = "What does this buoy indicate?",
+        choices =
+            listOf(
+                QuestionChoice("A", "Safe water"),
+                QuestionChoice("B", "Danger"),
+                QuestionChoice("C", "Channel edge"),
+            ),
+        answer = "A",
+        explanation = "Safe water marks indicate safe water all around.",
+        questionType = QuestionType.MultipleChoice,
+    )
 
 @Preview(showBackground = true)
 @Composable
@@ -264,7 +265,7 @@ private fun CollectionDetailScreenLoadingPreview() {
             onBack = {},
             onNavigateToPractice = { _, _ -> },
             onDeleteCollection = {},
-            onRetry = {}
+            onRetry = {},
         )
     }
 }
@@ -274,24 +275,27 @@ private fun CollectionDetailScreenLoadingPreview() {
 private fun CollectionDetailScreenLoadedPreview() {
     MnemoraTheme {
         CollectionDetailScreenContent(
-            uiState = CollectionDetailUiState(
-                collection = Collection(
-                    id = 1,
-                    bookId = 1,
-                    kind = CollectionKind.Custom,
-                    behavior = com.hihusky.mnemora.data.model.CollectionBehavior.Manual,
-                    name = "Weak Cards",
-                    description = "Questions I got wrong before",
-                    createdAt = 0L
+            uiState =
+                CollectionDetailUiState(
+                    collection =
+                        Collection(
+                            id = 1,
+                            bookId = 1,
+                            kind = CollectionKind.Custom,
+                            behavior = com.hihusky.mnemora.data.model.CollectionBehavior.Manual,
+                            name = "Weak Cards",
+                            description = "Questions I got wrong before",
+                            createdAt = 0L,
+                        ),
+                    questions =
+                        List(5) { i ->
+                            previewCollectionQuestion.copy(id = i)
+                        },
                 ),
-                questions = List(5) { i ->
-                    previewCollectionQuestion.copy(id = i)
-                }
-            ),
             onBack = {},
             onNavigateToPractice = { _, _ -> },
             onDeleteCollection = {},
-            onRetry = {}
+            onRetry = {},
         )
     }
 }

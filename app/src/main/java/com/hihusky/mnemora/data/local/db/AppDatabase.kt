@@ -37,21 +37,31 @@ import com.hihusky.mnemora.data.local.db.entity.UserAnswerEntity
         CollectionItemEntity::class,
         StudySessionEntity::class,
     ],
-    version = 19,
+    version = 21,
     autoMigrations = [
-        AutoMigration(from = 18, to = 19)
+        AutoMigration(from = 18, to = 19),
+        AutoMigration(from = 20, to = 21),
     ],
-    exportSchema = true
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun bookDao(): BookDao
+
     abstract fun nodeDao(): NodeDao
+
     abstract fun questionDao(): QuestionDao
+
     abstract fun userAnswerDao(): UserAnswerDao
+
     abstract fun srsReviewDao(): SrsReviewDao
+
     abstract fun chatSessionDao(): ChatSessionDao
+
     abstract fun chatHistoryDao(): ChatHistoryDao
+
     abstract fun collectionDao(): CollectionDao
+
     abstract fun collectionItemDao(): CollectionItemDao
+
     abstract fun studySessionDao(): StudySessionDao
 }

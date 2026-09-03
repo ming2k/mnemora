@@ -41,15 +41,16 @@ val InfoColor = Color(0xFF5AC8FA)
 // These are NOT theme colors; they are content colors assigned
 // deterministically per book ID for visual identity.
 // --------------------------------------------------
-val BookColors = listOf(
-    Color(0xFF007AFF), // Blue
-    Color(0xFF34C759), // Green
-    Color(0xFFFF9500), // Orange
-    Color(0xFFAF52DE), // Purple
-    Color(0xFFFF3B30), // Red
-    Color(0xFF5AC8FA), // Cyan
-    Color(0xFFFF2D55), // Pink
-    Color(0xFF8E8E93), // Gray
-)
+val BookColors =
+    listOf(
+        Color(0xFF007AFF), // Blue
+        Color(0xFF34C759), // Green
+        Color(0xFFFF9500), // Orange
+        Color(0xFFAF52DE), // Purple
+        Color(0xFFFF3B30), // Red
+        Color(0xFF5AC8FA), // Cyan
+        Color(0xFFFF2D55), // Pink
+        Color(0xFF8E8E93), // Gray
+    )
 
 fun bookColor(bookId: Int): Color = BookColors[bookId % BookColors.size]

@@ -12,26 +12,21 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Refresh
-import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
 import androidx.compose.material3.Button
-import com.hihusky.mnemora.ui.components.MnemoraCard
-import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -47,7 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -56,14 +50,17 @@ import com.hihusky.mnemora.data.model.QuestionChoice
 import com.hihusky.mnemora.data.model.QuestionType
 import com.hihusky.mnemora.data.model.UserAnswer
 import com.hihusky.mnemora.ui.components.DopamineProgressBar
+import com.hihusky.mnemora.ui.components.MnemoraAlertDialog
+import com.hihusky.mnemora.ui.components.MnemoraCard
 import com.hihusky.mnemora.ui.components.QuestionContent
+import com.hihusky.mnemora.ui.components.topappbar.MnemoraTopAppBar
 import com.hihusky.mnemora.ui.theme.MnemoraTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TestScreen(
     onBack: () -> Unit,
-    viewModel: TestViewModel = hiltViewModel()
+    viewModel: TestViewModel = hiltViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -74,7 +71,7 @@ fun TestScreen(
         onPrevious = { viewModel.previousQuestion() },
         onNext = { viewModel.nextQuestion() },
         onFinish = { viewModel.finishTest() },
-        onRetake = { viewModel.resetTest() }
+        onRetake = { viewModel.resetTest() },
     )
 }
 
@@ -88,7 +85,7 @@ internal fun TestScreenContent(
     onNext: () -> Unit,
     onFinish: () -> Unit,
     onRetake: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     var showFinishDialog by remember { mutableStateOf(false) }
 
@@ -102,7 +99,7 @@ internal fun TestScreenContent(
                     IconButton(onClick = { showFinishDialog = true }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Finish"
+                            contentDescription = "Finish",
                         )
                     }
                 },
@@ -111,54 +108,57 @@ internal fun TestScreenContent(
                         uiState.formattedTime,
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = androidx.compose.ui.Modifier.padding(end = 8.dp)
+                        modifier =
+                            androidx.compose.ui.Modifier
+                                .padding(end = 8.dp),
                     )
                     TextButton(onClick = { showFinishDialog = true }) {
                         Text("Finish")
                     }
-                }
+                },
             )
         },
         bottomBar = {
             if (uiState.isRunning) {
                 androidx.compose.material3.BottomAppBar(
                     containerColor = MaterialTheme.colorScheme.surfaceContainer,
-                    tonalElevation = 0.dp
+                    tonalElevation = 0.dp,
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp),
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(
                             onClick = onPrevious,
-                            enabled = uiState.currentIndex > 0
+                            enabled = uiState.currentIndex > 0,
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Previous"
+                                contentDescription = "Previous",
                             )
                         }
                         Text(
                             "${uiState.currentIndex + 1} / ${uiState.totalQuestions}",
-                            style = MaterialTheme.typography.labelLarge
+                            style = MaterialTheme.typography.labelLarge,
                         )
                         IconButton(
                             onClick = onNext,
-                            enabled = uiState.currentIndex < uiState.totalQuestions - 1
+                            enabled = uiState.currentIndex < uiState.totalQuestions - 1,
                         ) {
                             Icon(
                                 Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = "Next"
+                                contentDescription = "Next",
                             )
                         }
                     }
                 }
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(modifier = modifier.padding(padding)) {
             DopamineProgressBar(progress = uiState.progress)
@@ -167,7 +167,7 @@ internal fun TestScreenContent(
                 uiState.isLoading -> {
                     Box(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentAlignment = Alignment.Center,
                     ) {
                         CircularProgressIndicator()
                     }
@@ -177,21 +177,21 @@ internal fun TestScreenContent(
                     TestResults(
                         uiState = uiState,
                         onBack = onBack,
-                        onRetake = onRetake
+                        onRetake = onRetake,
                     )
                 }
 
                 uiState.currentQuestion != null -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp)
+                        contentPadding = PaddingValues(16.dp),
                     ) {
                         item {
                             QuestionContent(
                                 question = uiState.currentQuestion!!,
                                 selectedOption = uiState.userAnswers[uiState.currentQuestion!!.id]?.selected,
                                 showAnswer = false,
-                                onOptionSelected = { onAnswer(it) }
+                                onOptionSelected = { onAnswer(it) },
                             )
                         }
                     }
@@ -211,7 +211,7 @@ internal fun TestScreenContent(
                 showFinishDialog = false
             },
             dismissText = "Cancel",
-            isDestructive = true
+            isDestructive = true,
         )
     }
 }
@@ -220,50 +220,53 @@ internal fun TestScreenContent(
 private fun TestResults(
     uiState: TestUiState,
     onBack: () -> Unit,
-    onRetake: () -> Unit
+    onRetake: () -> Unit,
 ) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
     ) {
         Icon(
             imageVector = Icons.Default.CheckCircle,
             contentDescription = null,
             modifier = Modifier.size(72.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = MaterialTheme.colorScheme.primary,
         )
         Spacer(modifier = Modifier.height(16.dp))
         Text(
             "Test Result",
             style = MaterialTheme.typography.headlineMedium,
-            fontWeight = FontWeight.Bold
+            fontWeight = FontWeight.Bold,
         )
         Spacer(modifier = Modifier.height(24.dp))
 
         MnemoraCard(
             modifier = Modifier.fillMaxWidth(),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(20.dp)
+            contentPadding =
+                androidx.compose.foundation.layout
+                    .PaddingValues(20.dp),
         ) {
             ResultRow("Total", uiState.totalQuestions.toString())
             HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
             ResultRow(
                 "Correct",
                 uiState.correctCount.toString(),
-                MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.primary,
             )
             ResultRow(
                 "Wrong",
                 uiState.wrongCount.toString(),
-                MaterialTheme.colorScheme.error
+                MaterialTheme.colorScheme.error,
             )
             ResultRow(
                 "Unanswered",
                 uiState.unansweredCount.toString(),
-                MaterialTheme.colorScheme.onSurfaceVariant
+                MaterialTheme.colorScheme.onSurfaceVariant,
             )
             HorizontalDivider(thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
             ResultRow("Time", uiState.formattedTime)
@@ -274,7 +277,7 @@ private fun TestResults(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             OutlinedButton(
                 onClick = onRetake,
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             ) {
                 Icon(Icons.Default.Refresh, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -282,7 +285,7 @@ private fun TestResults(
             }
             Button(
                 onClick = onBack,
-                shape = MaterialTheme.shapes.large
+                shape = MaterialTheme.shapes.large,
             ) {
                 Icon(Icons.Default.Home, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
@@ -296,24 +299,25 @@ private fun TestResults(
 private fun ResultRow(
     label: String,
     value: String,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface
+    valueColor: Color = MaterialTheme.colorScheme.onSurface,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             label,
-            style = MaterialTheme.typography.bodyLarge
+            style = MaterialTheme.typography.bodyLarge,
         )
         Text(
             value,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
-            color = valueColor
+            color = valueColor,
         )
     }
 }
@@ -321,34 +325,37 @@ private fun ResultRow(
 @Preview(showBackground = true)
 @Composable
 private fun TestScreenContentActivePreview() {
-    val mockQuestion = Question(
-        id = 1,
-        bookId = 1,
-        content = "What is the capital of France?",
-        choices = listOf(
-            QuestionChoice("A", "London"),
-            QuestionChoice("B", "Paris"),
-            QuestionChoice("C", "Berlin"),
-            QuestionChoice("D", "Madrid")
-        ),
-        answer = "B",
-        questionType = QuestionType.MultipleChoice
-    )
+    val mockQuestion =
+        Question(
+            id = 1,
+            bookId = 1,
+            content = "What is the capital of France?",
+            choices =
+                listOf(
+                    QuestionChoice("A", "London"),
+                    QuestionChoice("B", "Paris"),
+                    QuestionChoice("C", "Berlin"),
+                    QuestionChoice("D", "Madrid"),
+                ),
+            answer = "B",
+            questionType = QuestionType.MultipleChoice,
+        )
     MnemoraTheme {
         TestScreenContent(
             onBack = {},
-            uiState = TestUiState(
-                questions = listOf(mockQuestion),
-                currentIndex = 0,
-                isLoading = false,
-                isRunning = true,
-                userAnswers = emptyMap()
-            ),
+            uiState =
+                TestUiState(
+                    questions = listOf(mockQuestion),
+                    currentIndex = 0,
+                    isLoading = false,
+                    isRunning = true,
+                    userAnswers = emptyMap(),
+                ),
             onAnswer = {},
             onPrevious = {},
             onNext = {},
             onFinish = {},
-            onRetake = {}
+            onRetake = {},
         )
     }
 }
@@ -356,52 +363,58 @@ private fun TestScreenContentActivePreview() {
 @Preview(showBackground = true)
 @Composable
 private fun TestScreenContentResultsPreview() {
-    val q1 = Question(
-        id = 1,
-        bookId = 1,
-        content = "What is the capital of France?",
-        choices = listOf(
-            QuestionChoice("A", "London"),
-            QuestionChoice("B", "Paris"),
-            QuestionChoice("C", "Berlin"),
-            QuestionChoice("D", "Madrid")
-        ),
-        answer = "B",
-        questionType = QuestionType.MultipleChoice
-    )
-    val q2 = Question(
-        id = 2,
-        bookId = 1,
-        content = "Which planet is known as the Red Planet?",
-        choices = listOf(
-            QuestionChoice("A", "Venus"),
-            QuestionChoice("B", "Mars"),
-            QuestionChoice("C", "Jupiter"),
-            QuestionChoice("D", "Saturn")
-        ),
-        answer = "B",
-        questionType = QuestionType.MultipleChoice
-    )
+    val q1 =
+        Question(
+            id = 1,
+            bookId = 1,
+            content = "What is the capital of France?",
+            choices =
+                listOf(
+                    QuestionChoice("A", "London"),
+                    QuestionChoice("B", "Paris"),
+                    QuestionChoice("C", "Berlin"),
+                    QuestionChoice("D", "Madrid"),
+                ),
+            answer = "B",
+            questionType = QuestionType.MultipleChoice,
+        )
+    val q2 =
+        Question(
+            id = 2,
+            bookId = 1,
+            content = "Which planet is known as the Red Planet?",
+            choices =
+                listOf(
+                    QuestionChoice("A", "Venus"),
+                    QuestionChoice("B", "Mars"),
+                    QuestionChoice("C", "Jupiter"),
+                    QuestionChoice("D", "Saturn"),
+                ),
+            answer = "B",
+            questionType = QuestionType.MultipleChoice,
+        )
     MnemoraTheme {
         TestScreenContent(
             onBack = {},
-            uiState = TestUiState(
-                questions = listOf(q1, q2),
-                currentIndex = 1,
-                isLoading = false,
-                isRunning = false,
-                showResults = true,
-                userAnswers = mapOf(
-                    1 to UserAnswer(selected = "B", isCorrect = true),
-                    2 to UserAnswer(selected = "A", isCorrect = false)
+            uiState =
+                TestUiState(
+                    questions = listOf(q1, q2),
+                    currentIndex = 1,
+                    isLoading = false,
+                    isRunning = false,
+                    showResults = true,
+                    userAnswers =
+                        mapOf(
+                            1 to UserAnswer(selected = "B", isCorrect = true),
+                            2 to UserAnswer(selected = "A", isCorrect = false),
+                        ),
+                    elapsedSeconds = 125,
                 ),
-                elapsedSeconds = 125
-            ),
             onAnswer = {},
             onPrevious = {},
             onNext = {},
             onFinish = {},
-            onRetake = {}
+            onRetake = {},
         )
     }
 }

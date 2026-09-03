@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Spaced-repetition scheduling wired into the answer flow** — `SubmitAnswerUseCase` now persists an SRS review on every answer (`Good` advances, `Again` resets), and `ManageProgressUseCase` clears SRS state on `resetAllProgress`. Previously the SM-2 implementation was unreachable from the UI.
+- **Shared SSE streaming engine** — `SseStream` in `data/remote/ai/` owns framing, `[DONE]` handling, keep-alive skipping, malformed-frame recovery, and HTTP-error raising, replacing duplicated logic across six AI provider adapters.
+- **Protocol adapters under `data/remote/ai/`** — `OpenAiCompatProvider`, `GeminiCompatProvider`, `AnthropicProvider`, `VertexAiProvider`, `DeepSeekProvider`, `KimiProvider` now live in the data layer instead of `domain/service/ai/`.
+- **`AiChatController`** — extracted from `PracticeViewModel` (~330 lines), owning chat session lifecycle, streaming jobs, scroll persistence, and the active model/provider labels. Exposes `close()` to cancel its supervisor scope.
+- **Tests** — `SubmitAnswerUseCaseTest` (SRS wiring), `AiChatControllerTest` (send/failure/reuse), `SseStreamTest` against `MockWebServer` (framing, malformed frames, whitespace preservation, HTTP errors, auth header). Existing AI provider tests relocated to the `data/remote/ai` package.
+
+### Changed
+- **`SrsService.intervalLabel`** — `Again` now truthfully reports `< 1 day` instead of `1 day`. Magic-number literals replaced with named `MINUTE_MS` / `DAY_MS` constants.
+- **AI defaults unified** — `SettingsRepository` now sources every AI default from the `AiConfig` single source of truth instead of hardcoding a maritime study prompt and mismatched `contextIncludeExplanation`.
+- **Gemini-compatible auth** — API key travels in the `x-goog-api-key` header instead of the URL query string, so it does not leak through proxy records or logs.
+- **`AiChatController` failure handling** — split generic exception catches into typed branches with an extracted `resumeInterruptedMessage` helper, removing the `InstanceOfCheckForException` smell.
+- **`extractDeltas` in OpenAI/Gemini/Anthropic providers** — rewritten as safe-navigation pipelines to drop the multi-`return` smell.
+
+### Fixed
+- **Empty `catch` blocks** — `loadCollectionData`, `createCollection`, `deleteCollection`, and `toggleQuestionInCollection` in `PracticeViewModel` now surface an error state instead of swallowing exceptions.
+- **Stale documentation paths** — `AGENTS.md` and `CLAUDE.md` now point at `docs/dev/documentation/style-guide.md`; `docs/reference/configuration.md` and `docs/reference/ai-providers.md` rewritten to match the current toolchain and the provider catalog.
+- **Dead code** — removed 35 unused imports across 12 files, stripped `strings.xml` to just `app_name` (no `R.string.*` references remained), and deleted the orphaned `values-zh-rCN/strings.xml`.
+
+### Removed
+- **`detekt.yml` MagicNumber whitelist entries** for `86400000` and `2800` — these literals no longer appear in source after extraction to named constants.
+
 ## [0.0.22] - 2026-08-29
 
 ### Fixed

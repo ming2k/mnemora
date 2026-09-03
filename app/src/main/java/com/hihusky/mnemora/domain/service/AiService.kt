@@ -5,13 +5,8 @@ import androidx.datastore.preferences.core.Preferences
 import com.hihusky.mnemora.data.model.AiConnectionProfile
 import com.hihusky.mnemora.data.model.AiConnectionProfiles
 import com.hihusky.mnemora.data.model.ChatMessage
+import com.hihusky.mnemora.data.remote.ai.AiProviderFactory
 import com.hihusky.mnemora.data.repository.SettingsRepository
-import com.hihusky.mnemora.domain.service.ai.AnthropicProvider
-import com.hihusky.mnemora.domain.service.ai.DeepSeekProvider
-import com.hihusky.mnemora.domain.service.ai.GeminiProvider
-import com.hihusky.mnemora.domain.service.ai.KimiProvider
-import com.hihusky.mnemora.domain.service.ai.OpenAIProvider
-import com.hihusky.mnemora.domain.service.ai.VertexAiProvider
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -20,12 +15,9 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -36,178 +28,192 @@ data class AiConfig(
     val model: String = AiProviderCatalog.defaultModelId,
     val projectId: String = "",
     val location: String = "",
-    val systemPrompt: String = "You are a helpful study assistant. Please explain questions and answers in a concise and clear manner.",
+    val systemPrompt: String = DEFAULT_SYSTEM_PROMPT,
     val contextIncludeStem: Boolean = true,
     val contextIncludeOptions: Boolean = true,
     val contextIncludeAnswer: Boolean = true,
-    val contextIncludeExplanation: Boolean = false,
+    val contextIncludeExplanation: Boolean = true,
     val thinkingMode: String = "disabled",
     val reasoningEffort: String = "",
 ) {
     fun resolveHost(official: String): String {
         val custom = baseUrl.trim().trimEnd('/')
-        val usesCustom = provider.lowercase().startsWith("custom") ||
-            AiProviderCatalog.usesCustomHost(provider)
+        val usesCustom =
+            provider.lowercase().startsWith("custom") ||
+                AiProviderCatalog.usesCustomHost(provider)
         return if (usesCustom && custom.isNotEmpty()) custom else official
+    }
+
+    companion object {
+        /** Single source of truth for the default system prompt. */
+        const val DEFAULT_SYSTEM_PROMPT =
+            "You are a helpful study assistant. " +
+                "Please explain questions and answers in a concise and clear manner."
     }
 }
 
 @Singleton
-class AiService @Inject constructor(
-    dataStore: DataStore<Preferences>
-) {
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(30, TimeUnit.SECONDS)
-        .readTimeout(60, TimeUnit.SECONDS)
-        .build()
+class AiService
+    @Inject
+    constructor(
+        dataStore: DataStore<Preferences>,
+        private val providerFactory: AiProviderFactory,
+    ) {
+        private val json = Json { ignoreUnknownKeys = true }
+        private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    private val json = Json { ignoreUnknownKeys = true }
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+        private val _config = MutableStateFlow(AiConfig())
+        val config: StateFlow<AiConfig> = _config.asStateFlow()
 
-    private val _config = MutableStateFlow(AiConfig())
-    val config: StateFlow<AiConfig> = _config.asStateFlow()
+        val isConfigured: Boolean get() = _config.value.apiKey.isNotBlank()
 
-    val isConfigured: Boolean get() = _config.value.apiKey.isNotBlank()
-
-    init {
-        // Keep the in-memory config in sync with persisted settings so the
-        // user's saved model/provider is restored on every launch, even before
-        // the Settings screen is opened.
-        scope.launch {
-            dataStore.data
-                .map { it.toAiConfig() }
-                .collect { _config.value = it }
-        }
-    }
-
-    fun updateConfig(config: AiConfig) {
-        _config.value = config
-    }
-
-    private fun Preferences.toAiConfig(): AiConfig {
-        val savedProvider = this[SettingsRepository.AI_PROVIDER] ?: AiConfig().provider
-        val savedModel = this[SettingsRepository.AI_MODEL] ?: AiConfig().model
-        // Provider is authoritative: migrate any unknown/legacy provider to the
-        // default, then keep the saved model only if it belongs to that provider.
-        val provider = AiProviderCatalog.resolve(savedProvider).id
-        val model = if (AiProviderCatalog.modelsFor(provider).any { it.id == savedModel }) {
-            savedModel
-        } else {
-            AiProviderCatalog.defaultModelFor(provider)
-        }
-        val activeKey = this[SettingsRepository.AI_API_KEY] ?: ""
-        val cachedKey = cachedKeyFor(provider)
-        val legacyProfile = if (provider == savedProvider) {
-            AiConnectionProfile(
-                apiKey = cachedKey.ifBlank { activeKey },
-                baseUrl = this[SettingsRepository.AI_BASE_URL] ?: "",
-                projectId = this[SettingsRepository.AI_PROJECT_ID] ?: "",
-                location = this[SettingsRepository.AI_LOCATION] ?: "",
-                thinkingMode = this[SettingsRepository.AI_THINKING_MODE] ?: "disabled",
-                reasoningEffort = this[SettingsRepository.AI_REASONING_EFFORT] ?: "",
-            )
-        } else {
-            AiConnectionProfile(apiKey = cachedKey)
-        }
-        val activeProfile = AiConnectionProfiles.get(
-            this[SettingsRepository.AI_CONNECTION_PROFILES] ?: "{}",
-            provider,
-            model,
-        ) ?: legacyProfile
-        return AiConfig(
-            apiKey = activeProfile.apiKey,
-            baseUrl = activeProfile.baseUrl,
-            provider = provider,
-            model = model,
-            projectId = activeProfile.projectId,
-            location = activeProfile.location,
-            systemPrompt = this[SettingsRepository.AI_SYSTEM_PROMPT] ?: AiConfig().systemPrompt,
-            contextIncludeStem = this[SettingsRepository.AI_CONTEXT_INCLUDE_STEM] ?: true,
-            contextIncludeOptions = this[SettingsRepository.AI_CONTEXT_INCLUDE_OPTIONS] ?: true,
-            contextIncludeAnswer = this[SettingsRepository.AI_CONTEXT_INCLUDE_ANSWER] ?: true,
-            contextIncludeExplanation = this[SettingsRepository.AI_CONTEXT_INCLUDE_EXPLANATION] ?: true,
-            thinkingMode = activeProfile.thinkingMode,
-            reasoningEffort = activeProfile.reasoningEffort,
-        )
-    }
-
-    private fun Preferences.cachedKeyFor(provider: String): String {
-        val raw = this[SettingsRepository.AI_API_KEY_CACHE] ?: "{}"
-        return try {
-            json.decodeFromString<Map<String, String>>(raw)[provider] ?: ""
-        } catch (_: Exception) {
-            ""
-        }
-    }
-
-    fun explain(
-        questionStem: String,
-        options: Map<String, String>,
-        correctAnswer: String,
-        explanation: String? = null,
-        userQuestion: String? = null,
-        history: List<ChatMessage> = emptyList()
-    ): Flow<String> {
-        val cfg = _config.value
-        if (cfg.apiKey.isBlank()) return flow { throw IllegalStateException("AI service not configured. Please set API key.") }
-
-        val context = buildQuestionContext(questionStem, options, correctAnswer, explanation, cfg)
-        val effectiveHistory = buildEffectiveHistory(history, userQuestion)
-
-        val provider = when (AiProviderCatalog.protocolFor(cfg.provider)) {
-            AiProtocol.GEMINI -> GeminiProvider()
-            AiProtocol.OPENAI -> OpenAIProvider()
-            AiProtocol.ANTHROPIC -> AnthropicProvider()
-            AiProtocol.VERTEX -> VertexAiProvider()
-            AiProtocol.DEEPSEEK -> DeepSeekProvider()
-            AiProtocol.KIMI -> KimiProvider()
-        }
-
-        return provider.streamChat(cfg, context, effectiveHistory, client).flowOn(Dispatchers.IO)
-    }
-
-    private fun buildQuestionContext(
-        questionStem: String,
-        options: Map<String, String>,
-        correctAnswer: String,
-        explanation: String?,
-        cfg: AiConfig
-    ): String {
-        val sb = StringBuilder()
-        if (cfg.contextIncludeStem) {
-            sb.appendLine("Question:")
-            sb.appendLine(questionStem)
-            sb.appendLine()
-        }
-        if (cfg.contextIncludeOptions && options.isNotEmpty()) {
-            sb.appendLine("Options:")
-            options.forEach { (k, v) ->
-                sb.appendLine("$k. $v")
+        init {
+            // Keep the in-memory config in sync with persisted settings so the
+            // user's saved model/provider is restored on every launch, even before
+            // the Settings screen is opened.
+            scope.launch {
+                dataStore.data
+                    .map { it.toAiConfig() }
+                    .collect { _config.value = it }
             }
-            sb.appendLine()
         }
-        if (cfg.contextIncludeAnswer) {
-            sb.appendLine("Correct answer: $correctAnswer")
-            sb.appendLine()
-        }
-        if (cfg.contextIncludeExplanation && !explanation.isNullOrBlank()) {
-            sb.appendLine("Explanation:")
-            sb.appendLine(explanation)
-            sb.appendLine()
-        }
-        return sb.toString().trimEnd()
-    }
 
-    private fun buildEffectiveHistory(
-        history: List<ChatMessage>,
-        userQuestion: String?
-    ): List<ChatMessage> {
-        val filtered = history.filter {
-            it.text.trim().isNotEmpty() && !(it.isUser.not() && it.text.startsWith("Error:"))
+        fun updateConfig(config: AiConfig) {
+            _config.value = config
         }
-        if (filtered.isNotEmpty()) return filtered
-        val fallback = userQuestion?.trim()?.takeIf { it.isNotEmpty() }
-            ?: "Please analyze this question in detail and explain why the correct answer is right."
-        return listOf(ChatMessage(text = fallback, isUser = true))
+
+        private fun Preferences.toAiConfig(): AiConfig {
+            val defaults = AiConfig()
+            val savedProvider = this[SettingsRepository.AI_PROVIDER] ?: defaults.provider
+            val savedModel = this[SettingsRepository.AI_MODEL] ?: defaults.model
+            // Provider is authoritative: migrate any unknown/legacy provider to the
+            // default, then keep the saved model only if it belongs to that provider.
+            val provider = AiProviderCatalog.resolve(savedProvider).id
+            val model =
+                if (AiProviderCatalog.modelsFor(provider).any { it.id == savedModel }) {
+                    savedModel
+                } else {
+                    AiProviderCatalog.defaultModelFor(provider)
+                }
+            val activeKey = this[SettingsRepository.AI_API_KEY] ?: ""
+            val cachedKey = cachedKeyFor(provider)
+            val legacyProfile =
+                if (provider == savedProvider) {
+                    AiConnectionProfile(
+                        apiKey = cachedKey.ifBlank { activeKey },
+                        baseUrl = this[SettingsRepository.AI_BASE_URL] ?: "",
+                        projectId = this[SettingsRepository.AI_PROJECT_ID] ?: "",
+                        location = this[SettingsRepository.AI_LOCATION] ?: "",
+                        thinkingMode = this[SettingsRepository.AI_THINKING_MODE] ?: "disabled",
+                        reasoningEffort = this[SettingsRepository.AI_REASONING_EFFORT] ?: "",
+                    )
+                } else {
+                    AiConnectionProfile(apiKey = cachedKey)
+                }
+            val activeProfile =
+                AiConnectionProfiles.get(
+                    this[SettingsRepository.AI_CONNECTION_PROFILES] ?: "{}",
+                    provider,
+                    model,
+                ) ?: legacyProfile
+            return AiConfig(
+                apiKey = activeProfile.apiKey,
+                baseUrl = activeProfile.baseUrl,
+                provider = provider,
+                model = model,
+                projectId = activeProfile.projectId,
+                location = activeProfile.location,
+                systemPrompt = this[SettingsRepository.AI_SYSTEM_PROMPT] ?: defaults.systemPrompt,
+                contextIncludeStem = this[SettingsRepository.AI_CONTEXT_INCLUDE_STEM] ?: defaults.contextIncludeStem,
+                contextIncludeOptions =
+                    this[SettingsRepository.AI_CONTEXT_INCLUDE_OPTIONS] ?: defaults.contextIncludeOptions,
+                contextIncludeAnswer =
+                    this[SettingsRepository.AI_CONTEXT_INCLUDE_ANSWER] ?: defaults.contextIncludeAnswer,
+                contextIncludeExplanation =
+                    this[SettingsRepository.AI_CONTEXT_INCLUDE_EXPLANATION]
+                        ?: defaults.contextIncludeExplanation,
+                thinkingMode = activeProfile.thinkingMode,
+                reasoningEffort = activeProfile.reasoningEffort,
+            )
+        }
+
+        private fun Preferences.cachedKeyFor(provider: String): String {
+            val raw = this[SettingsRepository.AI_API_KEY_CACHE] ?: "{}"
+            return try {
+                json.decodeFromString<Map<String, String>>(raw)[provider] ?: ""
+            } catch (_: Exception) {
+                ""
+            }
+        }
+
+        fun explain(
+            questionStem: String,
+            options: Map<String, String>,
+            correctAnswer: String,
+            explanation: String? = null,
+            userQuestion: String? = null,
+            history: List<ChatMessage> = emptyList(),
+        ): Flow<String> {
+            val cfg = _config.value
+            if (cfg.apiKey.isBlank()) {
+                return flow {
+                    throw IllegalStateException(
+                        "AI service not configured. Please set API key.",
+                    )
+                }
+            }
+
+            val context = buildQuestionContext(questionStem, options, correctAnswer, explanation, cfg)
+            val effectiveHistory = buildEffectiveHistory(history, userQuestion)
+
+            val provider = providerFactory.forProtocol(AiProviderCatalog.protocolFor(cfg.provider))
+            return provider.streamChat(cfg, context, effectiveHistory)
+        }
+
+        private fun buildQuestionContext(
+            questionStem: String,
+            options: Map<String, String>,
+            correctAnswer: String,
+            explanation: String?,
+            cfg: AiConfig,
+        ): String {
+            val sb = StringBuilder()
+            if (cfg.contextIncludeStem) {
+                sb.appendLine("Question:")
+                sb.appendLine(questionStem)
+                sb.appendLine()
+            }
+            if (cfg.contextIncludeOptions && options.isNotEmpty()) {
+                sb.appendLine("Options:")
+                options.forEach { (k, v) ->
+                    sb.appendLine("$k. $v")
+                }
+                sb.appendLine()
+            }
+            if (cfg.contextIncludeAnswer) {
+                sb.appendLine("Correct answer: $correctAnswer")
+                sb.appendLine()
+            }
+            if (cfg.contextIncludeExplanation && !explanation.isNullOrBlank()) {
+                sb.appendLine("Explanation:")
+                sb.appendLine(explanation)
+                sb.appendLine()
+            }
+            return sb.toString().trimEnd()
+        }
+
+        private fun buildEffectiveHistory(
+            history: List<ChatMessage>,
+            userQuestion: String?,
+        ): List<ChatMessage> {
+            val filtered =
+                history.filter {
+                    it.text.trim().isNotEmpty() && !(it.isUser.not() && it.text.startsWith("Error:"))
+                }
+            if (filtered.isNotEmpty()) return filtered
+            val fallback =
+                userQuestion?.trim()?.takeIf { it.isNotEmpty() }
+                    ?: "Please analyze this question in detail and explain why the correct answer is right."
+            return listOf(ChatMessage(text = fallback, isUser = true))
+        }
     }
-}
