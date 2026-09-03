@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.23] - 2026-09-03
+
 ### Added
 - **Spaced-repetition scheduling wired into the answer flow** — `SubmitAnswerUseCase` now persists an SRS review on every answer (`Good` advances, `Again` resets), and `ManageProgressUseCase` clears SRS state on `resetAllProgress`. Previously the SM-2 implementation was unreachable from the UI.
 - **Shared SSE streaming engine** — `SseStream` in `data/remote/ai/` owns framing, `[DONE]` handling, keep-alive skipping, malformed-frame recovery, and HTTP-error raising, replacing duplicated logic across six AI provider adapters.
